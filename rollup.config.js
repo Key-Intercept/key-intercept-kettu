@@ -5,7 +5,7 @@ import swc from "rollup-plugin-swc3";
 export default {
   input: "key-intercept/vencord.ts",
   output: {
-    file: "dist/index.js",
+    file: "index.js",
     format: "iife",
     name: "KeyInterceptPlugin",
   },
