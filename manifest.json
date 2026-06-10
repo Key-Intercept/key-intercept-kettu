@@ -7,7 +7,7 @@
             "id": "277137325342064640"
         }
     ],
-    "main": "index.js",
+    "main": "dist/index.js",
     "vendetta": {
         "icon": "ic_message_edit"
     }
