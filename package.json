@@ -2,7 +2,7 @@
   "name": "message-rule-interceptor",
   "version": "1.0.0",
   "description": "Intercepts and modifies messages before they are sent.",
-  "main": "index.js",
+  "main": "builds/key-intercept/index.js",
   "scripts": {
     "build": "rollup -c",
     "watch": "rollup -cw"

@@ -1,0 +1,17 @@
+{
+  "id": "key-intercept",
+  "version": "1.0.0",
+  "type": "plugin",
+  "spec": 3,
+  "main": "index.js",
+  "display": {
+    "name": "key-intercept",
+    "description": "You don't need to control what you say, let someone else control it.",
+    "authors": [
+      {
+        "name": "Tom",
+        "id": "277137325342064640"
+      }
+    ]
+  }
+}
