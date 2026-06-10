@@ -1,5 +1,7 @@
+import { findByProps } from "@metro";
+
 export function getPreviousMessage(channelId: string) {
-    const MessageStore = Vencord.Webpack.findByProps("getMessage", "getMessages");
+    const MessageStore = findByProps("getMessage", "getMessages");
     const messages = MessageStore?.getMessages?.(channelId);
     if (!messages) return null;
 
@@ -11,7 +13,7 @@ export function getPreviousMessage(channelId: string) {
 }
 
 export function editPreviousMessage(channelId: string, messageId: string, newContent: string) {
-    const MessageActions = Vencord.Webpack.findByProps("editMessage");
+    const MessageActions = findByProps("editMessage");
     if (!MessageActions?.editMessage) return;
 
     MessageActions.editMessage(channelId, messageId, { content: newContent });

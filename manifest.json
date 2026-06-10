@@ -1,0 +1,14 @@
+{
+    "name": "key intercept",
+    "description": "you dont deserve to talk properly",
+    "authors": [
+        {
+            "name": "supersliser",
+            "id": "277137325342064640"
+        }
+    ],
+    "main": "index.js",
+    "vendetta": {
+        "icon": "ic_message_edit"
+    }
+}

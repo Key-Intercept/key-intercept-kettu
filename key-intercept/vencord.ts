@@ -1,12 +1,12 @@
 /*
- * Vencord, a Discord client mod
- * Copyright (c) 2025 Vendicated and contributors
- * SPDX-License-Identifier: GPL-3.0-or-later
+ * Kettu Plugin - key-intercept
+ * A text transformation plugin for Kettu
  */
 
-import definePlugin from "@utils/types";
-
-declare const Vencord: any;
+import { defineCorePlugin } from "@lib/addons/plugins";
+import { before } from "@lib/api/patcher";
+import { findByProps } from "@metro";
+import { logger } from "@lib/utils/logger";
 
 import { editPreviousMessage, getPreviousMessage, getPreviousMessageSender } from "./getPreviousMessage";
 import {
@@ -19,14 +19,17 @@ import {
 	whitelist,
 } from "./core";
 
+let unpatchSendMessage: (() => void) | null = null;
+
 export function applyDrone(msg: string, drone_end: Date, speech_header: string, speech_footer: string, action_header: string, action_footer: string, whisper_header: string, whisper_footer: string, loud_header: string, loud_footer: string, drone_health: number, channelID: string, verbose: boolean = true) {
-	const currentUser = Vencord.Webpack.findByProps("getCurrentUser", "getUser").getCurrentUser();
+	const UserStore = findByProps("getCurrentUser", "getUser");
+	const currentUser = UserStore?.getCurrentUser?.();
 	const previousMessage = getPreviousMessage(channelID);
 	const previousSender = getPreviousMessageSender(channelID);
 	const result = applyDroneCore(msg, drone_end, speech_header, speech_footer, action_header, action_footer, whisper_header, whisper_footer, loud_header, loud_footer, drone_health, channelID, {
 		previousMessage,
 		previousSenderId: previousSender?.id ?? null,
-		currentUserId: currentUser.id,
+		currentUserId: currentUser?.id ?? null,
 	}, verbose);
 
 	if (result.editPreviousMessage) {
@@ -37,13 +40,14 @@ export function applyDrone(msg: string, drone_end: Date, speech_header: string, 
 }
 
 export function applyReplacements(msg: string, channelId: string): string {
-	const currentUser = Vencord.Webpack.findByProps("getCurrentUser", "getUser").getCurrentUser();
+	const UserStore = findByProps("getCurrentUser", "getUser");
+	const currentUser = UserStore?.getCurrentUser?.();
 	const previousMessage = getPreviousMessage(channelId);
 	const previousSender = getPreviousMessageSender(channelId);
 	const result = applyReplacementsCore(msg, channelId, {
 		previousMessage,
 		previousSenderId: previousSender?.id ?? null,
-		currentUserId: currentUser.id,
+		currentUserId: currentUser?.id ?? null,
 	});
 
 	if (result.editPreviousMessage) {
@@ -53,75 +57,105 @@ export function applyReplacements(msg: string, channelId: string): string {
 	return result.message;
 }
 
-export default definePlugin({
-	_filterBypassUsers: new Set<string>(),
-	name: "key-intercept",
-	description: "You don't need to control what you say, let someone else control it.",
-	authors: [{ name: "Tom", id: 277137325342064640n }],
-	dependencies: ["MessageEventsAPI"],
-	_handler: null as ((event: any) => void) | null,
+export default defineCorePlugin({
+	manifest: {
+		id: "key-intercept",
+		version: "1.0.0",
+		type: "plugin",
+		spec: 3,
+		main: "",
+		display: {
+			name: "key-intercept",
+			description: "You don't need to control what you say, let someone else control it.",
+			authors: [{ name: "Tom" }],
+		},
+	},
 
 	async start() {
-		const UserStore = Vencord.Webpack.findByProps("getCurrentUser", "getUser");
-		const currentUser = UserStore.getCurrentUser();
-		await getData(currentUser.id, currentUser.username);
-	},
-	onBeforeMessageSend(channelId: string, msg: { content: string }) {
-		const ChannelStore = Vencord.Webpack.findByProps("getChannel", "getDMFromUserId");
-		const GuildStore = Vencord.Webpack.findByProps("getGuild", "getGuilds");
-		const UserStore = Vencord.Webpack.findByProps("getCurrentUser", "getUser");
-
-		const channel = ChannelStore?.getChannel?.(channelId);
-		if (!channel) return;
-		if (config?.debug) console.log("Channel object:", channel);
-
-		let nameToCheck: string | null = null;
-		let idToCheck: string | null = null;
-
-		if (channel.guild_id) {
-			const guild = GuildStore?.getGuild(channel.guild_id);
-			if (config?.debug) console.log("Guild object:", guild);
-			nameToCheck = guild?.name ?? null;
-			idToCheck = guild?.id ?? null;
-		} else {
-			if (channel.name) {
-				nameToCheck = channel.name;
-			} else if (channel.recipients?.length > 0) {
-				const currentUser = UserStore.getCurrentUser();
-				const recipientNames = channel.recipients
-					.filter((id: string) => id !== currentUser.id)
-					.map((id: string) => UserStore.getUser(id)?.username)
-					.filter(Boolean);
-				nameToCheck = recipientNames.join(", ");
-				idToCheck = channel.id ?? null;
-			}
+		const UserStore = findByProps("getCurrentUser", "getUser");
+		const currentUser = UserStore?.getCurrentUser?.();
+		if (currentUser) {
+			await getData(currentUser.id, currentUser.username);
 		}
 
-		if (config?.debug) console.log(`Name to check against whitelist: "${nameToCheck}"`);
-		if (config?.debug) console.log(`ID to check against whitelist: "${idToCheck}"`);
+		// Patch sendMessage to intercept messages before sending
+		const MessageActions = findByProps("sendMessage");
+		if (MessageActions && MessageActions.sendMessage) {
+			unpatchSendMessage = before("sendMessage", MessageActions, (args) => {
+				const [channelId, messageData] = args;
+				
+				const ChannelStore = findByProps("getChannel", "getDMFromUserId");
+				const GuildStore = findByProps("getGuild", "getGuilds");
+				const UserStore = findByProps("getCurrentUser", "getUser");
 
-		if (whitelist.length > 0) {
-			const nameMatches = !!nameToCheck && whitelist.some(item => item.server_name === nameToCheck);
-			const idMatches = !!idToCheck && whitelist.some(item => item.discord_id === idToCheck);
+				const channel = ChannelStore?.getChannel?.(channelId);
+				if (!channel) return;
+				
+				if (config?.debug) logger.log("Channel object:", channel);
 
-			if ((nameToCheck || idToCheck) && !nameMatches && !idMatches) {
-				if (config?.debug) {
-					console.log(
-						`No whitelist match for name "${nameToCheck}" or ID "${idToCheck}", skipping modifications.`
-					);
+				let nameToCheck: string | null = null;
+				let idToCheck: string | null = null;
+
+				if (channel.guild_id) {
+					const guild = GuildStore?.getGuild(channel.guild_id);
+					if (config?.debug) logger.log("Guild object:", guild);
+					nameToCheck = guild?.name ?? null;
+					idToCheck = guild?.id ?? null;
+				} else {
+					if (channel.name) {
+						nameToCheck = channel.name;
+					} else if (channel.recipients?.length > 0) {
+						const currentUser = UserStore.getCurrentUser();
+						const recipientNames = channel.recipients
+							.filter((id: string) => id !== currentUser.id)
+							.map((id: string) => UserStore.getUser(id)?.username)
+							.filter(Boolean);
+						nameToCheck = recipientNames.join(", ");
+						idToCheck = channel.id ?? null;
+					}
 				}
-				return;
-			}
-		}
 
-		const channelName = channel?.name?.toLowerCase?.() ?? "";
-		if (channelName.includes("sfw") && !channelName.includes("nsfw")) {
-			if (config?.debug) console.log("SFW channel detected, skipping modifications");
-			return;
-		}
+				if (config?.debug) logger.log(`Name to check against whitelist: "${nameToCheck}"`);
+				if (config?.debug) logger.log(`ID to check against whitelist: "${idToCheck}"`);
 
-		console.log("Event caught: onBeforeMessageSend");
-		const output = applyReplacements(msg.content, channelId);
-		msg.content = output;
+				if (whitelist.length > 0) {
+					const nameMatches = !!nameToCheck && whitelist.some(item => item.server_name === nameToCheck);
+					const idMatches = !!idToCheck && whitelist.some(item => item.discord_id === idToCheck);
+
+					if ((nameToCheck || idToCheck) && !nameMatches && !idMatches) {
+						if (config?.debug) {
+							logger.log(
+								`No whitelist match for name "${nameToCheck}" or ID "${idToCheck}", skipping modifications.`
+							);
+						}
+						return;
+					}
+				}
+
+				const channelName = channel?.name?.toLowerCase?.() ?? "";
+				if (channelName.includes("sfw") && !channelName.includes("nsfw")) {
+					if (config?.debug) logger.log("SFW channel detected, skipping modifications");
+					return;
+				}
+
+				logger.log("Intercepted message send: applying replacements");
+				
+				// Modify the message content
+				if (typeof messageData === "object" && messageData !== null && "content" in messageData) {
+					const output = applyReplacements(messageData.content, channelId);
+					messageData.content = output;
+				}
+			});
+
+			logger.log("key-intercept: Enabled - message interception active");
+		}
+	},
+
+	stop() {
+		if (unpatchSendMessage) {
+			unpatchSendMessage();
+			unpatchSendMessage = null;
+		}
+		logger.log("key-intercept: Disabled");
 	},
 });

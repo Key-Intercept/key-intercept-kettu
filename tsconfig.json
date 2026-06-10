@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "lib": ["ES2020", "DOM"],
+    "declaration": true,
+    "outDir": "./dist",
+    "rootDir": "./key-intercept",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "node",
+    "paths": {
+      "@metro": ["./node_modules/@metro"],
+      "@lib": ["./node_modules/@lib"],
+      "@utils": ["./node_modules/@utils"]
+    },
+    "jsx": "react-jsx"
+  },
+  "include": ["key-intercept/**/*.ts", "key-intercept/**/*.tsx"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx"]
+}
