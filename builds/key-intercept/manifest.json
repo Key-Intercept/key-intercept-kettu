@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "plugin",
   "spec": 3,
-  "main": "index.js",
+  "main": "https://key-intercept.github.io/key-intercept-kettu/builds/key-intercept/index.js",
   "display": {
     "name": "key-intercept",
     "description": "You don't need to control what you say, let someone else control it.",
