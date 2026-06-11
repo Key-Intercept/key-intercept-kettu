@@ -2,24 +2,28 @@ import resolve from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
 import swc from "rollup-plugin-swc3";
 
-// 1. SHIM WEBSOCKETS: Tricks Supabase into using the mobile phone's native WebSocket
-const shimWS = () => ({
-  name: "shim-ws",
-  resolveId(id) {
-    if (id === "ws") return "\0ws"; 
-    return null;
-  },
-  load(id) {
-    if (id === "\0ws") return "export default window.WebSocket;"; 
-    return null;
+// 1. NUCLEAR SCRUBBER: Physically rips out all modern syntax that crashes Hermes
+const scrubHermesIncompatibilities = () => ({
+  name: "scrub-hermes",
+  renderChunk(code) {
+    return code
+      // Turns fatal dynamic imports into safe rejected promises: import("xyz") -> Promise.reject("xyz")
+      .replace(/\bimport\s*\(/g, "Promise.reject(") 
+      // Strips import.meta environment checks
+      .replace(/\bimport\.meta\b/g, "({})");
   }
 });
 
-// 2. SCRUBBER: Removes the Hermes-crashing dynamic import
-const scrubDynamicImports = () => ({
-  name: "scrub-dynamic-imports",
-  renderChunk(code) {
-    return code.replace(/import\(['"]@opentelemetry\/api['"]\)/g, "Promise.reject()");
+// 2. WEBSOCKET SHIM: Tricks Supabase into using the mobile native WebSocket
+const shimWS = () => ({
+  name: "shim-ws",
+  resolveId(id) {
+    if (id === "ws") return "\0ws";
+    return null;
+  },
+  load(id) {
+    if (id === "\0ws") return "export default window.WebSocket;";
+    return null;
   }
 });
 
@@ -27,16 +31,9 @@ export default {
   input: "src/index.ts",
   output: {
     file: "dist/index.js",
-    format: "iife", // <-- CRITICAL: Back to IIFE!
-    name: "KeyInterceptPlugin",
-    footer: "KeyInterceptPlugin;", // <-- CRITICAL: The trick to make eval() work!
-    globals: {
-      "@vendetta/patcher": "window.vendetta.patcher",
-      "@vendetta/metro": "window.vendetta.metro",
-      "@vendetta/storage": "window.vendetta.storage",
-      "react": "window.React",
-      "react-native": "window.ReactNative"
-    }
+    format: "cjs", // <-- CJS is 100% correct!
+    exports: "default",
+    inlineDynamicImports: true, // <-- CRITICAL: Prevents Rollup from leaving import() in the code
   },
   external: (id) => id.startsWith("@vendetta") || id === "react" || id === "react-native",
   plugins: [
@@ -49,10 +46,10 @@ export default {
     swc({
       jsc: {
         parser: { syntax: "typescript", tsx: true },
-        target: "es2020",
+        target: "es2015", // <-- CRITICAL: Downgrades classes so Hermes doesn't crash on '#'
       },
     }),
-    scrubDynamicImports(),
+    scrubHermesIncompatibilities(),
   ],
   onwarn: (warning, warn) => {
     if (warning.code === 'CIRCULAR_DEPENDENCY') return;
