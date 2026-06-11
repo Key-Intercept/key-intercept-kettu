@@ -9,8 +9,17 @@ import { createClient } from "@supabase/supabase-js";
 import { NormalizedString } from "./normalizedString";
 import { Config, DroneConfig, Rule, WhitelistItem } from "./types";
 
-const supabase = createClient("https://qjzgfwithyvmwctesnqs.supabase.co", "sb_publishable_cxq8QZp9BDtjE4G5qiPCFA_lUZ4Cbdh");
-
+const supabase = createClient(
+    "https://qjzgfwithyvmwctesnqs.supabase.co", 
+    "sb_publishable_cxq8QZp9BDtjE4G5qiPCFA_lUZ4Cbdh",
+    {
+        auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+            detectSessionInUrl: false,
+        }
+    }
+);
 export let config: Config;
 export let droneConfig: DroneConfig;
 export let rules: Rule[] = [];

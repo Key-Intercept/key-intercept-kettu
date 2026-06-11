@@ -5,7 +5,8 @@ export default {
   input: "src/index.ts",
   output: {
     file: "dist/index.js",
-    format: "iife",
+    format: "cjs",
+    exports: "named",
     name: "KeyInterceptPlugin",
     globals: {
       "@vendetta/patcher": "vendetta.patcher",

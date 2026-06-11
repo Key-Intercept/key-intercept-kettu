@@ -1,14 +1,15 @@
 {
-  "name": "key intercept",
-  "description": "you dont deserve to talk properly",
-  "authors": [
-    {
-      "name": "supersliser",
-      "id": "277137325342064640"
+    "name": "key intercept",
+    "description": "you dont deserve to talk properly",
+    "authors": [
+        {
+            "name": "supersliser",
+            "id": "277137325342064640"
+        }
+    ],
+    "main": "dist/index.js",
+    "hash": "123456789",
+    "vendetta": {
+        "icon": "ic_message_edit"
     }
-  ],
-  "main": "https://key-intercept.github.io/key-intercept-kettu/dist/index.js",
-  "vendetta": {
-        "icon": "wumpus-wump"
-  }
 }
