@@ -1,12 +1,13 @@
-import resolve from "@rollup/plugin-node-resolve";
-import commonjs from "@rollup/plugin-commonjs";
-import swc from "rollup-plugin-swc3";
+const resolve = require("@rollup/plugin-node-resolve");
+const commonjs = require("@rollup/plugin-commonjs");
+const swc = require("rollup-plugin-swc3").default;
 
-export default {
+module.exports = {
   input: "src/index.ts",
   output: {
     file: "dist/index.js",
-    format: "iife",
+    format: "cjs",
+    exports: "named",
     name: "KeyInterceptPlugin",
   },
   external: [
@@ -29,7 +30,7 @@ export default {
           decorators: false,
           dynamicImport: true,
         },
-        target: "es2020",
+        target: "es2022",
         transform: {
           react: {
             runtime: "automatic",
