@@ -6,14 +6,14 @@ var metro = require('@vendetta/metro');
 function getPreviousMessage(channelId) {
     var _messages__array, _list_at;
     var _MessageStore_getMessages;
-    const MessageStore = metro.findByProps("getMessage", "getMessages");
-    const messages = MessageStore === null || MessageStore === void 0 ? void 0 : (_MessageStore_getMessages = MessageStore.getMessages) === null || _MessageStore_getMessages === void 0 ? void 0 : _MessageStore_getMessages.call(MessageStore, channelId);
+    var MessageStore = metro.findByProps("getMessage", "getMessages");
+    var messages = MessageStore === null || MessageStore === void 0 ? void 0 : (_MessageStore_getMessages = MessageStore.getMessages) === null || _MessageStore_getMessages === void 0 ? void 0 : _MessageStore_getMessages.call(MessageStore, channelId);
     if (!messages) return null;
-    const list = Array.isArray(messages) ? messages : (_messages__array = messages._array) !== null && _messages__array !== void 0 ? _messages__array : Object.values(messages);
+    var list = Array.isArray(messages) ? messages : (_messages__array = messages._array) !== null && _messages__array !== void 0 ? _messages__array : Object.values(messages);
     return (_list_at = list.at(-1)) !== null && _list_at !== void 0 ? _list_at : null;
 }
 function editPreviousMessage(channelId, messageId, newContent) {
-    const MessageActions = metro.findByProps("editMessage");
+    var MessageActions = metro.findByProps("editMessage");
     if (!(MessageActions === null || MessageActions === void 0 ? void 0 : MessageActions.editMessage)) return;
     MessageActions.editMessage(channelId, messageId, {
         content: newContent
@@ -21,7 +21,7 @@ function editPreviousMessage(channelId, messageId, newContent) {
 }
 function getPreviousMessageSender(channelId) {
     var _ref;
-    const previousMessage = getPreviousMessage(channelId);
+    var previousMessage = getPreviousMessage(channelId);
     return (_ref = previousMessage === null || previousMessage === void 0 ? void 0 : previousMessage.author) !== null && _ref !== void 0 ? _ref : null;
 }
 
@@ -22835,6 +22835,24 @@ function shouldShowDeprecationWarning() {
 }
 if (shouldShowDeprecationWarning()) console.warn("⚠️  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217");
 
+function _class_call_check(instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+        throw new TypeError("Cannot call a class as a function");
+    }
+}
+function _defineProperties(target, props) {
+    for(var i = 0; i < props.length; i++){
+        var descriptor = props[i];
+        descriptor.enumerable = descriptor.enumerable || false;
+        descriptor.configurable = true;
+        if ("value" in descriptor) descriptor.writable = true;
+        Object.defineProperty(target, descriptor.key, descriptor);
+    }
+}
+function _create_class(Constructor, protoProps, staticProps) {
+    if (protoProps) _defineProperties(Constructor.prototype, protoProps);
+    return Constructor;
+}
 function _define_property(obj, key, value) {
     if (key in obj) {
         Object.defineProperty(obj, key, {
@@ -22848,82 +22866,9 @@ function _define_property(obj, key, value) {
     }
     return obj;
 }
-class NormalizedString {
-    /**
-     * We need to read through the input string and compare against regex to find matches
-     * We will then to to update the string as we go and continue matching
-     * 
-     * @param regex Regular Expression to match
-     * @param fn Callback for each match - returns a string that is the value to replace with
-     */ replace(regex, fn) {
-        const regexWithIndices = new RegExp(regex, 'gid');
-        let match;
-        while((match = regexWithIndices.exec(this.nfkdStr)) != null){
-            const indices = match.indices;
-            let postStart = indices[0][0];
-            let postEnd = indices[0][1];
-            if (this.verbose) {
-                console.log(`match found between ${postStart} to ${postEnd} on normalized string`);
-            }
-            let preRange = this.convertToPreNormalizedIndices(postStart, postEnd);
-            if (this.verbose) {
-                console.log(`corresponds to ${preRange.start} to ${preRange.stop} on pre-normalized string`);
-            }
-            this.str = this.str.substring(0, preRange.start) + fn(match[0]) + this.str.substring(preRange.stop);
-            this.rebuildNFKDMappings();
-        }
-        return this.str;
-    }
-    /**
-     * Builds a NFKD normalized string and maps indices of values in that string, to the corresponding values in the orginal string
-     * 
-     * Maps arbitrary indices of pre-normalized string to arbitrary ranges in post-normalized
-     * PRE      [A]   [SURROGATE 1] [SURROGATE 2]           [Å]
-     * POST     [A]        [Single item]               [A] [angstrom]
-     */ rebuildNFKDMappings() {
-        this.nfkdStr = '';
-        this.indices = [];
-        for(let i = 0; i < this.str.length; i++){
-            let char = this.str[i];
-            let preIndx = [
-                i,
-                i + 1
-            ];
-            let charCode = char.charCodeAt(0);
-            if (charCode >= 0xd800 && charCode <= 0xdfff) {
-                char = this.str.substring(i, i + 2);
-                preIndx[1] = i + 2;
-                i++;
-            }
-            const nfkdChar = char.normalize('NFKD');
-            let postIndx = [
-                this.nfkdStr.length,
-                this.nfkdStr.length + nfkdChar.length
-            ];
-            this.indices.push(new IndexMatch(new IndexRange(preIndx[0], preIndx[1]), new IndexRange(postIndx[0], postIndx[1])));
-            this.nfkdStr += nfkdChar;
-        }
-    }
-    /**
-     * Convert a range of from the post-normalized string, to the corresponding
-     * range on the pre-normalized string
-     * 
-     * @param postStart Starting index from post-normalized string
-     * @param postEnd Ending index from post-normalized string
-     * @returns Range of equilvalent characters in pre-normalized string
-     */ convertToPreNormalizedIndices(postStart, postEnd) {
-        let preStart = -1, preEnd = -1;
-        for (let index of this.indices){
-            if (preStart == -1 && index.postNormalized.start <= postStart && index.postNormalized.stop > postStart) {
-                preStart = index.preNormalized.start;
-            }
-            if (preEnd == -1 && index.postNormalized.start < postEnd && index.postNormalized.stop >= postEnd) {
-                preEnd = index.preNormalized.stop;
-            }
-        }
-        return new IndexRange(preStart, preEnd);
-    }
-    constructor(str, verbose){
+var NormalizedString = /*#__PURE__*/ function() {
+    function NormalizedString(str, verbose) {
+        _class_call_check(this, NormalizedString);
         _define_property(this, "str", void 0);
         _define_property(this, "nfkdStr", void 0);
         _define_property(this, "indices", void 0); // list of mappings of range in pre-normalized to ranges in post-normalized
@@ -22934,23 +22879,124 @@ class NormalizedString {
         this.indices = [];
         this.rebuildNFKDMappings();
     }
-}
-class IndexMatch {
-    constructor(preNormalized, postNormalized){
-        _define_property(this, "preNormalized", void 0);
-        _define_property(this, "postNormalized", void 0);
-        this.preNormalized = preNormalized;
-        this.postNormalized = postNormalized;
-    }
-}
-class IndexRange {
-    constructor(start, stop){
-        _define_property(this, "start", void 0);
-        _define_property(this, "stop", void 0);
-        this.start = start;
-        this.stop = stop;
-    }
-}
+    _create_class(NormalizedString, [
+        {
+            /**
+     * We need to read through the input string and compare against regex to find matches
+     * We will then to to update the string as we go and continue matching
+     * 
+     * @param regex Regular Expression to match
+     * @param fn Callback for each match - returns a string that is the value to replace with
+     */ key: "replace",
+            value: function replace(regex, fn) {
+                var regexWithIndices = new RegExp(regex, 'gid');
+                var match;
+                while((match = regexWithIndices.exec(this.nfkdStr)) != null){
+                    var indices = match.indices;
+                    var postStart = indices[0][0];
+                    var postEnd = indices[0][1];
+                    if (this.verbose) {
+                        console.log("match found between ".concat(postStart, " to ").concat(postEnd, " on normalized string"));
+                    }
+                    var preRange = this.convertToPreNormalizedIndices(postStart, postEnd);
+                    if (this.verbose) {
+                        console.log("corresponds to ".concat(preRange.start, " to ").concat(preRange.stop, " on pre-normalized string"));
+                    }
+                    this.str = this.str.substring(0, preRange.start) + fn(match[0]) + this.str.substring(preRange.stop);
+                    this.rebuildNFKDMappings();
+                }
+                return this.str;
+            }
+        },
+        {
+            /**
+     * Builds a NFKD normalized string and maps indices of values in that string, to the corresponding values in the orginal string
+     * 
+     * Maps arbitrary indices of pre-normalized string to arbitrary ranges in post-normalized
+     * PRE      [A]   [SURROGATE 1] [SURROGATE 2]           [Å]
+     * POST     [A]        [Single item]               [A] [angstrom]
+     */ key: "rebuildNFKDMappings",
+            value: function rebuildNFKDMappings() {
+                this.nfkdStr = '';
+                this.indices = [];
+                for(var i = 0; i < this.str.length; i++){
+                    var char = this.str[i];
+                    var preIndx = [
+                        i,
+                        i + 1
+                    ];
+                    var charCode = char.charCodeAt(0);
+                    if (charCode >= 0xd800 && charCode <= 0xdfff) {
+                        char = this.str.substring(i, i + 2);
+                        preIndx[1] = i + 2;
+                        i++;
+                    }
+                    var nfkdChar = char.normalize('NFKD');
+                    var postIndx = [
+                        this.nfkdStr.length,
+                        this.nfkdStr.length + nfkdChar.length
+                    ];
+                    this.indices.push(new IndexMatch(new IndexRange(preIndx[0], preIndx[1]), new IndexRange(postIndx[0], postIndx[1])));
+                    this.nfkdStr += nfkdChar;
+                }
+            }
+        },
+        {
+            /**
+     * Convert a range of from the post-normalized string, to the corresponding
+     * range on the pre-normalized string
+     * 
+     * @param postStart Starting index from post-normalized string
+     * @param postEnd Ending index from post-normalized string
+     * @returns Range of equilvalent characters in pre-normalized string
+     */ key: "convertToPreNormalizedIndices",
+            value: function convertToPreNormalizedIndices(postStart, postEnd) {
+                var preStart = -1, preEnd = -1;
+                var _iteratorNormalCompletion = true, _didIteratorError = false, _iteratorError = undefined;
+                try {
+                    for(var _iterator = this.indices[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true){
+                        var index = _step.value;
+                        if (preStart == -1 && index.postNormalized.start <= postStart && index.postNormalized.stop > postStart) {
+                            preStart = index.preNormalized.start;
+                        }
+                        if (preEnd == -1 && index.postNormalized.start < postEnd && index.postNormalized.stop >= postEnd) {
+                            preEnd = index.preNormalized.stop;
+                        }
+                    }
+                } catch (err) {
+                    _didIteratorError = true;
+                    _iteratorError = err;
+                } finally{
+                    try {
+                        if (!_iteratorNormalCompletion && _iterator.return != null) {
+                            _iterator.return();
+                        }
+                    } finally{
+                        if (_didIteratorError) {
+                            throw _iteratorError;
+                        }
+                    }
+                }
+                return new IndexRange(preStart, preEnd);
+            }
+        }
+    ]);
+    return NormalizedString;
+}();
+var IndexMatch = function IndexMatch(preNormalized, postNormalized) {
+    _class_call_check(this, IndexMatch);
+    _define_property(this, "preNormalized", void 0);
+    _define_property(this, "postNormalized", void 0);
+    this.preNormalized = preNormalized;
+    this.postNormalized = postNormalized;
+};
+var IndexRange = function IndexRange(start, stop) {
+    _class_call_check(this, IndexRange);
+    _define_property(this, "start", void 0);
+    _define_property(this, "stop", void 0);
+    this.start = start;
+    this.stop = stop;
+};
 
 function asyncGeneratorStep$1(gen, resolve, reject, _next, _throw, key, arg) {
     try {
@@ -22981,12 +23027,113 @@ function _async_to_generator$1(fn) {
         });
     };
 }
-const dummyStorage = {
-    getItem: (key)=>null,
-    setItem: (key, value)=>{},
-    removeItem: (key)=>{}
+function _ts_generator$1(thisArg, body) {
+    var f, y, t, _ = {
+        label: 0,
+        sent: function() {
+            if (t[0] & 1) throw t[1];
+            return t[1];
+        },
+        trys: [],
+        ops: []
+    }, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype), d = Object.defineProperty;
+    return d(g, "next", {
+        value: verb(0)
+    }), d(g, "throw", {
+        value: verb(1)
+    }), d(g, "return", {
+        value: verb(2)
+    }), typeof Symbol === "function" && d(g, Symbol.iterator, {
+        value: function() {
+            return this;
+        }
+    }), g;
+    function verb(n) {
+        return function(v) {
+            return step([
+                n,
+                v
+            ]);
+        };
+    }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while(g && (g = 0, op[0] && (_ = 0)), _)try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [
+                op[0] & 2,
+                t.value
+            ];
+            switch(op[0]){
+                case 0:
+                case 1:
+                    t = op;
+                    break;
+                case 4:
+                    _.label++;
+                    return {
+                        value: op[1],
+                        done: false
+                    };
+                case 5:
+                    _.label++;
+                    y = op[1];
+                    op = [
+                        0
+                    ];
+                    continue;
+                case 7:
+                    op = _.ops.pop();
+                    _.trys.pop();
+                    continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) {
+                        _ = 0;
+                        continue;
+                    }
+                    if (op[0] === 3 && (!t || op[1] > t[0] && op[1] < t[3])) {
+                        _.label = op[1];
+                        break;
+                    }
+                    if (op[0] === 6 && _.label < t[1]) {
+                        _.label = t[1];
+                        t = op;
+                        break;
+                    }
+                    if (t && _.label < t[2]) {
+                        _.label = t[2];
+                        _.ops.push(op);
+                        break;
+                    }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop();
+                    continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) {
+            op = [
+                6,
+                e
+            ];
+            y = 0;
+        } finally{
+            f = t = 0;
+        }
+        if (op[0] & 5) throw op[1];
+        return {
+            value: op[0] ? op[1] : void 0,
+            done: true
+        };
+    }
+}
+var dummyStorage = {
+    getItem: function getItem(key) {
+        return null;
+    },
+    setItem: function setItem(key, value) {},
+    removeItem: function removeItem(key) {}
 };
-let supabaseInstance = null;
+var supabaseInstance = null;
 function getSupabase() {
     if (!supabaseInstance) {
         supabaseInstance = createClient("https://qjzgfwithyvmwctesnqs.supabase.co", "sb_publishable_cxq8QZp9BDtjE4G5qiPCFA_lUZ4Cbdh", {
@@ -23000,283 +23147,643 @@ function getSupabase() {
     }
     return supabaseInstance;
 }
-let config;
-let droneConfig;
-let rules = [];
-let whitelist = [];
-let petWords = [];
-let censoredWords = [];
+var config;
+var droneConfig;
+var rules = [];
+var whitelist = [];
+var petWords = [];
+var censoredWords = [];
 function createNewUser(userID, username) {
-    return _async_to_generator$1(function*() {
-        console.log("creating new user...");
-        yield getSupabase().from("profiles").insert({
-            "display_name": username,
-            "discord_id": userID
+    return _async_to_generator$1(function() {
+        return _ts_generator$1(this, function(_state) {
+            switch(_state.label){
+                case 0:
+                    console.log("creating new user...");
+                    return [
+                        4,
+                        getSupabase().from("profiles").insert({
+                            "display_name": username,
+                            "discord_id": userID
+                        })
+                    ];
+                case 1:
+                    _state.sent();
+                    return [
+                        2
+                    ];
+            }
         });
     })();
 }
 function createNewConfig(userID) {
-    return _async_to_generator$1(function*() {
-        console.log("creating new config...");
-        const configData = yield getSupabase().from("Config").insert({}).select().single();
-        yield getSupabase().from("Sub_Config_Access").insert({
-            "sub_id": userID,
-            "config_id": configData.data.id
-        });
-        yield getSupabase().from("Drone_Config").insert({
-            "config_id": configData.data.id,
-            "speech_header": "This Drone Says:",
-            "speech_footer": "It Obeys",
-            "action_header": "Drone::Action::Performs(",
-            "action_footer": ");",
-            "whisper_header": "Drone Initiating Quiet Mode",
-            "whisper_footer": "Normal Volume Restored",
-            "loud_header": "Volume.set(500);",
-            "loud_footer": "Volume.set(100)"
+    return _async_to_generator$1(function() {
+        var configData;
+        return _ts_generator$1(this, function(_state) {
+            switch(_state.label){
+                case 0:
+                    console.log("creating new config...");
+                    return [
+                        4,
+                        getSupabase().from("Config").insert({}).select().single()
+                    ];
+                case 1:
+                    configData = _state.sent();
+                    return [
+                        4,
+                        getSupabase().from("Sub_Config_Access").insert({
+                            "sub_id": userID,
+                            "config_id": configData.data.id
+                        })
+                    ];
+                case 2:
+                    _state.sent();
+                    return [
+                        4,
+                        getSupabase().from("Drone_Config").insert({
+                            "config_id": configData.data.id,
+                            "speech_header": "This Drone Says:",
+                            "speech_footer": "It Obeys",
+                            "action_header": "Drone::Action::Performs(",
+                            "action_footer": ");",
+                            "whisper_header": "Drone Initiating Quiet Mode",
+                            "whisper_footer": "Normal Volume Restored",
+                            "loud_header": "Volume.set(500);",
+                            "loud_footer": "Volume.set(100)"
+                        })
+                    ];
+                case 3:
+                    _state.sent();
+                    return [
+                        2
+                    ];
+            }
         });
     })();
 }
 function getData(userID, username) {
-    return _async_to_generator$1(function*() {
-        var _subData_data;
-        const currentUserId = userID;
-        console.log(currentUserId);
-        let subIDData = yield getSupabase().from("profiles").select("id").eq("discord_id", currentUserId).single();
-        if (subIDData.data === null) {
-            yield createNewUser(userID, username);
-            subIDData = yield getSupabase().from("profiles").select("id").eq("discord_id", currentUserId).single();
-        }
-        console.log(subIDData);
-        const subID = subIDData.data.id;
-        console.log(subID);
-        let subData = yield getSupabase().from("Sub_Config_Access").select().eq("sub_id", subID);
-        console.log(subData);
-        if (((_subData_data = subData.data) === null || _subData_data === void 0 ? void 0 : _subData_data.length) === 0) {
-            yield createNewConfig(subID);
-            subData = yield getSupabase().from("Sub_Config_Access").select().eq("sub_id", subID);
-        }
-        config = {};
-        config.id = subData.data[0].config_id;
-        getSupabase().channel("public:config").on("postgres_changes", {
-            event: "*",
-            schema: "public",
-            table: "Config"
-        }, ()=>_async_to_generator$1(function*() {
-                yield getConfig();
-            })()).subscribe();
-        getSupabase().channel("public:rules").on("postgres_changes", {
-            event: "*",
-            schema: "public",
-            table: "Rules"
-        }, ()=>_async_to_generator$1(function*() {
-                yield getRules();
-            })()).subscribe();
-        getSupabase().channel("public:server_whitelist_items").on("postgres_changes", {
-            event: "*",
-            schema: "public",
-            table: "Server_Whitelist_Items"
-        }, ()=>_async_to_generator$1(function*() {
-                yield getWhitelist();
-            })()).subscribe();
-        getSupabase().channel("public:pet_type_words").on("postgres_changes", {
-            event: "*",
-            schema: "public",
-            table: "Config"
-        }, ()=>_async_to_generator$1(function*() {
-                yield getConfig();
-                yield getPetWords();
-            })()).subscribe();
-        getSupabase().channel("public:censored_words").on("postgres_changes", {
-            event: "*",
-            schema: "public",
-            table: "Censored_Words"
-        }, ()=>_async_to_generator$1(function*() {
-                yield getCensoredWords();
-            })()).subscribe();
-        getSupabase().channel("public:drone_config").on("postgres_changes", {
-            event: "*",
-            schema: "public",
-            table: "Drone_Config"
-        }, ()=>_async_to_generator$1(function*() {
-                yield getDroneConfig();
-            })()).subscribe();
-        yield getConfig();
-        yield getRules();
-        yield getWhitelist();
-        yield getPetWords();
-        yield getCensoredWords();
-        yield getDroneConfig();
+    return _async_to_generator$1(function() {
+        var _subData_data, currentUserId, subIDData, subID, subData;
+        return _ts_generator$1(this, function(_state) {
+            switch(_state.label){
+                case 0:
+                    currentUserId = userID;
+                    console.log(currentUserId);
+                    return [
+                        4,
+                        getSupabase().from("profiles").select("id").eq("discord_id", currentUserId).single()
+                    ];
+                case 1:
+                    subIDData = _state.sent();
+                    if (!(subIDData.data === null)) return [
+                        3,
+                        4
+                    ];
+                    return [
+                        4,
+                        createNewUser(userID, username)
+                    ];
+                case 2:
+                    _state.sent();
+                    return [
+                        4,
+                        getSupabase().from("profiles").select("id").eq("discord_id", currentUserId).single()
+                    ];
+                case 3:
+                    subIDData = _state.sent();
+                    _state.label = 4;
+                case 4:
+                    console.log(subIDData);
+                    subID = subIDData.data.id;
+                    console.log(subID);
+                    return [
+                        4,
+                        getSupabase().from("Sub_Config_Access").select().eq("sub_id", subID)
+                    ];
+                case 5:
+                    subData = _state.sent();
+                    console.log(subData);
+                    if (!(((_subData_data = subData.data) === null || _subData_data === void 0 ? void 0 : _subData_data.length) === 0)) return [
+                        3,
+                        8
+                    ];
+                    return [
+                        4,
+                        createNewConfig(subID)
+                    ];
+                case 6:
+                    _state.sent();
+                    return [
+                        4,
+                        getSupabase().from("Sub_Config_Access").select().eq("sub_id", subID)
+                    ];
+                case 7:
+                    subData = _state.sent();
+                    _state.label = 8;
+                case 8:
+                    config = {};
+                    config.id = subData.data[0].config_id;
+                    getSupabase().channel("public:config").on("postgres_changes", {
+                        event: "*",
+                        schema: "public",
+                        table: "Config"
+                    }, function() {
+                        return _async_to_generator$1(function() {
+                            return _ts_generator$1(this, function(_state) {
+                                switch(_state.label){
+                                    case 0:
+                                        return [
+                                            4,
+                                            getConfig()
+                                        ];
+                                    case 1:
+                                        _state.sent();
+                                        return [
+                                            2
+                                        ];
+                                }
+                            });
+                        })();
+                    }).subscribe();
+                    getSupabase().channel("public:rules").on("postgres_changes", {
+                        event: "*",
+                        schema: "public",
+                        table: "Rules"
+                    }, function() {
+                        return _async_to_generator$1(function() {
+                            return _ts_generator$1(this, function(_state) {
+                                switch(_state.label){
+                                    case 0:
+                                        return [
+                                            4,
+                                            getRules()
+                                        ];
+                                    case 1:
+                                        _state.sent();
+                                        return [
+                                            2
+                                        ];
+                                }
+                            });
+                        })();
+                    }).subscribe();
+                    getSupabase().channel("public:server_whitelist_items").on("postgres_changes", {
+                        event: "*",
+                        schema: "public",
+                        table: "Server_Whitelist_Items"
+                    }, function() {
+                        return _async_to_generator$1(function() {
+                            return _ts_generator$1(this, function(_state) {
+                                switch(_state.label){
+                                    case 0:
+                                        return [
+                                            4,
+                                            getWhitelist()
+                                        ];
+                                    case 1:
+                                        _state.sent();
+                                        return [
+                                            2
+                                        ];
+                                }
+                            });
+                        })();
+                    }).subscribe();
+                    getSupabase().channel("public:pet_type_words").on("postgres_changes", {
+                        event: "*",
+                        schema: "public",
+                        table: "Config"
+                    }, function() {
+                        return _async_to_generator$1(function() {
+                            return _ts_generator$1(this, function(_state) {
+                                switch(_state.label){
+                                    case 0:
+                                        return [
+                                            4,
+                                            getConfig()
+                                        ];
+                                    case 1:
+                                        _state.sent();
+                                        return [
+                                            4,
+                                            getPetWords()
+                                        ];
+                                    case 2:
+                                        _state.sent();
+                                        return [
+                                            2
+                                        ];
+                                }
+                            });
+                        })();
+                    }).subscribe();
+                    getSupabase().channel("public:censored_words").on("postgres_changes", {
+                        event: "*",
+                        schema: "public",
+                        table: "Censored_Words"
+                    }, function() {
+                        return _async_to_generator$1(function() {
+                            return _ts_generator$1(this, function(_state) {
+                                switch(_state.label){
+                                    case 0:
+                                        return [
+                                            4,
+                                            getCensoredWords()
+                                        ];
+                                    case 1:
+                                        _state.sent();
+                                        return [
+                                            2
+                                        ];
+                                }
+                            });
+                        })();
+                    }).subscribe();
+                    getSupabase().channel("public:drone_config").on("postgres_changes", {
+                        event: "*",
+                        schema: "public",
+                        table: "Drone_Config"
+                    }, function() {
+                        return _async_to_generator$1(function() {
+                            return _ts_generator$1(this, function(_state) {
+                                switch(_state.label){
+                                    case 0:
+                                        return [
+                                            4,
+                                            getDroneConfig()
+                                        ];
+                                    case 1:
+                                        _state.sent();
+                                        return [
+                                            2
+                                        ];
+                                }
+                            });
+                        })();
+                    }).subscribe();
+                    return [
+                        4,
+                        getConfig()
+                    ];
+                case 9:
+                    _state.sent();
+                    return [
+                        4,
+                        getRules()
+                    ];
+                case 10:
+                    _state.sent();
+                    return [
+                        4,
+                        getWhitelist()
+                    ];
+                case 11:
+                    _state.sent();
+                    return [
+                        4,
+                        getPetWords()
+                    ];
+                case 12:
+                    _state.sent();
+                    return [
+                        4,
+                        getCensoredWords()
+                    ];
+                case 13:
+                    _state.sent();
+                    return [
+                        4,
+                        getDroneConfig()
+                    ];
+                case 14:
+                    _state.sent();
+                    return [
+                        2
+                    ];
+            }
+        });
     })();
 }
 function getConfig() {
-    return _async_to_generator$1(function*() {
-        const configData = yield getSupabase().from("Config").select().eq("id", config.id).single();
-        config.id = configData.data.id;
-        config.rules_end = new Date(configData.data.rules_end);
-        config.gag_end = new Date(configData.data.gag_end);
-        config.pet_end = new Date(configData.data.pet_end);
-        config.bimbo_end = new Date(configData.data.bimbo_end);
-        config.bimbo_word_length = configData.data.bimbo_word_length;
-        config.pet_amount = configData.data.pet_amount;
-        config.horny_end = new Date(configData.data.horny_end);
-        config.pet_type = configData.data.pet_type;
-        config.drone_end = new Date(configData.data.drone_end);
-        config.debug = configData.data.debug;
-        config.uwu_end = new Date(configData.data.uwu_end);
-        config.censored_end = new Date(configData.data.censored_end);
-        config.censored_replacement = configData.data.censored_replacement;
-        console.log("Config:");
-        console.log(config);
+    return _async_to_generator$1(function() {
+        var configData;
+        return _ts_generator$1(this, function(_state) {
+            switch(_state.label){
+                case 0:
+                    return [
+                        4,
+                        getSupabase().from("Config").select().eq("id", config.id).single()
+                    ];
+                case 1:
+                    configData = _state.sent();
+                    config.id = configData.data.id;
+                    config.rules_end = new Date(configData.data.rules_end);
+                    config.gag_end = new Date(configData.data.gag_end);
+                    config.pet_end = new Date(configData.data.pet_end);
+                    config.bimbo_end = new Date(configData.data.bimbo_end);
+                    config.bimbo_word_length = configData.data.bimbo_word_length;
+                    config.pet_amount = configData.data.pet_amount;
+                    config.horny_end = new Date(configData.data.horny_end);
+                    config.pet_type = configData.data.pet_type;
+                    config.drone_end = new Date(configData.data.drone_end);
+                    config.debug = configData.data.debug;
+                    config.uwu_end = new Date(configData.data.uwu_end);
+                    config.censored_end = new Date(configData.data.censored_end);
+                    config.censored_replacement = configData.data.censored_replacement;
+                    console.log("Config:");
+                    console.log(config);
+                    return [
+                        2
+                    ];
+            }
+        });
     })();
 }
 function getRules() {
-    return _async_to_generator$1(function*() {
-        const rulesData = yield getSupabase().from("Rules").select().eq("config_id", config.id).order("id", {
-            ascending: false
+    return _async_to_generator$1(function() {
+        var rulesData;
+        return _ts_generator$1(this, function(_state) {
+            switch(_state.label){
+                case 0:
+                    return [
+                        4,
+                        getSupabase().from("Rules").select().eq("config_id", config.id).order("id", {
+                            ascending: false
+                        })
+                    ];
+                case 1:
+                    rulesData = _state.sent();
+                    rules = rulesData.data;
+                    console.log("Rules:");
+                    console.log(rules);
+                    return [
+                        2
+                    ];
+            }
         });
-        rules = rulesData.data;
-        console.log("Rules:");
-        console.log(rules);
     })();
 }
 function getWhitelist() {
-    return _async_to_generator$1(function*() {
-        const whitelistData = yield getSupabase().from("Server_Whitelist_Items").select().eq("config_id", config.id);
-        whitelist = whitelistData.data.map((item)=>({
-                id: item.id,
-                config_id: item.config_id,
-                server_name: item.server_name,
-                discord_id: item.discord_id
-            }));
-        console.log("Whitelist:");
-        console.log(whitelist);
+    return _async_to_generator$1(function() {
+        var whitelistData;
+        return _ts_generator$1(this, function(_state) {
+            switch(_state.label){
+                case 0:
+                    return [
+                        4,
+                        getSupabase().from("Server_Whitelist_Items").select().eq("config_id", config.id)
+                    ];
+                case 1:
+                    whitelistData = _state.sent();
+                    whitelist = whitelistData.data.map(function(item) {
+                        return {
+                            id: item.id,
+                            config_id: item.config_id,
+                            server_name: item.server_name,
+                            discord_id: item.discord_id
+                        };
+                    });
+                    console.log("Whitelist:");
+                    console.log(whitelist);
+                    return [
+                        2
+                    ];
+            }
+        });
     })();
 }
 function getPetWords() {
-    return _async_to_generator$1(function*() {
-        const petWordsData = yield getSupabase().from("Pet_Type_Words").select().eq("pet_type", config.pet_type);
-        petWords = [];
-        for (const wordData of petWordsData.data){
-            petWords.push(wordData.word);
-        }
-        console.log("Pet words:");
-        console.log(petWords);
+    return _async_to_generator$1(function() {
+        var petWordsData, _iteratorNormalCompletion, _didIteratorError, _iteratorError, _iterator, _step, wordData;
+        return _ts_generator$1(this, function(_state) {
+            switch(_state.label){
+                case 0:
+                    return [
+                        4,
+                        getSupabase().from("Pet_Type_Words").select().eq("pet_type", config.pet_type)
+                    ];
+                case 1:
+                    petWordsData = _state.sent();
+                    petWords = [];
+                    _iteratorNormalCompletion = true, _didIteratorError = false, _iteratorError = undefined;
+                    try {
+                        for(_iterator = petWordsData.data[Symbol.iterator](); !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true){
+                            wordData = _step.value;
+                            petWords.push(wordData.word);
+                        }
+                    } catch (err) {
+                        _didIteratorError = true;
+                        _iteratorError = err;
+                    } finally{
+                        try {
+                            if (!_iteratorNormalCompletion && _iterator.return != null) {
+                                _iterator.return();
+                            }
+                        } finally{
+                            if (_didIteratorError) {
+                                throw _iteratorError;
+                            }
+                        }
+                    }
+                    console.log("Pet words:");
+                    console.log(petWords);
+                    return [
+                        2
+                    ];
+            }
+        });
     })();
 }
 function getCensoredWords() {
-    return _async_to_generator$1(function*() {
-        const censoredWordsData = yield getSupabase().from("Censored_Words").select().eq("config_id", config.id);
-        censoredWords = [];
-        for (const wordData of censoredWordsData.data){
-            censoredWords.push(wordData.word);
-        }
-        console.log("Censored Words:");
-        console.log(censoredWords);
+    return _async_to_generator$1(function() {
+        var censoredWordsData, _iteratorNormalCompletion, _didIteratorError, _iteratorError, _iterator, _step, wordData;
+        return _ts_generator$1(this, function(_state) {
+            switch(_state.label){
+                case 0:
+                    return [
+                        4,
+                        getSupabase().from("Censored_Words").select().eq("config_id", config.id)
+                    ];
+                case 1:
+                    censoredWordsData = _state.sent();
+                    censoredWords = [];
+                    _iteratorNormalCompletion = true, _didIteratorError = false, _iteratorError = undefined;
+                    try {
+                        for(_iterator = censoredWordsData.data[Symbol.iterator](); !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true){
+                            wordData = _step.value;
+                            censoredWords.push(wordData.word);
+                        }
+                    } catch (err) {
+                        _didIteratorError = true;
+                        _iteratorError = err;
+                    } finally{
+                        try {
+                            if (!_iteratorNormalCompletion && _iterator.return != null) {
+                                _iterator.return();
+                            }
+                        } finally{
+                            if (_didIteratorError) {
+                                throw _iteratorError;
+                            }
+                        }
+                    }
+                    console.log("Censored Words:");
+                    console.log(censoredWords);
+                    return [
+                        2
+                    ];
+            }
+        });
     })();
 }
 function getDroneConfig() {
-    return _async_to_generator$1(function*() {
-        const droneConfigData = yield getSupabase().from("Drone_Config").select().eq("config_id", config.id).single();
-        droneConfig = {
-            config_id: droneConfigData.data.config_id,
-            drone_health: droneConfigData.data.drone_health,
-            speech_header: droneConfigData.data.speech_header,
-            speech_footer: droneConfigData.data.speech_footer,
-            action_header: droneConfigData.data.action_header,
-            action_footer: droneConfigData.data.action_footer,
-            whisper_header: droneConfigData.data.whisper_header,
-            whisper_footer: droneConfigData.data.whisper_footer,
-            loud_header: droneConfigData.data.loud_header,
-            loud_footer: droneConfigData.data.loud_footer
-        };
-        console.log("Drone Config:");
-        console.log(droneConfig);
+    return _async_to_generator$1(function() {
+        var droneConfigData;
+        return _ts_generator$1(this, function(_state) {
+            switch(_state.label){
+                case 0:
+                    return [
+                        4,
+                        getSupabase().from("Drone_Config").select().eq("config_id", config.id).single()
+                    ];
+                case 1:
+                    droneConfigData = _state.sent();
+                    droneConfig = {
+                        config_id: droneConfigData.data.config_id,
+                        drone_health: droneConfigData.data.drone_health,
+                        speech_header: droneConfigData.data.speech_header,
+                        speech_footer: droneConfigData.data.speech_footer,
+                        action_header: droneConfigData.data.action_header,
+                        action_footer: droneConfigData.data.action_footer,
+                        whisper_header: droneConfigData.data.whisper_header,
+                        whisper_footer: droneConfigData.data.whisper_footer,
+                        loud_header: droneConfigData.data.loud_header,
+                        loud_footer: droneConfigData.data.loud_footer
+                    };
+                    console.log("Drone Config:");
+                    console.log(droneConfig);
+                    return [
+                        2
+                    ];
+            }
+        });
     })();
 }
-function shouldApplyRules(rules_end, verbose = true) {
+function shouldApplyRules(rules_end) {
+    var verbose = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : true;
     if (verbose) {
         console.log(Date.now() <= rules_end.getTime() ? "Should apply rules" : "Should not apply rules");
     }
     return Date.now() <= rules_end.getTime();
 }
-function shouldApplyGag(gag_end, verbose = true) {
+function shouldApplyGag(gag_end) {
+    var verbose = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : true;
     if (verbose) {
         console.log(Date.now() <= gag_end.getTime() ? "Should apply gag" : "Should not apply gag");
     }
     return Date.now() <= gag_end.getTime();
 }
-function shouldApplyPet(pet_end, pet_amount, verbose = true) {
+function shouldApplyPet(pet_end, pet_amount) {
+    var verbose = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : true;
     if (verbose) {
         console.log(Date.now() <= pet_end.getTime() ? "Should apply pet" : "Should not apply pet");
     }
     return Date.now() <= pet_end.getTime() && pet_amount !== 0;
 }
-function shouldApplyBimbo(bimbo_end, verbose = true) {
+function shouldApplyBimbo(bimbo_end) {
+    var verbose = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : true;
     if (verbose) {
         console.log(Date.now() <= bimbo_end.getTime() ? "Should apply bimbo" : "Should not apply bimbo");
     }
     return Date.now() <= bimbo_end.getTime();
 }
-function shouldApplyHorny(horny_end, verbose = true) {
+function shouldApplyHorny(horny_end) {
+    var verbose = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : true;
     if (verbose) {
         console.log(Date.now() <= horny_end.getTime() ? "Should apply horny" : "Should not apply horny");
     }
     return Date.now() <= horny_end.getTime();
 }
-function shouldApplyDrone(drone_end, verbose = true) {
+function shouldApplyDrone(drone_end) {
+    var verbose = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : true;
     if (verbose) {
         console.log(Date.now() <= drone_end.getTime() ? "Should apply drone" : "Should not apply drone");
     }
     return Date.now() <= drone_end.getTime();
 }
-function shouldApplyUWU(uwu_end, verbose = true) {
+function shouldApplyUWU(uwu_end) {
+    var verbose = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : true;
     if (verbose) {
         console.log(Date.now() <= uwu_end.getTime() ? "Should apply uwu" : "Should not apply uwu");
     }
     return Date.now() <= uwu_end.getTime();
 }
-function shouldApplyCensored(censored_end, verbose = true) {
+function shouldApplyCensored(censored_end) {
+    var verbose = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : true;
     if (verbose) {
         console.log(Date.now() <= censored_end.getTime() ? "Should apply censored" : "Should not apply censored");
     }
     return Date.now() <= censored_end.getTime();
 }
-function applyRules(msg, rules, rules_end, verbose = true) {
+function applyRules(msg, rules, rules_end) {
+    var verbose = arguments.length > 3 && arguments[3] !== void 0 ? arguments[3] : true;
     if (!shouldApplyRules(rules_end, verbose)) {
         return msg;
     }
-    let output = msg.normalize("NFKC");
-    rules.sort((a, b)=>a.order - b.order);
-    for (const rule of rules){
-        if (!rule.enabled) {
-            if (verbose) {
-                console.log("Rule disabled, skipping");
-            }
-            continue;
-        }
-        const temp = new RegExp(rule.rule_regex.toString().replace(/\\\\/g, "\\"));
-        const matchCallback = (match, ..._args)=>{
-            if (Math.random() > rule.chance_to_apply) {
+    var output = msg.normalize("NFKC");
+    rules.sort(function(a, b) {
+        return a.order - b.order;
+    });
+    var _iteratorNormalCompletion = true, _didIteratorError = false, _iteratorError = undefined;
+    try {
+        var _loop = function() {
+            var rule = _step.value;
+            if (!rule.enabled) {
                 if (verbose) {
-                    console.log(`Skipping match ${rule.chance_to_apply}`);
+                    console.log("Rule disabled, skipping");
                 }
-                return match;
+                return "continue";
+            }
+            var temp = new RegExp(rule.rule_regex.toString().replace(/\\\\/g, "\\"));
+            var matchCallback = function matchCallback(match) {
+                for(var _len = arguments.length, _args = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++){
+                    _args[_key - 1] = arguments[_key];
+                }
+                if (Math.random() > rule.chance_to_apply) {
+                    if (verbose) {
+                        console.log("Skipping match ".concat(rule.chance_to_apply));
+                    }
+                    return match;
+                }
+                if (verbose) {
+                    console.log("Rule Applied ".concat(match.replace(new RegExp(temp, "i"), rule.rule_replacement)));
+                }
+                return match.replace(new RegExp(temp, "i"), rule.rule_replacement);
+            };
+            if (rule.regex_normalize) {
+                if (verbose) {
+                    console.log("Using input normalization");
+                }
+                output = new NormalizedString(output, verbose).replace(new RegExp(temp, "gi"), matchCallback);
+            } else {
+                output = output.replace(new RegExp(temp, "gi"), matchCallback);
             }
             if (verbose) {
-                console.log(`Rule Applied ${match.replace(new RegExp(temp, "i"), rule.rule_replacement)}`);
+                console.log("Applying rule: ".concat(temp));
             }
-            return match.replace(new RegExp(temp, "i"), rule.rule_replacement);
         };
-        if (rule.regex_normalize) {
-            if (verbose) {
-                console.log("Using input normalization");
+        for(var _iterator = rules[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true)_loop();
+    } catch (err) {
+        _didIteratorError = true;
+        _iteratorError = err;
+    } finally{
+        try {
+            if (!_iteratorNormalCompletion && _iterator.return != null) {
+                _iterator.return();
             }
-            output = new NormalizedString(output, verbose).replace(new RegExp(temp, "gi"), matchCallback);
-        } else {
-            output = output.replace(new RegExp(temp, "gi"), matchCallback);
-        }
-        if (verbose) {
-            console.log(`Applying rule: ${temp}`);
+        } finally{
+            if (_didIteratorError) {
+                throw _iteratorError;
+            }
         }
     }
     if (verbose) {
@@ -23284,13 +23791,14 @@ function applyRules(msg, rules, rules_end, verbose = true) {
     }
     return output;
 }
-function applyGag(msg, gag_end, verbose = true) {
+function applyGag(msg, gag_end) {
+    var verbose = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : true;
     if (!shouldApplyGag(gag_end, verbose)) {
         return msg;
     }
-    let output = "";
-    let inEmote = false;
-    const remainChars = [
+    var output = "";
+    var inEmote = false;
+    var remainChars = [
         "a",
         "e",
         "i",
@@ -23318,96 +23826,153 @@ function applyGag(msg, gag_end, verbose = true) {
         ")",
         "~"
     ];
-    for (const word of msg.split(" ")){
-        let outword = "";
-        if (word_is_link(word, verbose)) {
-            outword = word + " ";
-            continue;
+    var _iteratorNormalCompletion = true, _didIteratorError = false, _iteratorError = undefined;
+    try {
+        for(var _iterator = msg.split(" ")[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true){
+            var word = _step.value;
+            var outword = "";
+            if (word_is_link(word, verbose)) {
+                outword = word + " ";
+                continue;
+            }
+            var _iteratorNormalCompletion1 = true, _didIteratorError1 = false, _iteratorError1 = undefined;
+            try {
+                for(var _iterator1 = word[Symbol.iterator](), _step1; !(_iteratorNormalCompletion1 = (_step1 = _iterator1.next()).done); _iteratorNormalCompletion1 = true){
+                    var char = _step1.value;
+                    if (char === ":" && !inEmote) {
+                        if (verbose) {
+                            console.log("Starting emote");
+                        }
+                        ;
+                        inEmote = true;
+                        outword += char;
+                        continue;
+                    } else if (char === ":" && inEmote) {
+                        if (verbose) {
+                            console.log("Ending emote");
+                        }
+                        ;
+                        inEmote = false;
+                        outword += char;
+                        continue;
+                    }
+                    if (inEmote) {
+                        if (verbose) {
+                            console.log("Inside emote");
+                        }
+                        ;
+                        outword += char;
+                        continue;
+                    }
+                    if (remainChars.includes(char)) {
+                        outword += char;
+                    } else {
+                        if (!(char.charCodeAt(0) >= 97 && char.charCodeAt(0) <= 122)) {
+                            outword += [
+                                "G",
+                                "H"
+                            ][Math.floor(Math.random() * 2)];
+                        } else {
+                            outword += [
+                                "g",
+                                "h"
+                            ][Math.floor(Math.random() * 2)];
+                        }
+                    }
+                }
+            } catch (err) {
+                _didIteratorError1 = true;
+                _iteratorError1 = err;
+            } finally{
+                try {
+                    if (!_iteratorNormalCompletion1 && _iterator1.return != null) {
+                        _iterator1.return();
+                    }
+                } finally{
+                    if (_didIteratorError1) {
+                        throw _iteratorError1;
+                    }
+                }
+            }
+            output += outword + " ";
         }
-        for (const char of word){
-            if (char === ":" && !inEmote) {
-                if (verbose) {
-                    console.log("Starting emote");
-                }
-                inEmote = true;
-                outword += char;
-                continue;
-            } else if (char === ":" && inEmote) {
-                if (verbose) {
-                    console.log("Ending emote");
-                }
-                inEmote = false;
-                outword += char;
-                continue;
+    } catch (err) {
+        _didIteratorError = true;
+        _iteratorError = err;
+    } finally{
+        try {
+            if (!_iteratorNormalCompletion && _iterator.return != null) {
+                _iterator.return();
             }
-            if (inEmote) {
-                if (verbose) {
-                    console.log("Inside emote");
-                }
-                outword += char;
-                continue;
-            }
-            if (remainChars.includes(char)) {
-                outword += char;
-            } else {
-                if (!(char.charCodeAt(0) >= 97 && char.charCodeAt(0) <= 122)) {
-                    outword += [
-                        "G",
-                        "H"
-                    ][Math.floor(Math.random() * 2)];
-                } else {
-                    outword += [
-                        "g",
-                        "h"
-                    ][Math.floor(Math.random() * 2)];
-                }
+        } finally{
+            if (_didIteratorError) {
+                throw _iteratorError;
             }
         }
-        output += outword + " ";
     }
     if (verbose) {
         console.log("message after gag: " + output);
     }
     return output;
 }
-function applyPet(msg, pet_end, pet_amount, pet_words, verbose = true) {
+function applyPet(msg, pet_end, pet_amount, pet_words) {
+    var verbose = arguments.length > 4 && arguments[4] !== void 0 ? arguments[4] : true;
     if (!shouldApplyPet(pet_end, pet_amount, verbose)) {
         return msg;
     }
-    let output = "";
-    for (const word of msg.split(" ")){
-        if (word_is_link(word, verbose)) {
-            output += word + " ";
-            continue;
-        }
-        if (word[0] === ":" && word[word.length] === ":") {
-            output += word + " ";
-            if (verbose) {
-                console.log("Skipping emote word");
+    var output = "";
+    var _iteratorNormalCompletion = true, _didIteratorError = false, _iteratorError = undefined;
+    try {
+        for(var _iterator = msg.split(" ")[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true){
+            var word = _step.value;
+            if (word_is_link(word, verbose)) {
+                output += word + " ";
+                continue;
             }
-            continue;
-        }
-        if (Math.random() < pet_amount) {
-            if (verbose) {
-                console.log("Replacing word with pet word");
+            if (word[0] === ":" && word[word.length] === ":") {
+                output += word + " ";
+                if (verbose) {
+                    console.log("Skipping emote word");
+                }
+                ;
+                continue;
             }
-            output += pet_words[Math.floor(Math.random() * pet_words.length)];
-        } else {
-            output += word;
+            if (Math.random() < pet_amount) {
+                if (verbose) {
+                    console.log("Replacing word with pet word");
+                }
+                output += pet_words[Math.floor(Math.random() * pet_words.length)];
+            } else {
+                output += word;
+            }
+            output += " ";
         }
-        output += " ";
+    } catch (err) {
+        _didIteratorError = true;
+        _iteratorError = err;
+    } finally{
+        try {
+            if (!_iteratorNormalCompletion && _iterator.return != null) {
+                _iterator.return();
+            }
+        } finally{
+            if (_didIteratorError) {
+                throw _iteratorError;
+            }
+        }
     }
     if (verbose) {
         console.log("message after pet: " + output);
     }
     return output;
 }
-function applyBimbo(msg, bimbo_end, bimbo_word_length, verbose = true) {
+function applyBimbo(msg, bimbo_end, bimbo_word_length) {
+    var verbose = arguments.length > 3 && arguments[3] !== void 0 ? arguments[3] : true;
     if (!shouldApplyBimbo(bimbo_end, verbose)) {
         return msg;
     }
-    let output = "";
-    const pronouns = [
+    var output = "";
+    var pronouns = [
         "i",
         "you",
         "he",
@@ -23417,9 +23982,9 @@ function applyBimbo(msg, bimbo_end, bimbo_word_length, verbose = true) {
         "they",
         "is"
     ];
-    const maxWordLength = bimbo_word_length;
-    const likeChance = 0.1;
-    const gargle_words = [
+    var maxWordLength = bimbo_word_length;
+    var likeChance = 0.1;
+    var gargle_words = [
         "like",
         "hehe",
         "uhh",
@@ -23428,35 +23993,53 @@ function applyBimbo(msg, bimbo_end, bimbo_word_length, verbose = true) {
         "ummm",
         "hhhhh"
     ];
-    for (const word of msg.split(" ")){
-        let changed = false;
-        if (!word_is_link(word, verbose)) {
-            if (pronouns.includes(word.toLowerCase())) {
+    var _iteratorNormalCompletion = true, _didIteratorError = false, _iteratorError = undefined;
+    try {
+        for(var _iterator = msg.split(" ")[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true){
+            var word = _step.value;
+            var changed = false;
+            if (!word_is_link(word, verbose)) {
+                if (pronouns.includes(word.toLowerCase())) {
+                    output += word;
+                    output += " like totally ";
+                    changed = true;
+                    if (verbose) {
+                        console.log("pronoun found, added 'like totally'");
+                    }
+                }
+                if (word.length > maxWordLength) {
+                    if (verbose) {
+                        console.log("word: " + word + " was too long");
+                    }
+                    output += word.substring(0, maxWordLength - 2);
+                    output += "uhhhh long words harddd hehe";
+                    return output;
+                }
+            }
+            if (!changed) {
                 output += word;
-                output += " like totally ";
-                changed = true;
-                if (verbose) {
-                    console.log("pronoun found, added 'like totally'");
-                }
+                output += " ";
             }
-            if (word.length > maxWordLength) {
+            if (Math.random() < likeChance && !word_is_link(word, verbose)) {
+                output += gargle_words[Math.floor(Math.random() * (gargle_words.length - 1))];
+                output += " ";
                 if (verbose) {
-                    console.log("word: " + word + " was too long");
+                    console.log("added gargle word " + output.split(" ").reverse()[0]);
                 }
-                output += word.substring(0, maxWordLength - 2);
-                output += "uhhhh long words harddd hehe";
-                return output;
+                ;
             }
         }
-        if (!changed) {
-            output += word;
-            output += " ";
-        }
-        if (Math.random() < likeChance && !word_is_link(word, verbose)) {
-            output += gargle_words[Math.floor(Math.random() * (gargle_words.length - 1))];
-            output += " ";
-            if (verbose) {
-                console.log("added gargle word " + output.split(" ").reverse()[0]);
+    } catch (err) {
+        _didIteratorError = true;
+        _iteratorError = err;
+    } finally{
+        try {
+            if (!_iteratorNormalCompletion && _iterator.return != null) {
+                _iterator.return();
+            }
+        } finally{
+            if (_didIteratorError) {
+                throw _iteratorError;
             }
         }
     }
@@ -23465,79 +24048,134 @@ function applyBimbo(msg, bimbo_end, bimbo_word_length, verbose = true) {
     }
     return output;
 }
-function applyHorny(msg, horny_end, verbose = true, horny_words = [
-    "hmmph",
-    "nngh",
-    "ahhh",
-    "ooh",
-    "oohh",
-    "mmm",
-    "hehe",
-    "hehehe",
-    "heheh",
-    "eheh",
-    "ehehe",
-    "eheheh",
-    "guhh",
-    "pleasee",
-    "need to cumm",
-    "oh goshh",
-    "ohhh",
-    "ahhh",
-    "cummm",
-    "gggg"
-]) {
+function applyHorny(msg, horny_end) {
+    var verbose = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : true, horny_words = arguments.length > 3 && arguments[3] !== void 0 ? arguments[3] : [
+        "hmmph",
+        "nngh",
+        "ahhh",
+        "ooh",
+        "oohh",
+        "mmm",
+        "hehe",
+        "hehehe",
+        "heheh",
+        "eheh",
+        "ehehe",
+        "eheheh",
+        "guhh",
+        "pleasee",
+        "need to cumm",
+        "oh goshh",
+        "ohhh",
+        "ahhh",
+        "cummm",
+        "gggg"
+    ];
     if (!shouldApplyHorny(horny_end, verbose)) {
         return msg;
     }
-    let output = "";
-    for (const word of msg.split(" ")){
-        if (!word_is_link(word, verbose)) {
-            if (Math.random() < 0.75) {
-                if (verbose) {
-                    console.log("Adding horny word");
+    var output = "";
+    var _iteratorNormalCompletion = true, _didIteratorError = false, _iteratorError = undefined;
+    try {
+        for(var _iterator = msg.split(" ")[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true){
+            var word = _step.value;
+            if (!word_is_link(word, verbose)) {
+                if (Math.random() < 0.75) {
+                    if (verbose) {
+                        console.log("Adding horny word");
+                    }
+                    output += horny_words[Math.floor(Math.random() * (horny_words.length - 1))];
+                    output += " ";
                 }
-                output += horny_words[Math.floor(Math.random() * (horny_words.length - 1))];
-                output += " ";
+            }
+            output += word + " ";
+        }
+    } catch (err) {
+        _didIteratorError = true;
+        _iteratorError = err;
+    } finally{
+        try {
+            if (!_iteratorNormalCompletion && _iterator.return != null) {
+                _iterator.return();
+            }
+        } finally{
+            if (_didIteratorError) {
+                throw _iteratorError;
             }
         }
-        output += word + " ";
     }
     return output;
 }
-function applyUWU(msg, uwu_end, verbose = true) {
+function applyUWU(msg, uwu_end) {
+    var verbose = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : true;
     if (!shouldApplyUWU(uwu_end, verbose)) {
         return msg;
     }
-    let output = "";
-    for (let word of msg.split(" ")){
-        if (word_is_link(word, verbose)) {
+    var output = "";
+    var _iteratorNormalCompletion = true, _didIteratorError = false, _iteratorError = undefined;
+    try {
+        for(var _iterator = msg.split(" ")[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true){
+            var word = _step.value;
+            if (word_is_link(word, verbose)) {
+                output += word + " ";
+                continue;
+            }
+            word = word.replace(new RegExp("th", "gi"), "d");
+            word = word.replace(new RegExp("r|l", "gi"), "w");
+            word = word.replace(new RegExp("u", "gi"), "uw");
+            word = word.replace(new RegExp("n([aeiou])", "gi"), "ny$1");
+            word = word.replace(new RegExp("ove", "gi"), "uv");
             output += word + " ";
-            continue;
         }
-        word = word.replace(new RegExp("th", "gi"), "d");
-        word = word.replace(new RegExp("r|l", "gi"), "w");
-        word = word.replace(new RegExp("u", "gi"), "uw");
-        word = word.replace(new RegExp("n([aeiou])", "gi"), "ny$1");
-        word = word.replace(new RegExp("ove", "gi"), "uv");
-        output += word + " ";
+    } catch (err) {
+        _didIteratorError = true;
+        _iteratorError = err;
+    } finally{
+        try {
+            if (!_iteratorNormalCompletion && _iterator.return != null) {
+                _iterator.return();
+            }
+        } finally{
+            if (_didIteratorError) {
+                throw _iteratorError;
+            }
+        }
     }
     return output;
 }
-function applyCensored(msg, censoredWords, replacement, censored_end, verbose = true) {
+function applyCensored(msg, censoredWords, replacement, censored_end) {
+    var verbose = arguments.length > 4 && arguments[4] !== void 0 ? arguments[4] : true;
     if (!shouldApplyCensored(censored_end, verbose)) {
         return msg;
     }
-    for (let word of censoredWords){
-        let replacementText = "";
-        for(let i = 0; i < word.length; i += replacement.length){
-            replacementText += replacement;
+    var _iteratorNormalCompletion = true, _didIteratorError = false, _iteratorError = undefined;
+    try {
+        for(var _iterator = censoredWords[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true){
+            var word = _step.value;
+            var replacementText = "";
+            for(var i = 0; i < word.length; i += replacement.length){
+                replacementText += replacement;
+            }
+            msg = msg.replace(new RegExp(word, "gi"), replacementText);
         }
-        msg = msg.replace(new RegExp(word, "gi"), replacementText);
+    } catch (err) {
+        _didIteratorError = true;
+        _iteratorError = err;
+    } finally{
+        try {
+            if (!_iteratorNormalCompletion && _iterator.return != null) {
+                _iterator.return();
+            }
+        } finally{
+            if (_didIteratorError) {
+                throw _iteratorError;
+            }
+        }
     }
     return msg;
 }
-function applyDrone(msg, drone_end, speech_header, speech_footer, action_header, action_footer, whisper_header, whisper_footer, loud_header, loud_footer, drone_health, channelId, context = {}, verbose = true) {
+function applyDrone(msg, drone_end, speech_header, speech_footer, action_header, action_footer, whisper_header, whisper_footer, loud_header, loud_footer, drone_health, channelId) {
+    var context = arguments.length > 12 && arguments[12] !== void 0 ? arguments[12] : {}, verbose = arguments.length > 13 && arguments[13] !== void 0 ? arguments[13] : true;
     var _context_previousMessage, _ref, _context_previousSenderId, _context_currentUserId, _ref1;
     var _previousMessage_author;
     if (!shouldApplyDrone(drone_end, verbose)) {
@@ -23550,13 +24188,30 @@ function applyDrone(msg, drone_end, speech_header, speech_footer, action_header,
             message: "`This Drone haaaaas receieved bzzzzt, ppplease provide repaiirs using beep '/repair', tthank youu. Returned Error: 0x7547372482`"
         };
     }
-    let containsLink = false;
-    for (const word of msg.split(" ")){
-        if (word_is_link(word, verbose)) {
-            containsLink = true;
+    var containsLink = false;
+    var _iteratorNormalCompletion = true, _didIteratorError = false, _iteratorError = undefined;
+    try {
+        for(var _iterator = msg.split(" ")[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true){
+            var word = _step.value;
+            if (word_is_link(word, verbose)) {
+                containsLink = true;
+            }
+        }
+    } catch (err) {
+        _didIteratorError = true;
+        _iteratorError = err;
+    } finally{
+        try {
+            if (!_iteratorNormalCompletion && _iterator.return != null) {
+                _iterator.return();
+            }
+        } finally{
+            if (_didIteratorError) {
+                throw _iteratorError;
+            }
         }
     }
-    let output = "";
+    var output = "";
     if (!containsLink) {
         msg = msg.replace(new RegExp("\\bMe\\b", "gi"), "This Drone");
         msg = msg.replace(new RegExp("\\bMy\\b", "gi"), "Its'");
@@ -23567,44 +24222,100 @@ function applyDrone(msg, drone_end, speech_header, speech_footer, action_header,
             console.log("Drone Regex Applied");
         }
     }
-    for (const word of msg.split(" ")){
-        if (!word_is_link(word, verbose)) {
-            if (Math.random() > drone_health / 100) {
-                if (verbose) {
-                    console.log("Adding random beep");
+    var ignoreFirstOne = false;
+    var _iteratorNormalCompletion1 = true, _didIteratorError1 = false, _iteratorError1 = undefined;
+    try {
+        for(var _iterator1 = msg.split(" ")[Symbol.iterator](), _step1; !(_iteratorNormalCompletion1 = (_step1 = _iterator1.next()).done); _iteratorNormalCompletion1 = true){
+            var word1 = _step1.value;
+            if (ignoreFirstOne) {
+                ignoreFirstOne = false;
+                continue;
+            }
+            if (!word_is_link(word1, verbose)) {
+                if (Math.random() > drone_health / 100) {
+                    if (verbose) {
+                        console.log("Adding random beep");
+                    }
+                    output += Math.random() > 0.5 ? "`beep` " : "`bzzzt` ";
                 }
-                output += Math.random() > 0.5 ? "`beep` " : "`bzzzt` ";
+            }
+            output += word1 + " ";
+        }
+    } catch (err) {
+        _didIteratorError1 = true;
+        _iteratorError1 = err;
+    } finally{
+        try {
+            if (!_iteratorNormalCompletion1 && _iterator1.return != null) {
+                _iterator1.return();
+            }
+        } finally{
+            if (_didIteratorError1) {
+                throw _iteratorError1;
             }
         }
-        output += word + " ";
     }
-    const tempOutput = output;
+    var tempOutput = output;
     output = "";
-    let lastTriggered = 0;
-    for (const word of tempOutput.split(" ")){
-        let outword = "";
-        if (!word_is_link(word, verbose)) {
-            for (const char of word){
-                outword += char;
-                lastTriggered += 1;
-                if (Math.random() + lastTriggered / 100 - 1 > drone_health / 100 && char !== "`") {
-                    lastTriggered = 0;
-                    for(let i = 0; i < Math.floor(Math.random() * 10); i++){
-                        if (verbose) {
-                            console.log("Adding random static");
-                        }
+    var lastTriggered = 0;
+    var _iteratorNormalCompletion2 = true, _didIteratorError2 = false, _iteratorError2 = undefined;
+    try {
+        for(var _iterator2 = tempOutput.split(" ")[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true){
+            var word2 = _step2.value;
+            var outword = "";
+            if (!word_is_link(word2, verbose)) {
+                var _iteratorNormalCompletion3 = true, _didIteratorError3 = false, _iteratorError3 = undefined;
+                try {
+                    for(var _iterator3 = word2[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true){
+                        var char = _step3.value;
                         outword += char;
+                        lastTriggered += 1;
+                        if (Math.random() + lastTriggered / 100 - 1 > drone_health / 100 && char !== "`") {
+                            lastTriggered = 0;
+                            for(var i = 0; i < Math.floor(Math.random() * 10); i++){
+                                if (verbose) {
+                                    console.log("Adding random static");
+                                }
+                                outword += char;
+                            }
+                        }
+                    }
+                } catch (err) {
+                    _didIteratorError3 = true;
+                    _iteratorError3 = err;
+                } finally{
+                    try {
+                        if (!_iteratorNormalCompletion3 && _iterator3.return != null) {
+                            _iterator3.return();
+                        }
+                    } finally{
+                        if (_didIteratorError3) {
+                            throw _iteratorError3;
+                        }
                     }
                 }
+            } else {
+                outword = word2;
             }
-        } else {
-            outword = word;
+            output += outword + " ";
         }
-        output += outword + " ";
+    } catch (err) {
+        _didIteratorError2 = true;
+        _iteratorError2 = err;
+    } finally{
+        try {
+            if (!_iteratorNormalCompletion2 && _iterator2.return != null) {
+                _iterator2.return();
+            }
+        } finally{
+            if (_didIteratorError2) {
+                throw _iteratorError2;
+            }
+        }
     }
-    const previousMessage = (_context_previousMessage = context.previousMessage) !== null && _context_previousMessage !== void 0 ? _context_previousMessage : null;
-    const previousSenderId = (_ref = (_context_previousSenderId = context.previousSenderId) !== null && _context_previousSenderId !== void 0 ? _context_previousSenderId : previousMessage === null || previousMessage === void 0 ? void 0 : (_previousMessage_author = previousMessage.author) === null || _previousMessage_author === void 0 ? void 0 : _previousMessage_author.id) !== null && _ref !== void 0 ? _ref : null;
-    const currentUserId = (_context_currentUserId = context.currentUserId) !== null && _context_currentUserId !== void 0 ? _context_currentUserId : null;
+    var previousMessage = (_context_previousMessage = context.previousMessage) !== null && _context_previousMessage !== void 0 ? _context_previousMessage : null;
+    var previousSenderId = (_ref = (_context_previousSenderId = context.previousSenderId) !== null && _context_previousSenderId !== void 0 ? _context_previousSenderId : previousMessage === null || previousMessage === void 0 ? void 0 : (_previousMessage_author = previousMessage.author) === null || _previousMessage_author === void 0 ? void 0 : _previousMessage_author.id) !== null && _ref !== void 0 ? _ref : null;
+    var currentUserId = (_context_currentUserId = context.currentUserId) !== null && _context_currentUserId !== void 0 ? _context_currentUserId : null;
     if (verbose) {
         console.log("Previous message sent by: " + previousSenderId);
     }
@@ -23614,8 +24325,8 @@ function applyDrone(msg, drone_end, speech_header, speech_footer, action_header,
     if (verbose) {
         console.log("Previous message content: " + (previousMessage === null || previousMessage === void 0 ? void 0 : previousMessage.content));
     }
-    let header = speech_header;
-    let footer = speech_footer;
+    var header = speech_header;
+    var footer = speech_footer;
     if (msg.startsWith("**")) {
         header = loud_header;
         footer = loud_footer;
@@ -23632,26 +24343,27 @@ function applyDrone(msg, drone_end, speech_header, speech_footer, action_header,
     if (verbose) {
         console.log("footer: " + footer);
     }
-    const continuingOwnBlock = previousSenderId != null && currentUserId != null && previousSenderId === currentUserId;
-    const footerSuffix = "\n`" + footer + "`";
-    const previousHadMatchingFooter = (_ref1 = previousMessage === null || previousMessage === void 0 ? void 0 : previousMessage.content.endsWith(footerSuffix)) !== null && _ref1 !== void 0 ? _ref1 : false;
-    const editPreviousMessage = continuingOwnBlock && previousHadMatchingFooter && previousMessage ? {
-        channelId,
+    var continuingOwnBlock = previousSenderId != null && currentUserId != null && previousSenderId === currentUserId;
+    var footerSuffix = "\n`" + footer + "`";
+    var previousHadMatchingFooter = (_ref1 = previousMessage === null || previousMessage === void 0 ? void 0 : previousMessage.content.endsWith(footerSuffix)) !== null && _ref1 !== void 0 ? _ref1 : false;
+    var editPreviousMessage = continuingOwnBlock && previousHadMatchingFooter && previousMessage ? {
+        channelId: channelId,
         messageId: previousMessage.id,
         newContent: previousMessage.content.replace(footerSuffix, "")
     } : undefined;
-    const formattedBody = output.trimEnd();
-    let formattedMessage = formattedBody + footerSuffix;
+    var formattedBody = output.trimEnd();
+    var formattedMessage = formattedBody + footerSuffix;
     if (!continuingOwnBlock || !previousHadMatchingFooter) {
         formattedMessage = "`" + header + "`\n" + formattedMessage;
     }
     return {
         message: formattedMessage,
-        editPreviousMessage
+        editPreviousMessage: editPreviousMessage
     };
 }
-function applyReplacements$1(msg, channelId, context = {}) {
-    const originalMsg = msg;
+function applyReplacements$1(msg, channelId) {
+    var context = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : {};
+    var originalMsg = msg;
     console.log("Original message: " + originalMsg);
     msg = applyRules(msg, rules, config.rules_end);
     msg = applyUWU(msg, config.uwu_end);
@@ -23660,18 +24372,19 @@ function applyReplacements$1(msg, channelId, context = {}) {
     msg = applyBimbo(msg, config.bimbo_end, config.bimbo_word_length);
     msg = applyCensored(msg, censoredWords, config.censored_replacement, config.censored_end);
     msg = applyGag(msg, config.gag_end);
-    let editPreviousMessage;
+    var editPreviousMessage;
     if (droneConfig != null) {
-        const droneResult = applyDrone(msg, config.drone_end, droneConfig.speech_header, droneConfig.speech_footer, droneConfig.action_header, droneConfig.action_footer, droneConfig.whisper_header, droneConfig.whisper_footer, droneConfig.loud_header, droneConfig.loud_footer, droneConfig.drone_health, channelId, context);
+        var droneResult = applyDrone(msg, config.drone_end, droneConfig.speech_header, droneConfig.speech_footer, droneConfig.action_header, droneConfig.action_footer, droneConfig.whisper_header, droneConfig.whisper_footer, droneConfig.loud_header, droneConfig.loud_footer, droneConfig.drone_health, channelId, context);
         msg = droneResult.message;
         editPreviousMessage = droneResult.editPreviousMessage;
     }
     return {
-        message: msg + (config.debug && (shouldApplyRules(config.rules_end) || shouldApplyGag(config.gag_end) || shouldApplyPet(config.pet_end, config.pet_amount) || shouldApplyBimbo(config.bimbo_end) || shouldApplyHorny(config.horny_end) || shouldApplyDrone(config.drone_end)) ? `\n        (original message: ${originalMsg})` : ""),
-        editPreviousMessage
+        message: msg + (config.debug && (shouldApplyRules(config.rules_end) || shouldApplyGag(config.gag_end) || shouldApplyPet(config.pet_end, config.pet_amount) || shouldApplyBimbo(config.bimbo_end) || shouldApplyHorny(config.horny_end) || shouldApplyDrone(config.drone_end)) ? "\n        (original message: ".concat(originalMsg, ")") : ""),
+        editPreviousMessage: editPreviousMessage
     };
 }
-function word_is_link(word, verbose = true) {
+function word_is_link(word) {
+    var verbose = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : true;
     if (verbose) {
         console.log("testing if is link:");
         console.log(word[0]);
@@ -23682,6 +24395,17 @@ function word_is_link(word, verbose = true) {
     return word[0] == "h" && word[1] == "t" && word[2] == "t" && word[3] == "p";
 }
 
+function _array_like_to_array(arr, len) {
+    if (len == null || len > arr.length) len = arr.length;
+    for(var i = 0, arr2 = new Array(len); i < len; i++)arr2[i] = arr[i];
+    return arr2;
+}
+function _array_with_holes(arr) {
+    if (Array.isArray(arr)) return arr;
+}
+function _array_without_holes(arr) {
+    if (Array.isArray(arr)) return _array_like_to_array(arr);
+}
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) {
     try {
         var info = gen[key](arg);
@@ -23711,19 +24435,177 @@ function _async_to_generator(fn) {
         });
     };
 }
-const logger = {
-    log: (...args)=>console.log("[key-intercept]", ...args)
+function _iterable_to_array(iter) {
+    if (typeof Symbol !== "undefined" && iter[Symbol.iterator] != null || iter["@@iterator"] != null) return Array.from(iter);
+}
+function _iterable_to_array_limit(arr, i) {
+    var _i = arr == null ? null : typeof Symbol !== "undefined" && arr[Symbol.iterator] || arr["@@iterator"];
+    if (_i == null) return;
+    var _arr = [];
+    var _n = true;
+    var _d = false;
+    var _s, _e;
+    try {
+        for(_i = _i.call(arr); !(_n = (_s = _i.next()).done); _n = true){
+            _arr.push(_s.value);
+            if (i && _arr.length === i) break;
+        }
+    } catch (err) {
+        _d = true;
+        _e = err;
+    } finally{
+        try {
+            if (!_n && _i["return"] != null) _i["return"]();
+        } finally{
+            if (_d) throw _e;
+        }
+    }
+    return _arr;
+}
+function _non_iterable_rest() {
+    throw new TypeError("Invalid attempt to destructure non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+}
+function _non_iterable_spread() {
+    throw new TypeError("Invalid attempt to spread non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+}
+function _sliced_to_array(arr, i) {
+    return _array_with_holes(arr) || _iterable_to_array_limit(arr, i) || _unsupported_iterable_to_array(arr, i) || _non_iterable_rest();
+}
+function _to_consumable_array(arr) {
+    return _array_without_holes(arr) || _iterable_to_array(arr) || _unsupported_iterable_to_array(arr) || _non_iterable_spread();
+}
+function _type_of(obj) {
+    "@swc/helpers - typeof";
+    return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj;
+}
+function _unsupported_iterable_to_array(o, minLen) {
+    if (!o) return;
+    if (typeof o === "string") return _array_like_to_array(o, minLen);
+    var n = Object.prototype.toString.call(o).slice(8, -1);
+    if (n === "Object" && o.constructor) n = o.constructor.name;
+    if (n === "Map" || n === "Set") return Array.from(n);
+    if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _array_like_to_array(o, minLen);
+}
+function _ts_generator(thisArg, body) {
+    var f, y, t, _ = {
+        label: 0,
+        sent: function() {
+            if (t[0] & 1) throw t[1];
+            return t[1];
+        },
+        trys: [],
+        ops: []
+    }, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype), d = Object.defineProperty;
+    return d(g, "next", {
+        value: verb(0)
+    }), d(g, "throw", {
+        value: verb(1)
+    }), d(g, "return", {
+        value: verb(2)
+    }), typeof Symbol === "function" && d(g, Symbol.iterator, {
+        value: function() {
+            return this;
+        }
+    }), g;
+    function verb(n) {
+        return function(v) {
+            return step([
+                n,
+                v
+            ]);
+        };
+    }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while(g && (g = 0, op[0] && (_ = 0)), _)try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [
+                op[0] & 2,
+                t.value
+            ];
+            switch(op[0]){
+                case 0:
+                case 1:
+                    t = op;
+                    break;
+                case 4:
+                    _.label++;
+                    return {
+                        value: op[1],
+                        done: false
+                    };
+                case 5:
+                    _.label++;
+                    y = op[1];
+                    op = [
+                        0
+                    ];
+                    continue;
+                case 7:
+                    op = _.ops.pop();
+                    _.trys.pop();
+                    continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) {
+                        _ = 0;
+                        continue;
+                    }
+                    if (op[0] === 3 && (!t || op[1] > t[0] && op[1] < t[3])) {
+                        _.label = op[1];
+                        break;
+                    }
+                    if (op[0] === 6 && _.label < t[1]) {
+                        _.label = t[1];
+                        t = op;
+                        break;
+                    }
+                    if (t && _.label < t[2]) {
+                        _.label = t[2];
+                        _.ops.push(op);
+                        break;
+                    }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop();
+                    continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) {
+            op = [
+                6,
+                e
+            ];
+            y = 0;
+        } finally{
+            f = t = 0;
+        }
+        if (op[0] & 5) throw op[1];
+        return {
+            value: op[0] ? op[1] : void 0,
+            done: true
+        };
+    }
+}
+var _console;
+var logger = {
+    log: function log() {
+        for(var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++){
+            args[_key] = arguments[_key];
+        }
+        return (_console = console).log.apply(_console, [
+            "[key-intercept]"
+        ].concat(_to_consumable_array(args)));
+    }
 };
-let unpatchSendMessage = null;
+var unpatchSendMessage = null;
 function applyReplacements(msg, channelId) {
     var _ref, _ref1;
     var _UserStore_getCurrentUser;
-    const UserStore = metro.findByProps("getCurrentUser", "getUser");
-    const currentUser = UserStore === null || UserStore === void 0 ? void 0 : (_UserStore_getCurrentUser = UserStore.getCurrentUser) === null || _UserStore_getCurrentUser === void 0 ? void 0 : _UserStore_getCurrentUser.call(UserStore);
-    const previousMessage = getPreviousMessage(channelId);
-    const previousSender = getPreviousMessageSender(channelId);
-    const result = applyReplacements$1(msg, channelId, {
-        previousMessage,
+    var UserStore = metro.findByProps("getCurrentUser", "getUser");
+    var currentUser = UserStore === null || UserStore === void 0 ? void 0 : (_UserStore_getCurrentUser = UserStore.getCurrentUser) === null || _UserStore_getCurrentUser === void 0 ? void 0 : _UserStore_getCurrentUser.call(UserStore);
+    var previousMessage = getPreviousMessage(channelId);
+    var previousSender = getPreviousMessageSender(channelId);
+    var result = applyReplacements$1(msg, channelId, {
+        previousMessage: previousMessage,
         previousSenderId: (_ref = previousSender === null || previousSender === void 0 ? void 0 : previousSender.id) !== null && _ref !== void 0 ? _ref : null,
         currentUserId: (_ref1 = currentUser === null || currentUser === void 0 ? void 0 : currentUser.id) !== null && _ref1 !== void 0 ? _ref1 : null
     });
@@ -23732,81 +24614,120 @@ function applyReplacements(msg, channelId) {
     }
     return result.message;
 }
-const plugin = {
-    onLoad: ()=>_async_to_generator(function*() {
-            try {
-                var _UserStore_getCurrentUser;
-                const UserStore = metro.findByProps("getCurrentUser", "getUser");
-                const currentUser = UserStore === null || UserStore === void 0 ? void 0 : (_UserStore_getCurrentUser = UserStore.getCurrentUser) === null || _UserStore_getCurrentUser === void 0 ? void 0 : _UserStore_getCurrentUser.call(UserStore);
-                if (currentUser) {
-                    yield getData(currentUser.id, currentUser.username);
+var plugin = {
+    onLoad: function onLoad() {
+        return _async_to_generator(function() {
+            var _UserStore_getCurrentUser, UserStore, currentUser, error, MessageActions;
+            return _ts_generator(this, function(_state) {
+                switch(_state.label){
+                    case 0:
+                        _state.trys.push([
+                            0,
+                            3,
+                            ,
+                            4
+                        ]);
+                        UserStore = metro.findByProps("getCurrentUser", "getUser");
+                        currentUser = UserStore === null || UserStore === void 0 ? void 0 : (_UserStore_getCurrentUser = UserStore.getCurrentUser) === null || _UserStore_getCurrentUser === void 0 ? void 0 : _UserStore_getCurrentUser.call(UserStore);
+                        if (!currentUser) return [
+                            3,
+                            2
+                        ];
+                        return [
+                            4,
+                            getData(currentUser.id, currentUser.username)
+                        ];
+                    case 1:
+                        _state.sent();
+                        _state.label = 2;
+                    case 2:
+                        return [
+                            3,
+                            4
+                        ];
+                    case 3:
+                        error = _state.sent();
+                        logger.log("Error in onLoad:", error);
+                        return [
+                            3,
+                            4
+                        ];
+                    case 4:
+                        MessageActions = metro.findByProps("sendMessage");
+                        if (MessageActions && MessageActions.sendMessage) {
+                            unpatchSendMessage = patcher.before("sendMessage", MessageActions, function(args) {
+                                var _ref;
+                                var _ChannelStore_getChannel, _channel_name_toLowerCase, _channel_name;
+                                var _args = _sliced_to_array(args, 2), channelId = _args[0], messageData = _args[1];
+                                var ChannelStore = metro.findByProps("getChannel", "getDMFromUserId");
+                                var GuildStore = metro.findByProps("getGuild", "getGuilds");
+                                var UserStore = metro.findByProps("getCurrentUser", "getUser");
+                                var channel = ChannelStore === null || ChannelStore === void 0 ? void 0 : (_ChannelStore_getChannel = ChannelStore.getChannel) === null || _ChannelStore_getChannel === void 0 ? void 0 : _ChannelStore_getChannel.call(ChannelStore, channelId);
+                                if (!channel) return;
+                                if (config === null || config === void 0 ? void 0 : config.debug) logger.log("Channel object:", channel);
+                                var nameToCheck = null;
+                                var idToCheck = null;
+                                if (channel.guild_id) {
+                                    var _ref1, _ref2;
+                                    var guild = GuildStore === null || GuildStore === void 0 ? void 0 : GuildStore.getGuild(channel.guild_id);
+                                    if (config === null || config === void 0 ? void 0 : config.debug) logger.log("Guild object:", guild);
+                                    nameToCheck = (_ref1 = guild === null || guild === void 0 ? void 0 : guild.name) !== null && _ref1 !== void 0 ? _ref1 : null;
+                                    idToCheck = (_ref2 = guild === null || guild === void 0 ? void 0 : guild.id) !== null && _ref2 !== void 0 ? _ref2 : null;
+                                } else {
+                                    var _channel_recipients;
+                                    if (channel.name) {
+                                        nameToCheck = channel.name;
+                                    } else if (((_channel_recipients = channel.recipients) === null || _channel_recipients === void 0 ? void 0 : _channel_recipients.length) > 0) {
+                                        var _channel_id;
+                                        var currentUser = UserStore.getCurrentUser();
+                                        var recipientNames = channel.recipients.filter(function(id) {
+                                            return id !== currentUser.id;
+                                        }).map(function(id) {
+                                            var _UserStore_getUser;
+                                            return (_UserStore_getUser = UserStore.getUser(id)) === null || _UserStore_getUser === void 0 ? void 0 : _UserStore_getUser.username;
+                                        }).filter(Boolean);
+                                        nameToCheck = recipientNames.join(", ");
+                                        idToCheck = (_channel_id = channel.id) !== null && _channel_id !== void 0 ? _channel_id : null;
+                                    }
+                                }
+                                if (config === null || config === void 0 ? void 0 : config.debug) logger.log('Name to check against whitelist: "'.concat(nameToCheck, '"'));
+                                if (config === null || config === void 0 ? void 0 : config.debug) logger.log('ID to check against whitelist: "'.concat(idToCheck, '"'));
+                                if (whitelist.length > 0) {
+                                    var nameMatches = !!nameToCheck && whitelist.some(function(item) {
+                                        return item.server_name === nameToCheck;
+                                    });
+                                    var idMatches = !!idToCheck && whitelist.some(function(item) {
+                                        return item.discord_id === idToCheck;
+                                    });
+                                    if ((nameToCheck || idToCheck) && !nameMatches && !idMatches) {
+                                        if (config === null || config === void 0 ? void 0 : config.debug) {
+                                            logger.log('No whitelist match for name "'.concat(nameToCheck, '" or ID "').concat(idToCheck, '", skipping modifications.'));
+                                        }
+                                        return;
+                                    }
+                                }
+                                var channelName = (_ref = channel === null || channel === void 0 ? void 0 : (_channel_name = channel.name) === null || _channel_name === void 0 ? void 0 : (_channel_name_toLowerCase = _channel_name.toLowerCase) === null || _channel_name_toLowerCase === void 0 ? void 0 : _channel_name_toLowerCase.call(_channel_name)) !== null && _ref !== void 0 ? _ref : "";
+                                if (channelName.includes("sfw") && !channelName.includes("nsfw")) {
+                                    if (config === null || config === void 0 ? void 0 : config.debug) logger.log("SFW channel detected, skipping modifications");
+                                    return;
+                                }
+                                logger.log("Intercepted message send: applying replacements");
+                                // Modify the message content
+                                if ((typeof messageData === "undefined" ? "undefined" : _type_of(messageData)) === "object" && messageData !== null && "content" in messageData && typeof messageData.content === "string") {
+                                    var output = applyReplacements(messageData.content, channelId);
+                                    messageData.content = output;
+                                }
+                                return args;
+                            });
+                        }
+                        return [
+                            2
+                        ];
                 }
-            } catch (error) {
-                logger.log("Error in onLoad:", error);
-            }
-            const MessageActions = metro.findByProps("sendMessage");
-            if (MessageActions && MessageActions.sendMessage) {
-                unpatchSendMessage = patcher.before("sendMessage", MessageActions, (args)=>{
-                    var _ref;
-                    var _ChannelStore_getChannel, _channel_name_toLowerCase, _channel_name;
-                    const [channelId, messageData] = args;
-                    const ChannelStore = metro.findByProps("getChannel", "getDMFromUserId");
-                    const GuildStore = metro.findByProps("getGuild", "getGuilds");
-                    const UserStore = metro.findByProps("getCurrentUser", "getUser");
-                    const channel = ChannelStore === null || ChannelStore === void 0 ? void 0 : (_ChannelStore_getChannel = ChannelStore.getChannel) === null || _ChannelStore_getChannel === void 0 ? void 0 : _ChannelStore_getChannel.call(ChannelStore, channelId);
-                    if (!channel) return;
-                    if (config === null || config === void 0 ? void 0 : config.debug) logger.log("Channel object:", channel);
-                    let nameToCheck = null;
-                    let idToCheck = null;
-                    if (channel.guild_id) {
-                        var _ref1, _ref2;
-                        const guild = GuildStore === null || GuildStore === void 0 ? void 0 : GuildStore.getGuild(channel.guild_id);
-                        if (config === null || config === void 0 ? void 0 : config.debug) logger.log("Guild object:", guild);
-                        nameToCheck = (_ref1 = guild === null || guild === void 0 ? void 0 : guild.name) !== null && _ref1 !== void 0 ? _ref1 : null;
-                        idToCheck = (_ref2 = guild === null || guild === void 0 ? void 0 : guild.id) !== null && _ref2 !== void 0 ? _ref2 : null;
-                    } else {
-                        var _channel_recipients;
-                        if (channel.name) {
-                            nameToCheck = channel.name;
-                        } else if (((_channel_recipients = channel.recipients) === null || _channel_recipients === void 0 ? void 0 : _channel_recipients.length) > 0) {
-                            var _channel_id;
-                            const currentUser = UserStore.getCurrentUser();
-                            const recipientNames = channel.recipients.filter((id)=>id !== currentUser.id).map((id)=>{
-                                var _UserStore_getUser;
-                                return (_UserStore_getUser = UserStore.getUser(id)) === null || _UserStore_getUser === void 0 ? void 0 : _UserStore_getUser.username;
-                            }).filter(Boolean);
-                            nameToCheck = recipientNames.join(", ");
-                            idToCheck = (_channel_id = channel.id) !== null && _channel_id !== void 0 ? _channel_id : null;
-                        }
-                    }
-                    if (config === null || config === void 0 ? void 0 : config.debug) logger.log(`Name to check against whitelist: "${nameToCheck}"`);
-                    if (config === null || config === void 0 ? void 0 : config.debug) logger.log(`ID to check against whitelist: "${idToCheck}"`);
-                    if (whitelist.length > 0) {
-                        const nameMatches = !!nameToCheck && whitelist.some((item)=>item.server_name === nameToCheck);
-                        const idMatches = !!idToCheck && whitelist.some((item)=>item.discord_id === idToCheck);
-                        if ((nameToCheck || idToCheck) && !nameMatches && !idMatches) {
-                            if (config === null || config === void 0 ? void 0 : config.debug) {
-                                logger.log(`No whitelist match for name "${nameToCheck}" or ID "${idToCheck}", skipping modifications.`);
-                            }
-                            return;
-                        }
-                    }
-                    const channelName = (_ref = channel === null || channel === void 0 ? void 0 : (_channel_name = channel.name) === null || _channel_name === void 0 ? void 0 : (_channel_name_toLowerCase = _channel_name.toLowerCase) === null || _channel_name_toLowerCase === void 0 ? void 0 : _channel_name_toLowerCase.call(_channel_name)) !== null && _ref !== void 0 ? _ref : "";
-                    if (channelName.includes("sfw") && !channelName.includes("nsfw")) {
-                        if (config === null || config === void 0 ? void 0 : config.debug) logger.log("SFW channel detected, skipping modifications");
-                        return;
-                    }
-                    logger.log("Intercepted message send: applying replacements");
-                    // Modify the message content
-                    if (typeof messageData === "object" && messageData !== null && "content" in messageData && typeof messageData.content === "string") {
-                        const output = applyReplacements(messageData.content, channelId);
-                        messageData.content = output;
-                    }
-                    return args;
-                });
-            }
-        })(),
-    onUnload: ()=>{
+            });
+        })();
+    },
+    onUnload: function onUnload() {
         if (unpatchSendMessage) {
             unpatchSendMessage();
             unpatchSendMessage = null;

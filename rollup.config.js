@@ -46,7 +46,7 @@ export default {
     swc({
       jsc: {
         parser: { syntax: "typescript", tsx: true },
-        target: "es2015", // <-- CRITICAL: Downgrades classes so Hermes doesn't crash on '#'
+        target: "es5", // <-- CRITICAL: Downgrades classes so Hermes doesn't crash on '#'
       },
     }),
     scrubHermesIncompatibilities(),
