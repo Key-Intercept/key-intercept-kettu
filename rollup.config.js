@@ -25,6 +25,7 @@ export default {
   plugins: [
     resolve({
       preferBuiltins: false,
+      ignore: ["react", "react-native", "@vendetta/patcher", "@vendetta/metro", "@vendetta/storage"]
     }),
     swc({
       jsc: {
@@ -44,7 +45,7 @@ export default {
       module: {
         type: "es6",
       },
-      minify: true,
+      minify: false,
     }),
   ],
 };
