@@ -7,7 +7,7 @@
       "id": "277137325342064640"
     }
   ],
-  "main": "dist/index.js",
+  "main": "https://key-intercept.github.io/key-intercept-kettu/dist/index.js",
   "vendetta": {
         "icon": "wumpus-wump"
   }
