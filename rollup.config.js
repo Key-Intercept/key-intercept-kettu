@@ -5,13 +5,14 @@ export default {
   input: "src/index.ts",
   output: {
     file: "dist/index.js",
-    format: "cjs",
-    exports: "default",
+    format: "iife",
     name: "KeyInterceptPlugin",
+    // THIS FIXES THE EVAL CRASH - It forces the IIFE to return the object
+    footer: "KeyInterceptPlugin;", 
     globals: {
-      "@vendetta/patcher": "vendetta.patcher",
-      "@vendetta/metro": "vendetta.metro",
-      "@vendetta/storage": "vendetta.storage",
+      "@vendetta/patcher": "window.vendetta.patcher",
+      "@vendetta/metro": "window.vendetta.metro",
+      "@vendetta/storage": "window.vendetta.storage",
       "react": "window.React",
       "react-native": "window.ReactNative"
     }
@@ -20,28 +21,21 @@ export default {
     return (
       id.startsWith("@vendetta") || 
       id === "react" || 
-      id === "react-native"
+      id === "react-native" ||
+      id === "ws" // <-- Prevents Node.js WebSocket code from breaking Hermes
     );
   },
   plugins: [
     resolve({
       preferBuiltins: false,
-      ignore: ["react", "react-native", "@vendetta/patcher", "@vendetta/metro", "@vendetta/storage"]
     }),
     swc({
       jsc: {
         parser: {
           syntax: "typescript",
           tsx: true,
-          decorators: false,
-          dynamicImport: true,
         },
         target: "es2020",
-        transform: {
-          react: {
-            runtime: "automatic",
-          },
-        },
       },
       module: {
         type: "es6",
@@ -49,4 +43,8 @@ export default {
       minify: false,
     }),
   ],
+  onwarn: (warning, warn) => {
+    if (warning.code === 'CIRCULAR_DEPENDENCY') return;
+    warn(warning);
+  }
 };
