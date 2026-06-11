@@ -9,8 +9,6 @@ import { createClient } from "@supabase/supabase-js";
 import { NormalizedString } from "./normalizedString";
 import { Config, DroneConfig, Rule, WhitelistItem } from "./types";
 
-export const version_number = "4.3.0";
-
 const supabase = createClient("https://qjzgfwithyvmwctesnqs.supabase.co", "sb_publishable_cxq8QZp9BDtjE4G5qiPCFA_lUZ4Cbdh");
 
 export let config: Config;

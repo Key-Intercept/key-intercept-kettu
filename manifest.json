@@ -9,6 +9,6 @@
     ],
     "main": "dist/index.js",
     "vendetta": {
-        "icon": "ic_message_edit"
+        "icon": "https://petapixel.com/assets/uploads/2024/01/The-Star-of-System-Sol-Rectangle-640x800.jpg"
     }
 }
