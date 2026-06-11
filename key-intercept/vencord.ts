@@ -3,21 +3,21 @@
  * A text transformation plugin for Kettu
  */
 
-import { defineCorePlugin } from "@lib/addons/plugins";
-import { before } from "@lib/api/patcher";
-import { findByProps } from "@metro";
-import { logger } from "@lib/utils/logger";
+import { before } from "@vendetta/patcher";
+import { findByProps } from "@vendetta/metro";
 
 import { editPreviousMessage, getPreviousMessage, getPreviousMessageSender } from "./getPreviousMessage";
 import {
 	applyDrone as applyDroneCore,
 	applyReplacements as applyReplacementsCore,
 	config,
-	droneConfig,
 	getData,
-	DroneContext,
 	whitelist,
 } from "./core";
+
+const logger = {
+	log: (...args: unknown[]) => console.log("[key-intercept]", ...args),
+};
 
 let unpatchSendMessage: (() => void) | null = null;
 
@@ -57,20 +57,11 @@ export function applyReplacements(msg: string, channelId: string): string {
 	return result.message;
 }
 
-export default defineCorePlugin({
-	manifest: {
-		id: "key-intercept",
-		version: "1.0.0",
-		type: "plugin",
-		spec: 3,
-		main: "",
-		display: {
-			name: "key-intercept",
-			description: "You don't need to control what you say, let someone else control it.",
-			authors: [{ name: "Tom" }],
-		},
-	},
 
+const plugin = {
+	name: "key intercept",
+	description: "you dont deserve to talk properly",
+	authors: [{ name: "supersliser", id: "277137325342064640" }],
 	async start() {
 		const UserStore = findByProps("getCurrentUser", "getUser");
 		const currentUser = UserStore?.getCurrentUser?.();
@@ -82,7 +73,7 @@ export default defineCorePlugin({
 		const MessageActions = findByProps("sendMessage");
 		if (MessageActions && MessageActions.sendMessage) {
 			unpatchSendMessage = before("sendMessage", MessageActions, (args) => {
-				const [channelId, messageData] = args;
+				const [channelId, messageData] = args as [string, { content?: unknown } & Record<string, unknown>];
 				
 				const ChannelStore = findByProps("getChannel", "getDMFromUserId");
 				const GuildStore = findByProps("getGuild", "getGuilds");
@@ -141,7 +132,7 @@ export default defineCorePlugin({
 				logger.log("Intercepted message send: applying replacements");
 				
 				// Modify the message content
-				if (typeof messageData === "object" && messageData !== null && "content" in messageData) {
+				if (typeof messageData === "object" && messageData !== null && "content" in messageData && typeof messageData.content === "string") {
 					const output = applyReplacements(messageData.content, channelId);
 					messageData.content = output;
 				}
@@ -158,4 +149,6 @@ export default defineCorePlugin({
 		}
 		logger.log("key-intercept: Disabled");
 	},
-});
+};
+
+export default plugin;

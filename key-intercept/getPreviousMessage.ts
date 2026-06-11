@@ -1,4 +1,4 @@
-import { findByProps } from "@metro";
+import { findByProps } from "@vendetta/metro";
 
 export function getPreviousMessage(channelId: string) {
     const MessageStore = findByProps("getMessage", "getMessages");

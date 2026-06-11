@@ -18,7 +18,8 @@
       "@utils": ["./node_modules/@utils"]
     },
     "jsx": "react-jsx"
+    ,"types": []
   },
-  "include": ["key-intercept/**/*.ts", "key-intercept/**/*.tsx"],
+  "include": ["key-intercept/**/*.ts", "key-intercept/**/*.tsx", "key-intercept/**/*.d.ts"],
   "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx"]
 }
