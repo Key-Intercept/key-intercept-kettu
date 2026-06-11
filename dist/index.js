@@ -1,9 +1,26 @@
 'use strict';
 
-Object.defineProperty(exports, '__esModule', { value: true });
-
 var patcher = require('@vendetta/patcher');
 var metro = require('@vendetta/metro');
+
+function getPreviousMessage(channelId) {
+    const MessageStore = metro.findByProps("getMessage", "getMessages");
+    const messages = MessageStore?.getMessages?.(channelId);
+    if (!messages) return null;
+    const list = Array.isArray(messages) ? messages : messages._array ?? Object.values(messages);
+    return list.at(-1) ?? null;
+}
+function editPreviousMessage(channelId, messageId, newContent) {
+    const MessageActions = metro.findByProps("editMessage");
+    if (!MessageActions?.editMessage) return;
+    MessageActions.editMessage(channelId, messageId, {
+        content: newContent
+    });
+}
+function getPreviousMessageSender(channelId) {
+    const previousMessage = getPreviousMessage(channelId);
+    return previousMessage?.author ?? null;
+}
 
 /******************************************************************************
 Copyright (c) Microsoft Corporation.
@@ -22939,12 +22956,12 @@ const supabase = createClient("https://qjzgfwithyvmwctesnqs.supabase.co", "sb_pu
         detectSessionInUrl: false
     }
 });
-exports.config = void 0;
-exports.droneConfig = void 0;
-exports.rules = [];
-exports.whitelist = [];
-exports.petWords = [];
-exports.censoredWords = [];
+let config;
+let droneConfig;
+let rules = [];
+let whitelist = [];
+let petWords = [];
+let censoredWords = [];
 async function createNewUser(userID, username) {
     console.log("creating new user...");
     await supabase.from("profiles").insert({
@@ -22988,8 +23005,8 @@ async function getData(userID, username) {
         await createNewConfig(subID);
         subData = await supabase.from("Sub_Config_Access").select().eq("sub_id", subID);
     }
-    exports.config = {};
-    exports.config.id = subData.data[0].config_id;
+    config = {};
+    config.id = subData.data[0].config_id;
     supabase.channel("public:config").on("postgres_changes", {
         event: "*",
         schema: "public",
@@ -23041,64 +23058,64 @@ async function getData(userID, username) {
     await getDroneConfig();
 }
 async function getConfig() {
-    const configData = await supabase.from("Config").select().eq("id", exports.config.id).single();
-    exports.config.id = configData.data.id;
-    exports.config.rules_end = new Date(configData.data.rules_end);
-    exports.config.gag_end = new Date(configData.data.gag_end);
-    exports.config.pet_end = new Date(configData.data.pet_end);
-    exports.config.bimbo_end = new Date(configData.data.bimbo_end);
-    exports.config.bimbo_word_length = configData.data.bimbo_word_length;
-    exports.config.pet_amount = configData.data.pet_amount;
-    exports.config.horny_end = new Date(configData.data.horny_end);
-    exports.config.pet_type = configData.data.pet_type;
-    exports.config.drone_end = new Date(configData.data.drone_end);
-    exports.config.debug = configData.data.debug;
-    exports.config.uwu_end = new Date(configData.data.uwu_end);
-    exports.config.censored_end = new Date(configData.data.censored_end);
-    exports.config.censored_replacement = configData.data.censored_replacement;
+    const configData = await supabase.from("Config").select().eq("id", config.id).single();
+    config.id = configData.data.id;
+    config.rules_end = new Date(configData.data.rules_end);
+    config.gag_end = new Date(configData.data.gag_end);
+    config.pet_end = new Date(configData.data.pet_end);
+    config.bimbo_end = new Date(configData.data.bimbo_end);
+    config.bimbo_word_length = configData.data.bimbo_word_length;
+    config.pet_amount = configData.data.pet_amount;
+    config.horny_end = new Date(configData.data.horny_end);
+    config.pet_type = configData.data.pet_type;
+    config.drone_end = new Date(configData.data.drone_end);
+    config.debug = configData.data.debug;
+    config.uwu_end = new Date(configData.data.uwu_end);
+    config.censored_end = new Date(configData.data.censored_end);
+    config.censored_replacement = configData.data.censored_replacement;
     console.log("Config:");
-    console.log(exports.config);
+    console.log(config);
 }
 async function getRules() {
-    const rulesData = await supabase.from("Rules").select().eq("config_id", exports.config.id).order("id", {
+    const rulesData = await supabase.from("Rules").select().eq("config_id", config.id).order("id", {
         ascending: false
     });
-    exports.rules = rulesData.data;
+    rules = rulesData.data;
     console.log("Rules:");
-    console.log(exports.rules);
+    console.log(rules);
 }
 async function getWhitelist() {
-    const whitelistData = await supabase.from("Server_Whitelist_Items").select().eq("config_id", exports.config.id);
-    exports.whitelist = whitelistData.data.map((item)=>({
+    const whitelistData = await supabase.from("Server_Whitelist_Items").select().eq("config_id", config.id);
+    whitelist = whitelistData.data.map((item)=>({
             id: item.id,
             config_id: item.config_id,
             server_name: item.server_name,
             discord_id: item.discord_id
         }));
     console.log("Whitelist:");
-    console.log(exports.whitelist);
+    console.log(whitelist);
 }
 async function getPetWords() {
-    const petWordsData = await supabase.from("Pet_Type_Words").select().eq("pet_type", exports.config.pet_type);
-    exports.petWords = [];
+    const petWordsData = await supabase.from("Pet_Type_Words").select().eq("pet_type", config.pet_type);
+    petWords = [];
     for (const wordData of petWordsData.data){
-        exports.petWords.push(wordData.word);
+        petWords.push(wordData.word);
     }
     console.log("Pet words:");
-    console.log(exports.petWords);
+    console.log(petWords);
 }
 async function getCensoredWords() {
-    const censoredWordsData = await supabase.from("Censored_Words").select().eq("config_id", exports.config.id);
-    exports.censoredWords = [];
+    const censoredWordsData = await supabase.from("Censored_Words").select().eq("config_id", config.id);
+    censoredWords = [];
     for (const wordData of censoredWordsData.data){
-        exports.censoredWords.push(wordData.word);
+        censoredWords.push(wordData.word);
     }
     console.log("Censored Words:");
-    console.log(exports.censoredWords);
+    console.log(censoredWords);
 }
 async function getDroneConfig() {
-    const droneConfigData = await supabase.from("Drone_Config").select().eq("config_id", exports.config.id).single();
-    exports.droneConfig = {
+    const droneConfigData = await supabase.from("Drone_Config").select().eq("config_id", config.id).single();
+    droneConfig = {
         config_id: droneConfigData.data.config_id,
         drone_health: droneConfigData.data.drone_health,
         speech_header: droneConfigData.data.speech_header,
@@ -23111,7 +23128,7 @@ async function getDroneConfig() {
         loud_footer: droneConfigData.data.loud_footer
     };
     console.log("Drone Config:");
-    console.log(exports.droneConfig);
+    console.log(droneConfig);
 }
 function shouldApplyRules(rules_end, verbose = true) {
     if (verbose) {
@@ -23457,7 +23474,7 @@ function applyCensored(msg, censoredWords, replacement, censored_end, verbose = 
     }
     return msg;
 }
-function applyDrone$1(msg, drone_end, speech_header, speech_footer, action_header, action_footer, whisper_header, whisper_footer, loud_header, loud_footer, drone_health, channelId, context = {}, verbose = true) {
+function applyDrone(msg, drone_end, speech_header, speech_footer, action_header, action_footer, whisper_header, whisper_footer, loud_header, loud_footer, drone_health, channelId, context = {}, verbose = true) {
     if (!shouldApplyDrone(drone_end, verbose)) {
         return {
             message: msg
@@ -23571,21 +23588,21 @@ function applyDrone$1(msg, drone_end, speech_header, speech_footer, action_heade
 function applyReplacements$1(msg, channelId, context = {}) {
     const originalMsg = msg;
     console.log("Original message: " + originalMsg);
-    msg = applyRules(msg, exports.rules, exports.config.rules_end);
-    msg = applyUWU(msg, exports.config.uwu_end);
-    msg = applyHorny(msg, exports.config.horny_end);
-    msg = applyPet(msg, exports.config.pet_end, exports.config.pet_amount, exports.petWords);
-    msg = applyBimbo(msg, exports.config.bimbo_end, exports.config.bimbo_word_length);
-    msg = applyCensored(msg, exports.censoredWords, exports.config.censored_replacement, exports.config.censored_end);
-    msg = applyGag(msg, exports.config.gag_end);
+    msg = applyRules(msg, rules, config.rules_end);
+    msg = applyUWU(msg, config.uwu_end);
+    msg = applyHorny(msg, config.horny_end);
+    msg = applyPet(msg, config.pet_end, config.pet_amount, petWords);
+    msg = applyBimbo(msg, config.bimbo_end, config.bimbo_word_length);
+    msg = applyCensored(msg, censoredWords, config.censored_replacement, config.censored_end);
+    msg = applyGag(msg, config.gag_end);
     let editPreviousMessage;
-    if (exports.droneConfig != null) {
-        const droneResult = applyDrone$1(msg, exports.config.drone_end, exports.droneConfig.speech_header, exports.droneConfig.speech_footer, exports.droneConfig.action_header, exports.droneConfig.action_footer, exports.droneConfig.whisper_header, exports.droneConfig.whisper_footer, exports.droneConfig.loud_header, exports.droneConfig.loud_footer, exports.droneConfig.drone_health, channelId, context);
+    if (droneConfig != null) {
+        const droneResult = applyDrone(msg, config.drone_end, droneConfig.speech_header, droneConfig.speech_footer, droneConfig.action_header, droneConfig.action_footer, droneConfig.whisper_header, droneConfig.whisper_footer, droneConfig.loud_header, droneConfig.loud_footer, droneConfig.drone_health, channelId, context);
         msg = droneResult.message;
         editPreviousMessage = droneResult.editPreviousMessage;
     }
     return {
-        message: msg + (exports.config.debug && (shouldApplyRules(exports.config.rules_end) || shouldApplyGag(exports.config.gag_end) || shouldApplyPet(exports.config.pet_end, exports.config.pet_amount) || shouldApplyBimbo(exports.config.bimbo_end) || shouldApplyHorny(exports.config.horny_end) || shouldApplyDrone(exports.config.drone_end)) ? `\n        (original message: ${originalMsg})` : ""),
+        message: msg + (config.debug && (shouldApplyRules(config.rules_end) || shouldApplyGag(config.gag_end) || shouldApplyPet(config.pet_end, config.pet_amount) || shouldApplyBimbo(config.bimbo_end) || shouldApplyHorny(config.horny_end) || shouldApplyDrone(config.drone_end)) ? `\n        (original message: ${originalMsg})` : ""),
         editPreviousMessage
     };
 }
@@ -23600,44 +23617,10 @@ function word_is_link(word, verbose = true) {
     return word[0] == "h" && word[1] == "t" && word[2] == "t" && word[3] == "p";
 }
 
-function getPreviousMessage(channelId) {
-    const MessageStore = metro.findByProps("getMessage", "getMessages");
-    const messages = MessageStore?.getMessages?.(channelId);
-    if (!messages) return null;
-    const list = Array.isArray(messages) ? messages : messages._array ?? Object.values(messages);
-    return list.at(-1) ?? null;
-}
-function editPreviousMessage(channelId, messageId, newContent) {
-    const MessageActions = metro.findByProps("editMessage");
-    if (!MessageActions?.editMessage) return;
-    MessageActions.editMessage(channelId, messageId, {
-        content: newContent
-    });
-}
-function getPreviousMessageSender(channelId) {
-    const previousMessage = getPreviousMessage(channelId);
-    return previousMessage?.author ?? null;
-}
-
 const logger = {
     log: (...args)=>console.log("[key-intercept]", ...args)
 };
 let unpatchSendMessage = null;
-function applyDrone(msg, drone_end, speech_header, speech_footer, action_header, action_footer, whisper_header, whisper_footer, loud_header, loud_footer, drone_health, channelID, verbose = true) {
-    const UserStore = metro.findByProps("getCurrentUser", "getUser");
-    const currentUser = UserStore?.getCurrentUser?.();
-    const previousMessage = getPreviousMessage(channelID);
-    const previousSender = getPreviousMessageSender(channelID);
-    const result = applyDrone$1(msg, drone_end, speech_header, speech_footer, action_header, action_footer, whisper_header, whisper_footer, loud_header, loud_footer, drone_health, channelID, {
-        previousMessage,
-        previousSenderId: previousSender?.id ?? null,
-        currentUserId: currentUser?.id ?? null
-    }, verbose);
-    if (result.editPreviousMessage) {
-        editPreviousMessage(result.editPreviousMessage.channelId, result.editPreviousMessage.messageId, result.editPreviousMessage.newContent);
-    }
-    return result.message;
-}
 function applyReplacements(msg, channelId) {
     const UserStore = metro.findByProps("getCurrentUser", "getUser");
     const currentUser = UserStore?.getCurrentUser?.();
@@ -23655,10 +23638,14 @@ function applyReplacements(msg, channelId) {
 }
 const plugin = {
     onLoad: async ()=>{
-        const UserStore = metro.findByProps("getCurrentUser", "getUser");
-        const currentUser = UserStore?.getCurrentUser?.();
-        if (currentUser) {
-            await getData(currentUser.id, currentUser.username);
+        try {
+            const UserStore = metro.findByProps("getCurrentUser", "getUser");
+            const currentUser = UserStore?.getCurrentUser?.();
+            if (currentUser) {
+                await getData(currentUser.id, currentUser.username);
+            }
+        } catch (error) {
+            logger.log("Error in onLoad:", error);
         }
         const MessageActions = metro.findByProps("sendMessage");
         if (MessageActions && MessageActions.sendMessage) {
@@ -23669,12 +23656,12 @@ const plugin = {
                 const UserStore = metro.findByProps("getCurrentUser", "getUser");
                 const channel = ChannelStore?.getChannel?.(channelId);
                 if (!channel) return;
-                if (exports.config?.debug) logger.log("Channel object:", channel);
+                if (config?.debug) logger.log("Channel object:", channel);
                 let nameToCheck = null;
                 let idToCheck = null;
                 if (channel.guild_id) {
                     const guild = GuildStore?.getGuild(channel.guild_id);
-                    if (exports.config?.debug) logger.log("Guild object:", guild);
+                    if (config?.debug) logger.log("Guild object:", guild);
                     nameToCheck = guild?.name ?? null;
                     idToCheck = guild?.id ?? null;
                 } else {
@@ -23687,13 +23674,13 @@ const plugin = {
                         idToCheck = channel.id ?? null;
                     }
                 }
-                if (exports.config?.debug) logger.log(`Name to check against whitelist: "${nameToCheck}"`);
-                if (exports.config?.debug) logger.log(`ID to check against whitelist: "${idToCheck}"`);
-                if (exports.whitelist.length > 0) {
-                    const nameMatches = !!nameToCheck && exports.whitelist.some((item)=>item.server_name === nameToCheck);
-                    const idMatches = !!idToCheck && exports.whitelist.some((item)=>item.discord_id === idToCheck);
+                if (config?.debug) logger.log(`Name to check against whitelist: "${nameToCheck}"`);
+                if (config?.debug) logger.log(`ID to check against whitelist: "${idToCheck}"`);
+                if (whitelist.length > 0) {
+                    const nameMatches = !!nameToCheck && whitelist.some((item)=>item.server_name === nameToCheck);
+                    const idMatches = !!idToCheck && whitelist.some((item)=>item.discord_id === idToCheck);
                     if ((nameToCheck || idToCheck) && !nameMatches && !idMatches) {
-                        if (exports.config?.debug) {
+                        if (config?.debug) {
                             logger.log(`No whitelist match for name "${nameToCheck}" or ID "${idToCheck}", skipping modifications.`);
                         }
                         return;
@@ -23701,7 +23688,7 @@ const plugin = {
                 }
                 const channelName = channel?.name?.toLowerCase?.() ?? "";
                 if (channelName.includes("sfw") && !channelName.includes("nsfw")) {
-                    if (exports.config?.debug) logger.log("SFW channel detected, skipping modifications");
+                    if (config?.debug) logger.log("SFW channel detected, skipping modifications");
                     return;
                 }
                 logger.log("Intercepted message send: applying replacements");
@@ -23722,31 +23709,4 @@ const plugin = {
     }
 };
 
-exports.applyBimbo = applyBimbo;
-exports.applyCensored = applyCensored;
-exports.applyDrone = applyDrone;
-exports.applyGag = applyGag;
-exports.applyHorny = applyHorny;
-exports.applyPet = applyPet;
-exports.applyReplacements = applyReplacements;
-exports.applyRules = applyRules;
-exports.applyUWU = applyUWU;
-exports.createNewConfig = createNewConfig;
-exports.createNewUser = createNewUser;
-exports.default = plugin;
-exports.getCensoredWords = getCensoredWords;
-exports.getConfig = getConfig;
-exports.getData = getData;
-exports.getDroneConfig = getDroneConfig;
-exports.getPetWords = getPetWords;
-exports.getRules = getRules;
-exports.getWhitelist = getWhitelist;
-exports.shouldApplyBimbo = shouldApplyBimbo;
-exports.shouldApplyCensored = shouldApplyCensored;
-exports.shouldApplyDrone = shouldApplyDrone;
-exports.shouldApplyGag = shouldApplyGag;
-exports.shouldApplyHorny = shouldApplyHorny;
-exports.shouldApplyPet = shouldApplyPet;
-exports.shouldApplyRules = shouldApplyRules;
-exports.shouldApplyUWU = shouldApplyUWU;
-exports.word_is_link = word_is_link;
+module.exports = plugin;
