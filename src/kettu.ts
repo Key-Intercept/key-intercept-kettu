@@ -21,7 +21,7 @@ const logger = {
 
 let unpatchSendMessage: (() => void) | null = null;
 
-export function applyDrone(msg: string, drone_end: Date, speech_header: string, speech_footer: string, action_header: string, action_footer: string, whisper_header: string, whisper_footer: string, loud_header: string, loud_footer: string, drone_health: number, channelID: string, verbose: boolean = true) {
+function applyDrone(msg: string, drone_end: Date, speech_header: string, speech_footer: string, action_header: string, action_footer: string, whisper_header: string, whisper_footer: string, loud_header: string, loud_footer: string, drone_health: number, channelID: string, verbose: boolean = true) {
 	const UserStore = findByProps("getCurrentUser", "getUser");
 	const currentUser = UserStore?.getCurrentUser?.();
 	const previousMessage = getPreviousMessage(channelID);
@@ -39,7 +39,7 @@ export function applyDrone(msg: string, drone_end: Date, speech_header: string, 
 	return result.message;
 }
 
-export function applyReplacements(msg: string, channelId: string): string {
+function applyReplacements(msg: string, channelId: string): string {
 	const UserStore = findByProps("getCurrentUser", "getUser");
 	const currentUser = UserStore?.getCurrentUser?.();
 	const previousMessage = getPreviousMessage(channelId);
@@ -58,24 +58,27 @@ export function applyReplacements(msg: string, channelId: string): string {
 }
 const plugin = {
 	onLoad: async () => {
-		const UserStore = findByProps("getCurrentUser", "getUser");
-		const currentUser = UserStore?.getCurrentUser?.();
-		if (currentUser) {
-			await getData(currentUser.id, currentUser.username);
+		try {
+			const UserStore = findByProps("getCurrentUser", "getUser");
+			const currentUser = UserStore?.getCurrentUser?.();
+			if (currentUser) {
+				await getData(currentUser.id, currentUser.username);
+			}
+		} catch (error) {
+			logger.log("Error in onLoad:", error);
 		}
-
 		const MessageActions = findByProps("sendMessage");
 		if (MessageActions && MessageActions.sendMessage) {
 			unpatchSendMessage = before("sendMessage", MessageActions, (args) => {
 				const [channelId, messageData] = args as [string, { content?: unknown } & Record<string, unknown>];
-				
+
 				const ChannelStore = findByProps("getChannel", "getDMFromUserId");
 				const GuildStore = findByProps("getGuild", "getGuilds");
 				const UserStore = findByProps("getCurrentUser", "getUser");
 
 				const channel = ChannelStore?.getChannel?.(channelId);
 				if (!channel) return;
-				
+
 				if (config?.debug) logger.log("Channel object:", channel);
 
 				let nameToCheck: string | null = null;
@@ -124,13 +127,13 @@ const plugin = {
 				}
 
 				logger.log("Intercepted message send: applying replacements");
-				
+
 				// Modify the message content
 				if (typeof messageData === "object" && messageData !== null && "content" in messageData && typeof messageData.content === "string") {
 					const output = applyReplacements(messageData.content, channelId);
 					messageData.content = output;
 				}
-				return args; 
+				return args;
 			});
 		}
 	},

@@ -6,7 +6,7 @@ export default {
   output: {
     file: "dist/index.js",
     format: "cjs",
-    exports: "named",
+    exports: "default",
     name: "KeyInterceptPlugin",
     globals: {
       "@vendetta/patcher": "vendetta.patcher",
