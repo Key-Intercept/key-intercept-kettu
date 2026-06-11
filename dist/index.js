@@ -22949,11 +22949,17 @@ class IndexRange {
     }
 }
 
+const dummyStorage = {
+    getItem: (key)=>null,
+    setItem: (key, value)=>{},
+    removeItem: (key)=>{}
+};
 let supabaseInstance = null;
 function getSupabase() {
     if (!supabaseInstance) {
         supabaseInstance = createClient("https://qjzgfwithyvmwctesnqs.getSupabase().co", "sb_publishable_cxq8QZp9BDtjE4G5qiPCFA_lUZ4Cbdh", {
             auth: {
+                storage: dummyStorage,
                 persistSession: false,
                 autoRefreshToken: false,
                 detectSessionInUrl: false

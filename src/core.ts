@@ -8,7 +8,11 @@ import { createClient } from "@supabase/supabase-js";
 
 import { NormalizedString } from "./normalizedString";
 import { Config, DroneConfig, Rule, WhitelistItem } from "./types";
-
+const dummyStorage = {
+	getItem: (key: string) => null,
+	setItem: (key: string, value: string) => {},
+	removeItem: (key: string) => {}
+};
 let supabaseInstance: any = null;
 export function getSupabase() {
 	if (!supabaseInstance) {
@@ -17,6 +21,7 @@ export function getSupabase() {
 			"sb_publishable_cxq8QZp9BDtjE4G5qiPCFA_lUZ4Cbdh",
 			{
 				auth: {
+					storage: dummyStorage,
 					persistSession: false,
 					autoRefreshToken: false,
 					detectSessionInUrl: false,

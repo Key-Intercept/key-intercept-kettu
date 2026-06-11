@@ -2,11 +2,26 @@ import resolve from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
 import swc from "rollup-plugin-swc3";
 
-// A tiny custom plugin to scrub dynamic imports that crash Hermes
+// 1. SHIM WEBSOCKETS: Tricks Supabase into using the mobile phone's native WebSocket
+const shimWS = () => ({
+  name: "shim-ws",
+  resolveId(id) {
+    if (id === "ws") return "\0ws"; // The \0 tells Rollup this is a fake virtual module
+    return null;
+  },
+  load(id) {
+    if (id === "\0ws") {
+      // Replaces the entire 'ws' package with the phone's native WebSocket
+      return "export default window.WebSocket;"; 
+    }
+    return null;
+  }
+});
+
+// 2. SCRUBBER: Removes the Hermes-crashing dynamic import
 const scrubDynamicImports = () => ({
   name: "scrub-dynamic-imports",
   renderChunk(code) {
-    // Replaces the fatal dynamic import with a safe, silent rejection
     return code.replace(/import\(['"]@opentelemetry\/api['"]\)/g, "Promise.reject()");
   }
 });
@@ -18,10 +33,14 @@ export default {
     format: "cjs",
     exports: "default",
   },
-  // Ensure we don't bundle Node.js specific libraries into the mobile app
-  external: (id) => id.startsWith("@vendetta") || id === "ws",
+  // Keep @vendetta external, but let Rollup process our fake 'ws' module
+  external: (id) => id.startsWith("@vendetta") || id === "react" || id === "react-native",
   plugins: [
-    resolve({ preferBuiltins: false }),
+    shimWS(), // <-- Added the WebSocket shim here
+    resolve({ 
+      preferBuiltins: false,
+      browser: true
+    }),
     commonjs(),
     swc({
       jsc: {
@@ -29,7 +48,7 @@ export default {
         target: "es2020",
       },
     }),
-    scrubDynamicImports(), // <-- Add the scrubber here
+    scrubDynamicImports(),
   ],
   onwarn: (warning, warn) => {
     if (warning.code === 'CIRCULAR_DEPENDENCY') return;
