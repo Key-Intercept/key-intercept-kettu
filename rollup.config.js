@@ -6,14 +6,11 @@ import swc from "rollup-plugin-swc3";
 const shimWS = () => ({
   name: "shim-ws",
   resolveId(id) {
-    if (id === "ws") return "\0ws"; // The \0 tells Rollup this is a fake virtual module
+    if (id === "ws") return "\0ws"; 
     return null;
   },
   load(id) {
-    if (id === "\0ws") {
-      // Replaces the entire 'ws' package with the phone's native WebSocket
-      return "export default window.WebSocket;"; 
-    }
+    if (id === "\0ws") return "export default window.WebSocket;"; 
     return null;
   }
 });
@@ -30,13 +27,20 @@ export default {
   input: "src/index.ts",
   output: {
     file: "dist/index.js",
-    format: "cjs",
-    exports: "default",
+    format: "iife", // <-- CRITICAL: Back to IIFE!
+    name: "KeyInterceptPlugin",
+    footer: "KeyInterceptPlugin;", // <-- CRITICAL: The trick to make eval() work!
+    globals: {
+      "@vendetta/patcher": "window.vendetta.patcher",
+      "@vendetta/metro": "window.vendetta.metro",
+      "@vendetta/storage": "window.vendetta.storage",
+      "react": "window.React",
+      "react-native": "window.ReactNative"
+    }
   },
-  // Keep @vendetta external, but let Rollup process our fake 'ws' module
   external: (id) => id.startsWith("@vendetta") || id === "react" || id === "react-native",
   plugins: [
-    shimWS(), // <-- Added the WebSocket shim here
+    shimWS(),
     resolve({ 
       preferBuiltins: false,
       browser: true

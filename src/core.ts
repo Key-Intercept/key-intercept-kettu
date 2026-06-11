@@ -10,14 +10,14 @@ import { NormalizedString } from "./normalizedString";
 import { Config, DroneConfig, Rule, WhitelistItem } from "./types";
 const dummyStorage = {
 	getItem: (key: string) => null,
-	setItem: (key: string, value: string) => {},
-	removeItem: (key: string) => {}
+	setItem: (key: string, value: string) => { },
+	removeItem: (key: string) => { }
 };
 let supabaseInstance: any = null;
 export function getSupabase() {
 	if (!supabaseInstance) {
 		supabaseInstance = createClient(
-			"https://qjzgfwithyvmwctesnqs.getSupabase().co", 
+			"https://qjzgfwithyvmwctesnqs.supabase.co",
 			"sb_publishable_cxq8QZp9BDtjE4G5qiPCFA_lUZ4Cbdh",
 			{
 				auth: {
