@@ -6,9 +6,8 @@ export default {
   input: "src/index.ts",
   output: {
     file: "dist/index.js",
-    format: "iife",
+    format: "umd",
     name: "KeyInterceptPlugin",
-    // THIS IS THE CRITICAL FIX: Tell Rollup where the APIs actually live in Kettu
     globals: {
       "@vendetta/patcher": "vendetta.patcher",
       "@vendetta/metro": "vendetta.metro",
@@ -17,7 +16,6 @@ export default {
       "react-native": "window.ReactNative"
     }
   },
-  // Keep using the function format so we don't have to hardcode every single vendetta path
   external: (id) => {
     return (
       id.startsWith("@vendetta") || 
