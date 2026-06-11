@@ -260,7 +260,7 @@ export function applyRules(msg: string, rules: Rule[], rules_end: Date, verbose:
 			if (verbose) { console.log("Rule disabled, skipping"); }
 			continue;
 		}
-		const temp = new RegExp(rule.rule_regex.toString().replaceAll("\\\\", "\\"));
+		const temp = new RegExp(rule.rule_regex.toString().replace(/\\\\/g, "\\"));
 		const matchCallback = (match: string, ..._args: unknown[]): string => {
 			if (Math.random() > rule.chance_to_apply) {
 				if (verbose) { console.log(`Skipping match ${rule.chance_to_apply}`); }
@@ -598,10 +598,10 @@ export function applyReplacements(msg: string, channelId: string, context: Drone
 export function word_is_link(word: string, verbose: boolean = true): boolean {
 	if (verbose) {
 		console.log("testing if is link:");
-		console.log(word.at(0));
-		console.log(word.at(1));
-		console.log(word.at(2));
-		console.log(word.at(3));
+		console.log(word[0]);
+		console.log(word[1]);
+		console.log(word[2]);
+		console.log(word[3]);
 	}
-	return (word.at(0) == "h" && word.at(1) == "t" && word.at(2) == "t" && word.at(3) == "p")
+	return (word[0] == "h" && word[1] == "t" && word[2] == "t" && word[3] == "p")
 }

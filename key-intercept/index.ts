@@ -1,2 +1,2 @@
 export * from "./core";
-export { applyDrone, applyReplacements, default } from "./vencord";
+export { applyDrone, applyReplacements, default } from "./kettu";
