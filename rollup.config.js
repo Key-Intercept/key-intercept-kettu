@@ -11,7 +11,6 @@ export default {
       "@vendetta/patcher": "vendetta.patcher",
       "@vendetta/metro": "vendetta.metro",
       "@vendetta/storage": "vendetta.storage",
-      "@supabase/supabase-js": "supabase",
       "react": "window.React",
       "react-native": "window.ReactNative"
     }
@@ -20,9 +19,7 @@ export default {
     return (
       id.startsWith("@vendetta") || 
       id === "react" || 
-      id === "react-native" ||
-      id === "@supabase/supabase-js" ||
-      id === "ws"
+      id === "react-native"
     );
   },
   plugins: [
