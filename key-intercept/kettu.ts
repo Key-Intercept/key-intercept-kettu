@@ -56,20 +56,14 @@ export function applyReplacements(msg: string, channelId: string): string {
 
 	return result.message;
 }
-
-
 const plugin = {
-	name: "key intercept",
-	description: "you dont deserve to talk properly",
-	authors: [{ name: "supersliser", id: "277137325342064640" }],
-	async start() {
+	onLoad: async () => {
 		const UserStore = findByProps("getCurrentUser", "getUser");
 		const currentUser = UserStore?.getCurrentUser?.();
 		if (currentUser) {
 			await getData(currentUser.id, currentUser.username);
 		}
 
-		// Patch sendMessage to intercept messages before sending
 		const MessageActions = findByProps("sendMessage");
 		if (MessageActions && MessageActions.sendMessage) {
 			unpatchSendMessage = before("sendMessage", MessageActions, (args) => {
@@ -136,18 +130,16 @@ const plugin = {
 					const output = applyReplacements(messageData.content, channelId);
 					messageData.content = output;
 				}
+				return args; 
 			});
-
-			logger.log("key-intercept: Enabled - message interception active");
 		}
 	},
 
-	stop() {
+	onUnload: () => {
 		if (unpatchSendMessage) {
 			unpatchSendMessage();
 			unpatchSendMessage = null;
 		}
-		logger.log("key-intercept: Disabled");
 	},
 };
 
