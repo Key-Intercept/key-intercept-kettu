@@ -5,7 +5,7 @@
     "lib": ["ES2020", "DOM"],
     "declaration": true,
     "outDir": "./dist",
-    "rootDir": "./key-intercept",
+    "rootDir": "src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -20,6 +20,6 @@
     "jsx": "react-jsx"
     ,"types": []
   },
-  "include": ["key-intercept/**/*.ts", "key-intercept/**/*.tsx", "key-intercept/**/*.d.ts"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts"],
   "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx"]
 }
