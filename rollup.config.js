@@ -3,7 +3,7 @@ import commonjs from "@rollup/plugin-commonjs";
 import swc from "rollup-plugin-swc3";
 
 export default {
-  input: ".src/index.ts",
+  input: "src/index.ts",
   output: {
     file: "dist/index.js",
     format: "iife",
