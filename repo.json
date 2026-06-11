@@ -1,0 +1,9 @@
+{
+  "$meta": {
+    "name": "Key Intercept",
+    "description": "A Kettu plugin repository for key-intercept"
+  },
+  "key-intercept": {
+    "version": "1.0.0"
+  }
+}
