@@ -3,7 +3,8 @@
   "version": "5.0.0",
   "description": "Intercepts and modifies messages before they are sent.",
   "main": "dist/index.js",
-"scripts": {
+  "platform": "browser",
+  "scripts": {
     "build": "node build.mjs"
   },
   "author": "supersliser",

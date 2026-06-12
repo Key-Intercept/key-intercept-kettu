@@ -2,24 +2,7 @@
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getOwnPropSymbols = Object.getOwnPropertySymbols;
-var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __propIsEnum = Object.prototype.propertyIsEnumerable;
-var __reflectGet = Reflect.get;
-var __pow = Math.pow;
-var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-var __spreadValues = (a, b) => {
-  for (var prop in b || (b = {}))
-    if (__hasOwnProp.call(b, prop))
-      __defNormalProp(a, prop, b[prop]);
-  if (__getOwnPropSymbols)
-    for (var prop of __getOwnPropSymbols(b)) {
-      if (__propIsEnum.call(b, prop))
-        __defNormalProp(a, prop, b[prop]);
-    }
-  return a;
-};
 var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
@@ -33,27 +16,6 @@ var __copyProps = (to, from, except, desc) => {
   return to;
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-var __superGet = (cls, obj, key) => __reflectGet(__getProtoOf(cls), key, obj);
-var __async = (__this, __arguments, generator) => {
-  return new Promise((resolve, reject) => {
-    var fulfilled = (value) => {
-      try {
-        step(generator.next(value));
-      } catch (e) {
-        reject(e);
-      }
-    };
-    var rejected = (value) => {
-      try {
-        step(generator.throw(value));
-      } catch (e) {
-        reject(e);
-      }
-    };
-    var step = (x) => x.done ? resolve(x.value) : Promise.resolve(x.value).then(fulfilled, rejected);
-    step((generator = generator.apply(__this, __arguments)).next());
-  });
-};
 
 // src/index.ts
 var index_exports = {};
@@ -69,22 +31,20 @@ var import_metro2 = require("@vendetta/metro");
 // src/getPreviousMessage.ts
 var import_metro = require("@vendetta/metro");
 function getPreviousMessage(channelId) {
-  var _a, _b, _c;
   const MessageStore = (0, import_metro.findByProps)("getMessage", "getMessages");
-  const messages = (_a = MessageStore == null ? void 0 : MessageStore.getMessages) == null ? void 0 : _a.call(MessageStore, channelId);
+  const messages = MessageStore?.getMessages?.(channelId);
   if (!messages) return null;
-  const list = Array.isArray(messages) ? messages : (_b = messages._array) != null ? _b : Object.values(messages);
-  return (_c = list.at(-1)) != null ? _c : null;
+  const list = Array.isArray(messages) ? messages : messages._array ?? Object.values(messages);
+  return list.at(-1) ?? null;
 }
 function editPreviousMessage(channelId, messageId, newContent) {
   const MessageActions = (0, import_metro.findByProps)("editMessage");
-  if (!(MessageActions == null ? void 0 : MessageActions.editMessage)) return;
+  if (!MessageActions?.editMessage) return;
   MessageActions.editMessage(channelId, messageId, { content: newContent });
 }
 function getPreviousMessageSender(channelId) {
-  var _a;
   const previousMessage = getPreviousMessage(channelId);
-  return (_a = previousMessage == null ? void 0 : previousMessage.author) != null ? _a : null;
+  return previousMessage?.author ?? null;
 }
 
 // node_modules/.pnpm/tslib@2.8.1/node_modules/tslib/tslib.es6.mjs
@@ -453,7 +413,7 @@ var FunctionsClient = class {
 
 // node_modules/.pnpm/@supabase+postgrest-js@2.108.1/node_modules/@supabase/postgrest-js/dist/index.mjs
 var DEFAULT_MAX_RETRIES = 3;
-var getRetryDelay = (attemptIndex) => Math.min(1e3 * __pow(2, attemptIndex), 3e4);
+var getRetryDelay = (attemptIndex) => Math.min(1e3 * 2 ** attemptIndex, 3e4);
 var RETRYABLE_STATUS_CODES = [520, 503];
 var RETRYABLE_METHODS = [
   "GET",
@@ -682,7 +642,7 @@ var PostgrestBuilder = class {
       else if (!currentAccept || currentAccept === "application/json") this.headers.set("Accept", "application/vnd.pgrst.array+json;nulls=stripped");
     }
     const _fetch = this.fetch;
-    const executeWithRetry = () => __async(this, null, function* () {
+    const executeWithRetry = async () => {
       let attemptCount = 0;
       while (true) {
         const headers = {};
@@ -692,7 +652,7 @@ var PostgrestBuilder = class {
         if (attemptCount > 0) headers["X-Retry-Count"] = String(attemptCount);
         let res$1;
         try {
-          res$1 = yield _fetch(_this.url.toString(), {
+          res$1 = await _fetch(_this.url.toString(), {
             method: _this.method,
             headers,
             body: JSON.stringify(_this.body, (_, value) => typeof value === "bigint" ? value.toString() : value),
@@ -704,7 +664,7 @@ var PostgrestBuilder = class {
           if (_this.retryEnabled && attemptCount < DEFAULT_MAX_RETRIES) {
             const delay = getRetryDelay(attemptCount);
             attemptCount++;
-            yield sleep(delay, _this.signal);
+            await sleep(delay, _this.signal);
             continue;
           }
           throw fetchError;
@@ -713,14 +673,14 @@ var PostgrestBuilder = class {
           var _res$headers$get, _res$headers;
           const retryAfterHeader = (_res$headers$get = (_res$headers = res$1.headers) === null || _res$headers === void 0 ? void 0 : _res$headers.get("Retry-After")) !== null && _res$headers$get !== void 0 ? _res$headers$get : null;
           const delay = retryAfterHeader !== null ? Math.max(0, parseInt(retryAfterHeader, 10) || 0) * 1e3 : getRetryDelay(attemptCount);
-          yield res$1.text();
+          await res$1.text();
           attemptCount++;
-          yield sleep(delay, _this.signal);
+          await sleep(delay, _this.signal);
           continue;
         }
-        return yield _this.processResponse(res$1);
+        return await _this.processResponse(res$1);
       }
-    });
+    };
     let res = executeWithRetry();
     if (!this.shouldThrowOnError) res = res.catch((fetchError) => {
       var _fetchError$name2;
@@ -772,78 +732,76 @@ ${cause.stack}`;
   /**
   * Process a fetch response and return the standardized postgrest response.
   */
-  processResponse(res) {
-    return __async(this, null, function* () {
-      var _this2 = this;
-      let error = null;
-      let data = null;
-      let count = null;
-      let status = res.status;
-      let statusText = res.statusText;
-      if (res.ok) {
-        var _this$headers$get2, _res$headers$get2;
-        if (_this2.method !== "HEAD") {
-          var _this$headers$get;
-          const body = yield res.text();
-          if (body === "") {
-          } else if (_this2.headers.get("Accept") === "text/csv") data = body;
-          else if (_this2.headers.get("Accept") && ((_this$headers$get = _this2.headers.get("Accept")) === null || _this$headers$get === void 0 ? void 0 : _this$headers$get.includes("application/vnd.pgrst.plan+text"))) data = body;
-          else try {
-            data = JSON.parse(body);
-          } catch (_unused) {
-            error = { message: body };
-            data = null;
-            if (_this2.shouldThrowOnError) throw new PostgrestError({
-              message: body,
-              details: "",
-              hint: "",
-              code: ""
-            });
-          }
-        }
-        const countHeader = (_this$headers$get2 = _this2.headers.get("Prefer")) === null || _this$headers$get2 === void 0 ? void 0 : _this$headers$get2.match(/count=(exact|planned|estimated)/);
-        const contentRange = (_res$headers$get2 = res.headers.get("content-range")) === null || _res$headers$get2 === void 0 ? void 0 : _res$headers$get2.split("/");
-        if (countHeader && contentRange && contentRange.length > 1) count = parseInt(contentRange[1]);
-        if (_this2.isMaybeSingle && Array.isArray(data)) if (data.length > 1) {
-          error = {
-            code: "PGRST116",
-            details: `Results contain ${data.length} rows, application/vnd.pgrst.object+json requires 1 row`,
-            hint: null,
-            message: "JSON object requested, multiple (or no) rows returned"
-          };
+  async processResponse(res) {
+    var _this2 = this;
+    let error = null;
+    let data = null;
+    let count = null;
+    let status = res.status;
+    let statusText = res.statusText;
+    if (res.ok) {
+      var _this$headers$get2, _res$headers$get2;
+      if (_this2.method !== "HEAD") {
+        var _this$headers$get;
+        const body = await res.text();
+        if (body === "") {
+        } else if (_this2.headers.get("Accept") === "text/csv") data = body;
+        else if (_this2.headers.get("Accept") && ((_this$headers$get = _this2.headers.get("Accept")) === null || _this$headers$get === void 0 ? void 0 : _this$headers$get.includes("application/vnd.pgrst.plan+text"))) data = body;
+        else try {
+          data = JSON.parse(body);
+        } catch (_unused) {
+          error = { message: body };
           data = null;
-          count = null;
-          status = 406;
-          statusText = "Not Acceptable";
-        } else if (data.length === 1) data = data[0];
-        else data = null;
-      } else {
-        const body = yield res.text();
-        try {
-          error = JSON.parse(body);
-          if (Array.isArray(error) && res.status === 404) {
-            data = [];
-            error = null;
-            status = 200;
-            statusText = "OK";
-          }
-        } catch (_unused2) {
-          if (res.status === 404 && body === "") {
-            status = 204;
-            statusText = "No Content";
-          } else error = { message: body };
+          if (_this2.shouldThrowOnError) throw new PostgrestError({
+            message: body,
+            details: "",
+            hint: "",
+            code: ""
+          });
         }
-        if (error && _this2.shouldThrowOnError) throw new PostgrestError(error);
       }
-      return {
-        success: error === null,
-        error,
-        data,
-        count,
-        status,
-        statusText
-      };
-    });
+      const countHeader = (_this$headers$get2 = _this2.headers.get("Prefer")) === null || _this$headers$get2 === void 0 ? void 0 : _this$headers$get2.match(/count=(exact|planned|estimated)/);
+      const contentRange = (_res$headers$get2 = res.headers.get("content-range")) === null || _res$headers$get2 === void 0 ? void 0 : _res$headers$get2.split("/");
+      if (countHeader && contentRange && contentRange.length > 1) count = parseInt(contentRange[1]);
+      if (_this2.isMaybeSingle && Array.isArray(data)) if (data.length > 1) {
+        error = {
+          code: "PGRST116",
+          details: `Results contain ${data.length} rows, application/vnd.pgrst.object+json requires 1 row`,
+          hint: null,
+          message: "JSON object requested, multiple (or no) rows returned"
+        };
+        data = null;
+        count = null;
+        status = 406;
+        statusText = "Not Acceptable";
+      } else if (data.length === 1) data = data[0];
+      else data = null;
+    } else {
+      const body = await res.text();
+      try {
+        error = JSON.parse(body);
+        if (Array.isArray(error) && res.status === 404) {
+          data = [];
+          error = null;
+          status = 200;
+          statusText = "OK";
+        }
+      } catch (_unused2) {
+        if (res.status === 404 && body === "") {
+          status = 204;
+          statusText = "No Content";
+        } else error = { message: body };
+      }
+      if (error && _this2.shouldThrowOnError) throw new PostgrestError(error);
+    }
+    return {
+      success: error === null,
+      error,
+      data,
+      count,
+      status,
+      statusText
+    };
   }
   /**
   * Override the type of the returned `data`.
@@ -6554,7 +6512,7 @@ var Ajax = class {
     }
     try {
       return JSON.parse(resp);
-    } catch (e) {
+    } catch {
       console && console.log("failed to parse JSON response", resp);
       return null;
     }
@@ -7074,7 +7032,6 @@ var Socket = class {
    * @param {SocketOptions} [opts] - Optional configuration
    */
   constructor(endPoint, opts = {}) {
-    var _a, _b;
     this.stateChangeCallbacks = { open: [], close: [], error: [], message: [] };
     this.channels = [];
     this.sendBuffer = [];
@@ -7089,7 +7046,7 @@ var Socket = class {
     let envSessionStorage = null;
     try {
       envSessionStorage = global2 && global2.sessionStorage;
-    } catch (e) {
+    } catch {
     }
     this.sessionStore = opts.sessionStorage || envSessionStorage;
     this.establishedConnections = 0;
@@ -7135,8 +7092,8 @@ var Socket = class {
       });
     }
     this.heartbeatIntervalMs = opts.heartbeatIntervalMs || 3e4;
-    this.autoSendHeartbeat = (_a = opts.autoSendHeartbeat) != null ? _a : true;
-    this.heartbeatCallback = (_b = opts.heartbeatCallback) != null ? _b : (() => {
+    this.autoSendHeartbeat = opts.autoSendHeartbeat ?? true;
+    this.heartbeatCallback = opts.heartbeatCallback ?? (() => {
     });
     this.rejoinAfterMs = (tries) => {
       if (opts.rejoinAfterMs) {
@@ -7172,10 +7129,10 @@ var Socket = class {
         this.teardown();
         return;
       }
-      this.teardown(() => __async(this, null, function* () {
-        if (opts.beforeReconnect) yield opts.beforeReconnect();
+      this.teardown(async () => {
+        if (opts.beforeReconnect) await opts.beforeReconnect();
         this.connect();
-      }));
+      });
     }, this.reconnectAfterMs);
     this.authToken = opts.authToken;
   }
@@ -8117,7 +8074,7 @@ var RealtimeChannel = class _RealtimeChannel {
       this._onClose(() => callback === null || callback === void 0 ? void 0 : callback(REALTIME_SUBSCRIBE_STATES.CLOSED));
       this.updateJoinPayload(Object.assign({ config: config2 }, accessTokenPayload));
       this._updateFilterMessage();
-      this.channelAdapter.subscribe(timeout).receive("ok", (_0) => __async(this, [_0], function* ({ postgres_changes: postgres_changes2 }) {
+      this.channelAdapter.subscribe(timeout).receive("ok", async ({ postgres_changes: postgres_changes2 }) => {
         if (!this.socket._isManualToken()) {
           this.socket.setAuth();
         }
@@ -8126,7 +8083,7 @@ var RealtimeChannel = class _RealtimeChannel {
           return;
         }
         this._updatePostgresBindings(postgres_changes2, callback);
-      })).receive("error", (error) => {
+      }).receive("error", (error) => {
         this.state = CHANNEL_STATES.errored;
         const message = Object.values(error).join(", ") || "error";
         callback === null || callback === void 0 ? void 0 : callback(REALTIME_SUBSCRIBE_STATES.CHANNEL_ERROR, new Error(message, { cause: error }));
@@ -8176,27 +8133,23 @@ var RealtimeChannel = class _RealtimeChannel {
    *
    * @category Realtime
    */
-  track(_0) {
-    return __async(this, arguments, function* (payload, opts = {}) {
-      return yield this.send({
-        type: "presence",
-        event: "track",
-        payload
-      }, opts.timeout || this.timeout);
-    });
+  async track(payload, opts = {}) {
+    return await this.send({
+      type: "presence",
+      event: "track",
+      payload
+    }, opts.timeout || this.timeout);
   }
   /**
    * Removes the current presence state for this client.
    *
    * @category Realtime
    */
-  untrack() {
-    return __async(this, arguments, function* (opts = {}) {
-      return yield this.send({
-        type: "presence",
-        event: "untrack"
-      }, opts);
-    });
+  async untrack(opts = {}) {
+    return await this.send({
+      type: "presence",
+      event: "untrack"
+    }, opts);
   }
   /**
    * Listen to realtime events on this channel.
@@ -8382,42 +8335,40 @@ var RealtimeChannel = class _RealtimeChannel {
    *
    * @category Realtime
    */
-  httpSend(_0, _1) {
-    return __async(this, arguments, function* (event, payload, opts = {}) {
-      var _a;
-      if (payload === void 0 || payload === null) {
-        return Promise.reject(new Error("Payload is required for httpSend()"));
-      }
-      const isBinary = payload instanceof ArrayBuffer || ArrayBuffer.isView(payload);
-      const headers = {
-        apikey: this.socket.apiKey ? this.socket.apiKey : "",
-        "Content-Type": isBinary ? "application/octet-stream" : "application/json"
-      };
-      if (this.socket.accessTokenValue) {
-        headers["Authorization"] = `Bearer ${this.socket.accessTokenValue}`;
-      }
-      const url = new URL(this.broadcastEndpointURL);
-      url.pathname += `/${encodeURIComponent(this.subTopic)}/events/${encodeURIComponent(event)}`;
-      if (this.private) {
-        url.searchParams.set("private", "true");
-      }
-      const options = {
-        method: "POST",
-        headers,
-        body: isBinary ? payload : JSON.stringify(payload)
-      };
-      const response = yield this._fetchWithTimeout(url.toString(), options, (_a = opts.timeout) !== null && _a !== void 0 ? _a : this.timeout);
-      if (response.status === 202) {
-        return { success: true };
-      }
-      let errorMessage = response.statusText;
-      try {
-        const errorBody = yield response.json();
-        errorMessage = errorBody.error || errorBody.message || errorMessage;
-      } catch (_b) {
-      }
-      return Promise.reject(new Error(errorMessage));
-    });
+  async httpSend(event, payload, opts = {}) {
+    var _a;
+    if (payload === void 0 || payload === null) {
+      return Promise.reject(new Error("Payload is required for httpSend()"));
+    }
+    const isBinary = payload instanceof ArrayBuffer || ArrayBuffer.isView(payload);
+    const headers = {
+      apikey: this.socket.apiKey ? this.socket.apiKey : "",
+      "Content-Type": isBinary ? "application/octet-stream" : "application/json"
+    };
+    if (this.socket.accessTokenValue) {
+      headers["Authorization"] = `Bearer ${this.socket.accessTokenValue}`;
+    }
+    const url = new URL(this.broadcastEndpointURL);
+    url.pathname += `/${encodeURIComponent(this.subTopic)}/events/${encodeURIComponent(event)}`;
+    if (this.private) {
+      url.searchParams.set("private", "true");
+    }
+    const options = {
+      method: "POST",
+      headers,
+      body: isBinary ? payload : JSON.stringify(payload)
+    };
+    const response = await this._fetchWithTimeout(url.toString(), options, (_a = opts.timeout) !== null && _a !== void 0 ? _a : this.timeout);
+    if (response.status === 202) {
+      return { success: true };
+    }
+    let errorMessage = response.statusText;
+    try {
+      const errorBody = await response.json();
+      errorMessage = errorBody.error || errorBody.message || errorMessage;
+    } catch (_b) {
+    }
+    return Promise.reject(new Error(errorMessage));
   }
   /**
    * Sends a message into the channel.
@@ -8467,57 +8418,55 @@ var RealtimeChannel = class _RealtimeChannel {
    * }
    * ```
    */
-  send(_0) {
-    return __async(this, arguments, function* (args, opts = {}) {
-      var _a, _b;
-      if (!this.channelAdapter.canPush() && args.type === "broadcast") {
-        console.warn("Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery.");
-        const { event, payload: endpoint_payload } = args;
-        const headers = {
-          apikey: this.socket.apiKey ? this.socket.apiKey : "",
-          "Content-Type": "application/json"
-        };
-        if (this.socket.accessTokenValue) {
-          headers["Authorization"] = `Bearer ${this.socket.accessTokenValue}`;
-        }
-        const options = {
-          method: "POST",
-          headers,
-          body: JSON.stringify({
-            messages: [
-              {
-                topic: this.subTopic,
-                event,
-                payload: endpoint_payload,
-                private: this.private
-              }
-            ]
-          })
-        };
-        try {
-          const response = yield this._fetchWithTimeout(this.broadcastEndpointURL, options, (_a = opts.timeout) !== null && _a !== void 0 ? _a : this.timeout);
-          yield (_b = response.body) === null || _b === void 0 ? void 0 : _b.cancel();
-          return response.ok ? "ok" : "error";
-        } catch (error) {
-          if (error instanceof Error && error.name === "AbortError") {
-            return "timed out";
-          } else {
-            return "error";
-          }
-        }
-      } else {
-        return new Promise((resolve) => {
-          var _a2, _b2, _c;
-          const push = this.channelAdapter.push(args.type, args, opts.timeout || this.timeout);
-          if (args.type === "broadcast" && !((_c = (_b2 = (_a2 = this.params) === null || _a2 === void 0 ? void 0 : _a2.config) === null || _b2 === void 0 ? void 0 : _b2.broadcast) === null || _c === void 0 ? void 0 : _c.ack)) {
-            resolve("ok");
-          }
-          push.receive("ok", () => resolve("ok"));
-          push.receive("error", () => resolve("error"));
-          push.receive("timeout", () => resolve("timed out"));
-        });
+  async send(args, opts = {}) {
+    var _a, _b;
+    if (!this.channelAdapter.canPush() && args.type === "broadcast") {
+      console.warn("Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery.");
+      const { event, payload: endpoint_payload } = args;
+      const headers = {
+        apikey: this.socket.apiKey ? this.socket.apiKey : "",
+        "Content-Type": "application/json"
+      };
+      if (this.socket.accessTokenValue) {
+        headers["Authorization"] = `Bearer ${this.socket.accessTokenValue}`;
       }
-    });
+      const options = {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          messages: [
+            {
+              topic: this.subTopic,
+              event,
+              payload: endpoint_payload,
+              private: this.private
+            }
+          ]
+        })
+      };
+      try {
+        const response = await this._fetchWithTimeout(this.broadcastEndpointURL, options, (_a = opts.timeout) !== null && _a !== void 0 ? _a : this.timeout);
+        await ((_b = response.body) === null || _b === void 0 ? void 0 : _b.cancel());
+        return response.ok ? "ok" : "error";
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          return "timed out";
+        } else {
+          return "error";
+        }
+      }
+    } else {
+      return new Promise((resolve) => {
+        var _a2, _b2, _c;
+        const push = this.channelAdapter.push(args.type, args, opts.timeout || this.timeout);
+        if (args.type === "broadcast" && !((_c = (_b2 = (_a2 = this.params) === null || _a2 === void 0 ? void 0 : _a2.config) === null || _b2 === void 0 ? void 0 : _b2.broadcast) === null || _c === void 0 ? void 0 : _c.ack)) {
+          resolve("ok");
+        }
+        push.receive("ok", () => resolve("ok"));
+        push.receive("error", () => resolve("error"));
+        push.receive("timeout", () => resolve("timed out"));
+      });
+    }
   }
   /**
    * Updates the payload that will be sent the next time the channel joins (reconnects).
@@ -8539,11 +8488,9 @@ var RealtimeChannel = class _RealtimeChannel {
    *
    * @category Realtime
    */
-  unsubscribe() {
-    return __async(this, arguments, function* (timeout = this.timeout) {
-      return new Promise((resolve) => {
-        this.channelAdapter.unsubscribe(timeout).receive("ok", () => resolve("ok")).receive("timeout", () => resolve("timed out")).receive("error", () => resolve("error"));
-      });
+  async unsubscribe(timeout = this.timeout) {
+    return new Promise((resolve) => {
+      this.channelAdapter.unsubscribe(timeout).receive("ok", () => resolve("ok")).receive("timeout", () => resolve("timed out")).receive("error", () => resolve("error"));
     });
   }
   /**
@@ -8555,14 +8502,12 @@ var RealtimeChannel = class _RealtimeChannel {
     this.channelAdapter.teardown();
   }
   /** @internal */
-  _fetchWithTimeout(url, options, timeout) {
-    return __async(this, null, function* () {
-      const controller = new AbortController();
-      const id = setTimeout(() => controller.abort(), timeout);
-      const response = yield this.socket.fetch(url, Object.assign(Object.assign({}, options), { signal: controller.signal }));
-      clearTimeout(id);
-      return response;
-    });
+  async _fetchWithTimeout(url, options, timeout) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    const response = await this.socket.fetch(url, Object.assign(Object.assign({}, options), { signal: controller.signal }));
+    clearTimeout(id);
+    return response;
   }
   /** @internal */
   _on(type, filter, callback) {
@@ -9020,17 +8965,15 @@ Option 2: Install and provide the "ws" package:
    *
    * @category Realtime
    */
-  disconnect(code, reason) {
-    return __async(this, null, function* () {
-      this._cancelPendingDisconnect();
-      if (this.isDisconnecting()) {
-        return "ok";
-      }
-      return yield this.socketAdapter.disconnect(() => {
-        clearInterval(this._workerHeartbeatTimer);
-        this._terminateWorker();
-      }, code, reason);
-    });
+  async disconnect(code, reason) {
+    this._cancelPendingDisconnect();
+    if (this.isDisconnecting()) {
+      return "ok";
+    }
+    return await this.socketAdapter.disconnect(() => {
+      clearInterval(this._workerHeartbeatTimer);
+      this._terminateWorker();
+    }, code, reason);
   }
   /**
    * Returns all created channels
@@ -9046,31 +8989,27 @@ Option 2: Install and provide the "ws" package:
    *
    * @category Realtime
    */
-  removeChannel(channel) {
-    return __async(this, null, function* () {
-      const status = yield channel.unsubscribe();
-      if (status === "ok") {
-        channel.teardown();
-      }
-      return status;
-    });
+  async removeChannel(channel) {
+    const status = await channel.unsubscribe();
+    if (status === "ok") {
+      channel.teardown();
+    }
+    return status;
   }
   /**
    * Unsubscribes, removes and tears down all channels
    *
    * @category Realtime
    */
-  removeAllChannels() {
-    return __async(this, null, function* () {
-      const promises = this.channels.map((channel) => __async(this, null, function* () {
-        const result2 = yield channel.unsubscribe();
-        channel.teardown();
-        return result2;
-      }));
-      const result = yield Promise.all(promises);
-      yield this.disconnect();
-      return result;
+  async removeAllChannels() {
+    const promises = this.channels.map(async (channel) => {
+      const result2 = await channel.unsubscribe();
+      channel.teardown();
+      return result2;
     });
+    const result = await Promise.all(promises);
+    await this.disconnect();
+    return result;
   }
   /**
    * Logs the message.
@@ -9167,15 +9106,13 @@ Option 2: Install and provide the "ws" package:
    *
    * @category Realtime
    */
-  setAuth(token = null) {
-    return __async(this, null, function* () {
-      this._authPromise = this._performAuth(token);
-      try {
-        yield this._authPromise;
-      } finally {
-        this._authPromise = null;
-      }
-    });
+  async setAuth(token = null) {
+    this._authPromise = this._performAuth(token);
+    try {
+      await this._authPromise;
+    } finally {
+      this._authPromise = null;
+    }
   }
   /**
    * Returns true if the current access token was explicitly set via setAuth(token),
@@ -9190,10 +9127,8 @@ Option 2: Install and provide the "ws" package:
    *
    * @category Realtime
    */
-  sendHeartbeat() {
-    return __async(this, null, function* () {
-      this.socketAdapter.sendHeartbeat();
-    });
+  async sendHeartbeat() {
+    this.socketAdapter.sendHeartbeat();
   }
   /**
    * Sets a callback that receives lifecycle events for internal heartbeat messages.
@@ -9255,55 +9190,51 @@ Option 2: Install and provide the "ws" package:
    * Perform the actual auth operation
    * @internal
    */
-  _performAuth(token = null) {
-    return __async(this, null, function* () {
-      let tokenToSend;
-      let isManualToken = false;
-      if (token) {
-        tokenToSend = token;
-        isManualToken = true;
-      } else if (this.accessToken) {
-        try {
-          tokenToSend = yield this.accessToken();
-        } catch (e) {
-          this.log("error", "Error fetching access token from callback", e);
-          tokenToSend = this.accessTokenValue;
-        }
-      } else {
+  async _performAuth(token = null) {
+    let tokenToSend;
+    let isManualToken = false;
+    if (token) {
+      tokenToSend = token;
+      isManualToken = true;
+    } else if (this.accessToken) {
+      try {
+        tokenToSend = await this.accessToken();
+      } catch (e) {
+        this.log("error", "Error fetching access token from callback", e);
         tokenToSend = this.accessTokenValue;
       }
-      if (isManualToken) {
-        this._manuallySetToken = true;
-      } else if (this.accessToken) {
-        this._manuallySetToken = false;
-      }
-      if (this.accessTokenValue != tokenToSend) {
-        this.accessTokenValue = tokenToSend;
-        this.channels.forEach((channel) => {
-          const payload = {
-            access_token: tokenToSend,
-            version: DEFAULT_VERSION
-          };
-          tokenToSend && channel.updateJoinPayload(payload);
-          if (channel.joinedOnce && channel.channelAdapter.isJoined()) {
-            channel.channelAdapter.push(CHANNEL_EVENTS.access_token, {
-              access_token: tokenToSend
-            });
-          }
-        });
-      }
-    });
+    } else {
+      tokenToSend = this.accessTokenValue;
+    }
+    if (isManualToken) {
+      this._manuallySetToken = true;
+    } else if (this.accessToken) {
+      this._manuallySetToken = false;
+    }
+    if (this.accessTokenValue != tokenToSend) {
+      this.accessTokenValue = tokenToSend;
+      this.channels.forEach((channel) => {
+        const payload = {
+          access_token: tokenToSend,
+          version: DEFAULT_VERSION
+        };
+        tokenToSend && channel.updateJoinPayload(payload);
+        if (channel.joinedOnce && channel.channelAdapter.isJoined()) {
+          channel.channelAdapter.push(CHANNEL_EVENTS.access_token, {
+            access_token: tokenToSend
+          });
+        }
+      });
+    }
   }
   /**
    * Wait for any in-flight auth operations to complete
    * @internal
    */
-  _waitForAuthIfNeeded() {
-    return __async(this, null, function* () {
-      if (this._authPromise) {
-        yield this._authPromise;
-      }
-    });
+  async _waitForAuthIfNeeded() {
+    if (this._authPromise) {
+      await this._authPromise;
+    }
   }
   /**
    * Safely call setAuth with standardized error handling
@@ -9456,27 +9387,24 @@ Option 2: Install and provide the "ws" package:
     return result;
   }
   /** @internal */
-  _reconnectAuth() {
-    return __async(this, null, function* () {
-      yield this._waitForAuthIfNeeded();
-      if (!this.isConnected()) {
-        this.connect();
-      }
-    });
+  async _reconnectAuth() {
+    await this._waitForAuthIfNeeded();
+    if (!this.isConnected()) {
+      this.connect();
+    }
   }
 };
 
 // node_modules/.pnpm/iceberg-js@0.8.1/node_modules/iceberg-js/dist/index.mjs
 var IcebergError = class extends Error {
   constructor(message, opts) {
-    var _a;
     super(message);
     this.name = "IcebergError";
     this.status = opts.status;
     this.icebergType = opts.icebergType;
     this.icebergCode = opts.icebergCode;
     this.details = opts.details;
-    this.isCommitStateUnknown = opts.icebergType === "CommitStateUnknownException" || [500, 502, 504].includes(opts.status) && ((_a = opts.icebergType) == null ? void 0 : _a.includes("CommitState")) === true;
+    this.isCommitStateUnknown = opts.icebergType === "CommitStateUnknownException" || [500, 502, 504].includes(opts.status) && opts.icebergType?.includes("CommitState") === true;
   }
   /**
    * Returns true if the error is a 404 Not Found error.
@@ -9508,61 +9436,59 @@ function buildUrl(baseUrl, path, query) {
   }
   return url.toString();
 }
-function buildAuthHeaders(auth) {
-  return __async(this, null, function* () {
-    if (!auth || auth.type === "none") {
-      return {};
-    }
-    if (auth.type === "bearer") {
-      return { Authorization: `Bearer ${auth.token}` };
-    }
-    if (auth.type === "header") {
-      return { [auth.name]: auth.value };
-    }
-    if (auth.type === "custom") {
-      return yield auth.getHeaders();
-    }
+async function buildAuthHeaders(auth) {
+  if (!auth || auth.type === "none") {
     return {};
-  });
+  }
+  if (auth.type === "bearer") {
+    return { Authorization: `Bearer ${auth.token}` };
+  }
+  if (auth.type === "header") {
+    return { [auth.name]: auth.value };
+  }
+  if (auth.type === "custom") {
+    return await auth.getHeaders();
+  }
+  return {};
 }
 function createFetchClient(options) {
-  var _a;
-  const fetchFn = (_a = options.fetchImpl) != null ? _a : globalThis.fetch;
+  const fetchFn = options.fetchImpl ?? globalThis.fetch;
   return {
-    request(_0) {
-      return __async(this, arguments, function* ({
+    async request({
+      method,
+      path,
+      query,
+      body,
+      headers
+    }) {
+      const url = buildUrl(options.baseUrl, path, query);
+      const authHeaders = await buildAuthHeaders(options.auth);
+      const res = await fetchFn(url, {
         method,
-        path,
-        query,
-        body,
-        headers
-      }) {
-        var _a2;
-        const url = buildUrl(options.baseUrl, path, query);
-        const authHeaders = yield buildAuthHeaders(options.auth);
-        const res = yield fetchFn(url, {
-          method,
-          headers: __spreadValues(__spreadValues(__spreadValues({}, body ? { "Content-Type": "application/json" } : {}), authHeaders), headers),
-          body: body ? JSON.stringify(body) : void 0
-        });
-        const text = yield res.text();
-        const isJson = (res.headers.get("content-type") || "").includes("application/json");
-        const data = isJson && text ? JSON.parse(text) : text;
-        if (!res.ok) {
-          const errBody = isJson ? data : void 0;
-          const errorDetail = errBody == null ? void 0 : errBody.error;
-          throw new IcebergError(
-            (_a2 = errorDetail == null ? void 0 : errorDetail.message) != null ? _a2 : `Request failed with status ${res.status}`,
-            {
-              status: res.status,
-              icebergType: errorDetail == null ? void 0 : errorDetail.type,
-              icebergCode: errorDetail == null ? void 0 : errorDetail.code,
-              details: errBody
-            }
-          );
-        }
-        return { status: res.status, headers: res.headers, data };
+        headers: {
+          ...body ? { "Content-Type": "application/json" } : {},
+          ...authHeaders,
+          ...headers
+        },
+        body: body ? JSON.stringify(body) : void 0
       });
+      const text = await res.text();
+      const isJson = (res.headers.get("content-type") || "").includes("application/json");
+      const data = isJson && text ? JSON.parse(text) : text;
+      if (!res.ok) {
+        const errBody = isJson ? data : void 0;
+        const errorDetail = errBody?.error;
+        throw new IcebergError(
+          errorDetail?.message ?? `Request failed with status ${res.status}`,
+          {
+            status: res.status,
+            icebergType: errorDetail?.type,
+            icebergCode: errorDetail?.code,
+            details: errBody
+          }
+        );
+      }
+      return { status: res.status, headers: res.headers, data };
     }
   };
 }
@@ -9574,77 +9500,65 @@ var NamespaceOperations = class {
     this.client = client;
     this.prefix = prefix;
   }
-  listNamespaces(parent) {
-    return __async(this, null, function* () {
-      const query = parent ? { parent: namespaceToPath(parent.namespace) } : void 0;
-      const response = yield this.client.request({
-        method: "GET",
-        path: `${this.prefix}/namespaces`,
-        query
-      });
-      return response.data.namespaces.map((ns) => ({ namespace: ns }));
+  async listNamespaces(parent) {
+    const query = parent ? { parent: namespaceToPath(parent.namespace) } : void 0;
+    const response = await this.client.request({
+      method: "GET",
+      path: `${this.prefix}/namespaces`,
+      query
+    });
+    return response.data.namespaces.map((ns) => ({ namespace: ns }));
+  }
+  async createNamespace(id, metadata) {
+    const request = {
+      namespace: id.namespace,
+      properties: metadata?.properties
+    };
+    const response = await this.client.request({
+      method: "POST",
+      path: `${this.prefix}/namespaces`,
+      body: request
+    });
+    return response.data;
+  }
+  async dropNamespace(id) {
+    await this.client.request({
+      method: "DELETE",
+      path: `${this.prefix}/namespaces/${namespaceToPath(id.namespace)}`
     });
   }
-  createNamespace(id, metadata) {
-    return __async(this, null, function* () {
-      const request = {
-        namespace: id.namespace,
-        properties: metadata == null ? void 0 : metadata.properties
-      };
-      const response = yield this.client.request({
-        method: "POST",
-        path: `${this.prefix}/namespaces`,
-        body: request
-      });
-      return response.data;
+  async loadNamespaceMetadata(id) {
+    const response = await this.client.request({
+      method: "GET",
+      path: `${this.prefix}/namespaces/${namespaceToPath(id.namespace)}`
     });
+    return {
+      properties: response.data.properties
+    };
   }
-  dropNamespace(id) {
-    return __async(this, null, function* () {
-      yield this.client.request({
-        method: "DELETE",
+  async namespaceExists(id) {
+    try {
+      await this.client.request({
+        method: "HEAD",
         path: `${this.prefix}/namespaces/${namespaceToPath(id.namespace)}`
       });
-    });
-  }
-  loadNamespaceMetadata(id) {
-    return __async(this, null, function* () {
-      const response = yield this.client.request({
-        method: "GET",
-        path: `${this.prefix}/namespaces/${namespaceToPath(id.namespace)}`
-      });
-      return {
-        properties: response.data.properties
-      };
-    });
-  }
-  namespaceExists(id) {
-    return __async(this, null, function* () {
-      try {
-        yield this.client.request({
-          method: "HEAD",
-          path: `${this.prefix}/namespaces/${namespaceToPath(id.namespace)}`
-        });
-        return true;
-      } catch (error) {
-        if (error instanceof IcebergError && error.status === 404) {
-          return false;
-        }
-        throw error;
+      return true;
+    } catch (error) {
+      if (error instanceof IcebergError && error.status === 404) {
+        return false;
       }
-    });
+      throw error;
+    }
   }
-  createNamespaceIfNotExists(id, metadata) {
-    return __async(this, null, function* () {
-      try {
-        return yield this.createNamespace(id, metadata);
-      } catch (error) {
-        if (error instanceof IcebergError && error.status === 409) {
-          return;
-        }
-        throw error;
+  async createNamespaceIfNotExists(id, metadata) {
+    try {
+      return await this.createNamespace(id, metadata);
+    } catch (error) {
+      if (error instanceof IcebergError && error.status === 409) {
+        return;
       }
-    });
+      throw error;
+    }
   }
 };
 function namespaceToPath2(namespace) {
@@ -9656,99 +9570,84 @@ var TableOperations = class {
     this.prefix = prefix;
     this.accessDelegation = accessDelegation;
   }
-  listTables(namespace) {
-    return __async(this, null, function* () {
-      const response = yield this.client.request({
-        method: "GET",
-        path: `${this.prefix}/namespaces/${namespaceToPath2(namespace.namespace)}/tables`
-      });
-      return response.data.identifiers;
+  async listTables(namespace) {
+    const response = await this.client.request({
+      method: "GET",
+      path: `${this.prefix}/namespaces/${namespaceToPath2(namespace.namespace)}/tables`
+    });
+    return response.data.identifiers;
+  }
+  async createTable(namespace, request) {
+    const headers = {};
+    if (this.accessDelegation) {
+      headers["X-Iceberg-Access-Delegation"] = this.accessDelegation;
+    }
+    const response = await this.client.request({
+      method: "POST",
+      path: `${this.prefix}/namespaces/${namespaceToPath2(namespace.namespace)}/tables`,
+      body: request,
+      headers
+    });
+    return response.data.metadata;
+  }
+  async updateTable(id, request) {
+    const response = await this.client.request({
+      method: "POST",
+      path: `${this.prefix}/namespaces/${namespaceToPath2(id.namespace)}/tables/${id.name}`,
+      body: request
+    });
+    return {
+      "metadata-location": response.data["metadata-location"],
+      metadata: response.data.metadata
+    };
+  }
+  async dropTable(id, options) {
+    await this.client.request({
+      method: "DELETE",
+      path: `${this.prefix}/namespaces/${namespaceToPath2(id.namespace)}/tables/${id.name}`,
+      query: { purgeRequested: String(options?.purge ?? false) }
     });
   }
-  createTable(namespace, request) {
-    return __async(this, null, function* () {
-      const headers = {};
-      if (this.accessDelegation) {
-        headers["X-Iceberg-Access-Delegation"] = this.accessDelegation;
-      }
-      const response = yield this.client.request({
-        method: "POST",
-        path: `${this.prefix}/namespaces/${namespaceToPath2(namespace.namespace)}/tables`,
-        body: request,
+  async loadTable(id) {
+    const headers = {};
+    if (this.accessDelegation) {
+      headers["X-Iceberg-Access-Delegation"] = this.accessDelegation;
+    }
+    const response = await this.client.request({
+      method: "GET",
+      path: `${this.prefix}/namespaces/${namespaceToPath2(id.namespace)}/tables/${id.name}`,
+      headers
+    });
+    return response.data.metadata;
+  }
+  async tableExists(id) {
+    const headers = {};
+    if (this.accessDelegation) {
+      headers["X-Iceberg-Access-Delegation"] = this.accessDelegation;
+    }
+    try {
+      await this.client.request({
+        method: "HEAD",
+        path: `${this.prefix}/namespaces/${namespaceToPath2(id.namespace)}/tables/${id.name}`,
         headers
       });
-      return response.data.metadata;
-    });
-  }
-  updateTable(id, request) {
-    return __async(this, null, function* () {
-      const response = yield this.client.request({
-        method: "POST",
-        path: `${this.prefix}/namespaces/${namespaceToPath2(id.namespace)}/tables/${id.name}`,
-        body: request
-      });
-      return {
-        "metadata-location": response.data["metadata-location"],
-        metadata: response.data.metadata
-      };
-    });
-  }
-  dropTable(id, options) {
-    return __async(this, null, function* () {
-      var _a;
-      yield this.client.request({
-        method: "DELETE",
-        path: `${this.prefix}/namespaces/${namespaceToPath2(id.namespace)}/tables/${id.name}`,
-        query: { purgeRequested: String((_a = options == null ? void 0 : options.purge) != null ? _a : false) }
-      });
-    });
-  }
-  loadTable(id) {
-    return __async(this, null, function* () {
-      const headers = {};
-      if (this.accessDelegation) {
-        headers["X-Iceberg-Access-Delegation"] = this.accessDelegation;
+      return true;
+    } catch (error) {
+      if (error instanceof IcebergError && error.status === 404) {
+        return false;
       }
-      const response = yield this.client.request({
-        method: "GET",
-        path: `${this.prefix}/namespaces/${namespaceToPath2(id.namespace)}/tables/${id.name}`,
-        headers
-      });
-      return response.data.metadata;
-    });
+      throw error;
+    }
   }
-  tableExists(id) {
-    return __async(this, null, function* () {
-      const headers = {};
-      if (this.accessDelegation) {
-        headers["X-Iceberg-Access-Delegation"] = this.accessDelegation;
+  async createTableIfNotExists(namespace, request) {
+    try {
+      return await this.createTable(namespace, request);
+    } catch (error) {
+      if (error instanceof IcebergError && error.status === 409) {
+        return await this.loadTable({ namespace: namespace.namespace, name: request.name });
       }
-      try {
-        yield this.client.request({
-          method: "HEAD",
-          path: `${this.prefix}/namespaces/${namespaceToPath2(id.namespace)}/tables/${id.name}`,
-          headers
-        });
-        return true;
-      } catch (error) {
-        if (error instanceof IcebergError && error.status === 404) {
-          return false;
-        }
-        throw error;
-      }
-    });
-  }
-  createTableIfNotExists(namespace, request) {
-    return __async(this, null, function* () {
-      try {
-        return yield this.createTable(namespace, request);
-      } catch (error) {
-        if (error instanceof IcebergError && error.status === 409) {
-          return yield this.loadTable({ namespace: namespace.namespace, name: request.name });
-        }
-        throw error;
-      }
-    });
+      throw error;
+    }
   }
 };
 var IcebergRestCatalog = class {
@@ -9758,7 +9657,6 @@ var IcebergRestCatalog = class {
    * @param options - Configuration options for the catalog client
    */
   constructor(options) {
-    var _a;
     let prefix = "v1";
     if (options.catalogName) {
       prefix += `/${options.catalogName}`;
@@ -9769,7 +9667,7 @@ var IcebergRestCatalog = class {
       auth: options.auth,
       fetchImpl: options.fetch
     });
-    this.accessDelegation = (_a = options.accessDelegation) == null ? void 0 : _a.join(",");
+    this.accessDelegation = options.accessDelegation?.join(",");
     this.namespaceOps = new NamespaceOperations(this.client, prefix);
     this.tableOps = new TableOperations(this.client, prefix, this.accessDelegation);
   }
@@ -9788,10 +9686,8 @@ var IcebergRestCatalog = class {
    * const children = await catalog.listNamespaces({ namespace: ['analytics'] });
    * ```
    */
-  listNamespaces(parent) {
-    return __async(this, null, function* () {
-      return this.namespaceOps.listNamespaces(parent);
-    });
+  async listNamespaces(parent) {
+    return this.namespaceOps.listNamespaces(parent);
   }
   /**
    * Creates a new namespace in the catalog.
@@ -9810,10 +9706,8 @@ var IcebergRestCatalog = class {
    * console.log(response.properties); // { owner: 'data-team', ... }
    * ```
    */
-  createNamespace(id, metadata) {
-    return __async(this, null, function* () {
-      return this.namespaceOps.createNamespace(id, metadata);
-    });
+  async createNamespace(id, metadata) {
+    return this.namespaceOps.createNamespace(id, metadata);
   }
   /**
    * Drops a namespace from the catalog.
@@ -9827,10 +9721,8 @@ var IcebergRestCatalog = class {
    * await catalog.dropNamespace({ namespace: ['analytics'] });
    * ```
    */
-  dropNamespace(id) {
-    return __async(this, null, function* () {
-      yield this.namespaceOps.dropNamespace(id);
-    });
+  async dropNamespace(id) {
+    await this.namespaceOps.dropNamespace(id);
   }
   /**
    * Loads metadata for a namespace.
@@ -9844,10 +9736,8 @@ var IcebergRestCatalog = class {
    * console.log(metadata.properties);
    * ```
    */
-  loadNamespaceMetadata(id) {
-    return __async(this, null, function* () {
-      return this.namespaceOps.loadNamespaceMetadata(id);
-    });
+  async loadNamespaceMetadata(id) {
+    return this.namespaceOps.loadNamespaceMetadata(id);
   }
   /**
    * Lists all tables in a namespace.
@@ -9861,10 +9751,8 @@ var IcebergRestCatalog = class {
    * console.log(tables); // [{ namespace: ['analytics'], name: 'events' }, ...]
    * ```
    */
-  listTables(namespace) {
-    return __async(this, null, function* () {
-      return this.tableOps.listTables(namespace);
-    });
+  async listTables(namespace) {
+    return this.tableOps.listTables(namespace);
   }
   /**
    * Creates a new table in the catalog.
@@ -9897,10 +9785,8 @@ var IcebergRestCatalog = class {
    * );
    * ```
    */
-  createTable(namespace, request) {
-    return __async(this, null, function* () {
-      return this.tableOps.createTable(namespace, request);
-    });
+  async createTable(namespace, request) {
+    return this.tableOps.createTable(namespace, request);
   }
   /**
    * Updates an existing table's metadata.
@@ -9923,10 +9809,8 @@ var IcebergRestCatalog = class {
    * console.log(response.metadata); // TableMetadata object
    * ```
    */
-  updateTable(id, request) {
-    return __async(this, null, function* () {
-      return this.tableOps.updateTable(id, request);
-    });
+  async updateTable(id, request) {
+    return this.tableOps.updateTable(id, request);
   }
   /**
    * Drops a table from the catalog.
@@ -9938,10 +9822,8 @@ var IcebergRestCatalog = class {
    * await catalog.dropTable({ namespace: ['analytics'], name: 'events' });
    * ```
    */
-  dropTable(id, options) {
-    return __async(this, null, function* () {
-      yield this.tableOps.dropTable(id, options);
-    });
+  async dropTable(id, options) {
+    await this.tableOps.dropTable(id, options);
   }
   /**
    * Loads metadata for a table.
@@ -9956,10 +9838,8 @@ var IcebergRestCatalog = class {
    * console.log(metadata.location);
    * ```
    */
-  loadTable(id) {
-    return __async(this, null, function* () {
-      return this.tableOps.loadTable(id);
-    });
+  async loadTable(id) {
+    return this.tableOps.loadTable(id);
   }
   /**
    * Checks if a namespace exists in the catalog.
@@ -9973,10 +9853,8 @@ var IcebergRestCatalog = class {
    * console.log(exists); // true or false
    * ```
    */
-  namespaceExists(id) {
-    return __async(this, null, function* () {
-      return this.namespaceOps.namespaceExists(id);
-    });
+  async namespaceExists(id) {
+    return this.namespaceOps.namespaceExists(id);
   }
   /**
    * Checks if a table exists in the catalog.
@@ -9990,10 +9868,8 @@ var IcebergRestCatalog = class {
    * console.log(exists); // true or false
    * ```
    */
-  tableExists(id) {
-    return __async(this, null, function* () {
-      return this.tableOps.tableExists(id);
-    });
+  async tableExists(id) {
+    return this.tableOps.tableExists(id);
   }
   /**
    * Creates a namespace if it does not exist.
@@ -10017,10 +9893,8 @@ var IcebergRestCatalog = class {
    * }
    * ```
    */
-  createNamespaceIfNotExists(id, metadata) {
-    return __async(this, null, function* () {
-      return this.namespaceOps.createNamespaceIfNotExists(id, metadata);
-    });
+  async createNamespaceIfNotExists(id, metadata) {
+    return this.namespaceOps.createNamespaceIfNotExists(id, metadata);
   }
   /**
    * Creates a table if it does not exist.
@@ -10049,10 +9923,8 @@ var IcebergRestCatalog = class {
    * );
    * ```
    */
-  createTableIfNotExists(namespace, request) {
-    return __async(this, null, function* () {
-      return this.tableOps.createTableIfNotExists(namespace, request);
-    });
+  async createTableIfNotExists(namespace, request) {
+    return this.tableOps.createTableIfNotExists(namespace, request);
   }
 };
 
@@ -10199,7 +10071,7 @@ var _getErrorMessage = (err) => {
   }
   return JSON.stringify(err);
 };
-var handleError = (error, reject, options, namespace) => __async(null, null, function* () {
+var handleError = async (error, reject, options, namespace) => {
   if (error !== null && typeof error === "object" && "json" in error && typeof error.json === "function") {
     const responseError = error;
     let status = parseInt(String(responseError.status), 10);
@@ -10212,7 +10084,7 @@ var handleError = (error, reject, options, namespace) => __async(null, null, fun
       reject(new StorageApiError(responseError.statusText || `HTTP ${status} error`, status, statusCode, namespace));
     });
   } else reject(new StorageUnknownError(_getErrorMessage(error), error, namespace));
-});
+};
 var _getRequestParams = (method, options, parameters, body) => {
   const params = {
     method,
@@ -10230,39 +10102,37 @@ var _getRequestParams = (method, options, parameters, body) => {
   if (options === null || options === void 0 ? void 0 : options.duplex) params.duplex = options.duplex;
   return _objectSpread22(_objectSpread22({}, params), parameters);
 };
-function _handleRequest(fetcher, method, url, options, parameters, body, namespace) {
-  return __async(this, null, function* () {
-    return new Promise((resolve, reject) => {
-      fetcher(url, _getRequestParams(method, options, parameters, body)).then((result) => {
-        if (!result.ok) throw result;
-        if (options === null || options === void 0 ? void 0 : options.noResolveJson) return result;
-        if (namespace === "vectors") {
-          const contentType = result.headers.get("content-type");
-          if (result.headers.get("content-length") === "0" || result.status === 204) return {};
-          if (!contentType || !contentType.includes("application/json")) return {};
-        }
-        return result.json();
-      }).then((data) => resolve(data)).catch((error) => handleError(error, reject, options, namespace));
-    });
+async function _handleRequest(fetcher, method, url, options, parameters, body, namespace) {
+  return new Promise((resolve, reject) => {
+    fetcher(url, _getRequestParams(method, options, parameters, body)).then((result) => {
+      if (!result.ok) throw result;
+      if (options === null || options === void 0 ? void 0 : options.noResolveJson) return result;
+      if (namespace === "vectors") {
+        const contentType = result.headers.get("content-type");
+        if (result.headers.get("content-length") === "0" || result.status === 204) return {};
+        if (!contentType || !contentType.includes("application/json")) return {};
+      }
+      return result.json();
+    }).then((data) => resolve(data)).catch((error) => handleError(error, reject, options, namespace));
   });
 }
 function createFetchApi(namespace = "storage") {
   return {
-    get: (fetcher, url, options, parameters) => __async(null, null, function* () {
+    get: async (fetcher, url, options, parameters) => {
       return _handleRequest(fetcher, "GET", url, options, parameters, void 0, namespace);
-    }),
-    post: (fetcher, url, body, options, parameters) => __async(null, null, function* () {
+    },
+    post: async (fetcher, url, body, options, parameters) => {
       return _handleRequest(fetcher, "POST", url, options, parameters, body, namespace);
-    }),
-    put: (fetcher, url, body, options, parameters) => __async(null, null, function* () {
+    },
+    put: async (fetcher, url, body, options, parameters) => {
       return _handleRequest(fetcher, "PUT", url, options, parameters, body, namespace);
-    }),
-    head: (fetcher, url, options, parameters) => __async(null, null, function* () {
+    },
+    head: async (fetcher, url, options, parameters) => {
       return _handleRequest(fetcher, "HEAD", url, _objectSpread22(_objectSpread22({}, options), {}, { noResolveJson: true }), parameters, void 0, namespace);
-    }),
-    remove: (fetcher, url, body, options, parameters) => __async(null, null, function* () {
+    },
+    remove: async (fetcher, url, body, options, parameters) => {
       return _handleRequest(fetcher, "DELETE", url, options, parameters, body, namespace);
-    })
+    }
   };
 }
 var defaultApi = createFetchApi("storage");
@@ -10330,23 +10200,21 @@ var BaseApiClient = class {
   * }
   * ```
   */
-  handleOperation(operation) {
-    return __async(this, null, function* () {
-      var _this = this;
-      try {
-        return {
-          data: yield operation(),
-          error: null
-        };
-      } catch (error) {
-        if (_this.shouldThrowOnError) throw error;
-        if (isStorageError(error)) return {
-          data: null,
-          error
-        };
-        throw error;
-      }
-    });
+  async handleOperation(operation) {
+    var _this = this;
+    try {
+      return {
+        data: await operation(),
+        error: null
+      };
+    } catch (error) {
+      if (_this.shouldThrowOnError) throw error;
+      if (isStorageError(error)) return {
+        data: null,
+        error
+      };
+      throw error;
+    }
   }
 };
 var _Symbol$toStringTag$1;
@@ -10371,23 +10239,21 @@ var StreamDownloadBuilder = class {
     if (!this.promise) this.promise = this.execute();
     return this.promise;
   }
-  execute() {
-    return __async(this, null, function* () {
-      var _this = this;
-      try {
-        return {
-          data: (yield _this.downloadFn()).body,
-          error: null
-        };
-      } catch (error) {
-        if (_this.shouldThrowOnError) throw error;
-        if (isStorageError(error)) return {
-          data: null,
-          error
-        };
-        throw error;
-      }
-    });
+  async execute() {
+    var _this = this;
+    try {
+      return {
+        data: (await _this.downloadFn()).body,
+        error: null
+      };
+    } catch (error) {
+      if (_this.shouldThrowOnError) throw error;
+      if (isStorageError(error)) return {
+        data: null,
+        error
+      };
+      throw error;
+    }
   }
 };
 var _Symbol$toStringTag;
@@ -10415,23 +10281,21 @@ var BlobDownloadBuilder = class {
     if (!this.promise) this.promise = this.execute();
     return this.promise;
   }
-  execute() {
-    return __async(this, null, function* () {
-      var _this = this;
-      try {
-        return {
-          data: yield (yield _this.downloadFn()).blob(),
-          error: null
-        };
-      } catch (error) {
-        if (_this.shouldThrowOnError) throw error;
-        if (isStorageError(error)) return {
-          data: null,
-          error
-        };
-        throw error;
-      }
-    });
+  async execute() {
+    var _this = this;
+    try {
+      return {
+        data: await (await _this.downloadFn()).blob(),
+        error: null
+      };
+    } catch (error) {
+      if (_this.shouldThrowOnError) throw error;
+      if (isStorageError(error)) return {
+        data: null,
+        error
+      };
+      throw error;
+    }
   }
 };
 var DEFAULT_SEARCH_OPTIONS = {
@@ -10459,40 +10323,38 @@ var StorageFileApi = class extends BaseApiClient {
   * @param path The relative file path. Should be of the format `folder/subfolder/filename.png`. The bucket must already exist before attempting to upload.
   * @param fileBody The body of the file to be stored in the bucket.
   */
-  uploadOrUpdate(method, path, fileBody, fileOptions) {
-    return __async(this, null, function* () {
-      var _this = this;
-      return _this.handleOperation(() => __async(this, null, function* () {
-        let body;
-        const options = _objectSpread22(_objectSpread22({}, DEFAULT_FILE_OPTIONS), fileOptions);
-        let headers = _objectSpread22(_objectSpread22({}, _this.headers), method === "POST" && { "x-upsert": String(options.upsert) });
-        const metadata = options.metadata;
-        if (typeof Blob !== "undefined" && fileBody instanceof Blob) {
-          body = new FormData();
-          body.append("cacheControl", options.cacheControl);
-          if (metadata) body.append("metadata", _this.encodeMetadata(metadata));
-          body.append("", fileBody);
-        } else if (typeof FormData !== "undefined" && fileBody instanceof FormData) {
-          body = fileBody;
-          if (!body.has("cacheControl")) body.append("cacheControl", options.cacheControl);
-          if (metadata && !body.has("metadata")) body.append("metadata", _this.encodeMetadata(metadata));
-        } else {
-          body = fileBody;
-          headers["cache-control"] = `max-age=${options.cacheControl}`;
-          headers["content-type"] = options.contentType;
-          if (metadata) headers["x-metadata"] = _this.toBase64(_this.encodeMetadata(metadata));
-          if ((typeof ReadableStream !== "undefined" && body instanceof ReadableStream || body && typeof body === "object" && "pipe" in body && typeof body.pipe === "function") && !options.duplex) options.duplex = "half";
-        }
-        if (fileOptions === null || fileOptions === void 0 ? void 0 : fileOptions.headers) for (const [key, value] of Object.entries(fileOptions.headers)) headers = setHeader(headers, key, value);
-        const cleanPath = _this._removeEmptyFolders(path);
-        const _path = _this._getFinalPath(cleanPath);
-        const data = yield (method == "PUT" ? put : post)(_this.fetch, `${_this.url}/object/${_path}`, body, _objectSpread22({ headers }, (options === null || options === void 0 ? void 0 : options.duplex) ? { duplex: options.duplex } : {}));
-        return {
-          path: cleanPath,
-          id: data.Id,
-          fullPath: data.Key
-        };
-      }));
+  async uploadOrUpdate(method, path, fileBody, fileOptions) {
+    var _this = this;
+    return _this.handleOperation(async () => {
+      let body;
+      const options = _objectSpread22(_objectSpread22({}, DEFAULT_FILE_OPTIONS), fileOptions);
+      let headers = _objectSpread22(_objectSpread22({}, _this.headers), method === "POST" && { "x-upsert": String(options.upsert) });
+      const metadata = options.metadata;
+      if (typeof Blob !== "undefined" && fileBody instanceof Blob) {
+        body = new FormData();
+        body.append("cacheControl", options.cacheControl);
+        if (metadata) body.append("metadata", _this.encodeMetadata(metadata));
+        body.append("", fileBody);
+      } else if (typeof FormData !== "undefined" && fileBody instanceof FormData) {
+        body = fileBody;
+        if (!body.has("cacheControl")) body.append("cacheControl", options.cacheControl);
+        if (metadata && !body.has("metadata")) body.append("metadata", _this.encodeMetadata(metadata));
+      } else {
+        body = fileBody;
+        headers["cache-control"] = `max-age=${options.cacheControl}`;
+        headers["content-type"] = options.contentType;
+        if (metadata) headers["x-metadata"] = _this.toBase64(_this.encodeMetadata(metadata));
+        if ((typeof ReadableStream !== "undefined" && body instanceof ReadableStream || body && typeof body === "object" && "pipe" in body && typeof body.pipe === "function") && !options.duplex) options.duplex = "half";
+      }
+      if (fileOptions === null || fileOptions === void 0 ? void 0 : fileOptions.headers) for (const [key, value] of Object.entries(fileOptions.headers)) headers = setHeader(headers, key, value);
+      const cleanPath = _this._removeEmptyFolders(path);
+      const _path = _this._getFinalPath(cleanPath);
+      const data = await (method == "PUT" ? put : post)(_this.fetch, `${_this.url}/object/${_path}`, body, _objectSpread22({ headers }, (options === null || options === void 0 ? void 0 : options.duplex) ? { duplex: options.duplex } : {}));
+      return {
+        path: cleanPath,
+        id: data.Id,
+        fullPath: data.Key
+      };
     });
   }
   /**
@@ -10562,10 +10424,8 @@ var StorageFileApi = class extends BaseApiClient {
   * - Refer to the [Storage guide](/docs/guides/storage/security/access-control) on how access control works
   * - For React Native, using either `Blob`, `File` or `FormData` does not work as intended. Upload file using `ArrayBuffer` from base64 file data instead, see example below.
   */
-  upload(path, fileBody, fileOptions) {
-    return __async(this, null, function* () {
-      return this.uploadOrUpdate("POST", path, fileBody, fileOptions);
-    });
+  async upload(path, fileBody, fileOptions) {
+    return this.uploadOrUpdate("POST", path, fileBody, fileOptions);
   }
   /**
   * Upload a file with a token generated from `createSignedUploadUrl`.
@@ -10605,40 +10465,38 @@ var StorageFileApi = class extends BaseApiClient {
   *   - `objects` table permissions: none
   * - Refer to the [Storage guide](/docs/guides/storage/security/access-control) on how access control works
   */
-  uploadToSignedUrl(path, token, fileBody, fileOptions) {
-    return __async(this, null, function* () {
-      var _this3 = this;
-      const cleanPath = _this3._removeEmptyFolders(path);
-      const _path = _this3._getFinalPath(cleanPath);
-      const url = new URL(_this3.url + `/object/upload/sign/${_path}`);
-      url.searchParams.set("token", token);
-      return _this3.handleOperation(() => __async(this, null, function* () {
-        let body;
-        const options = _objectSpread22(_objectSpread22({}, DEFAULT_FILE_OPTIONS), fileOptions);
-        let headers = _objectSpread22(_objectSpread22({}, _this3.headers), { "x-upsert": String(options.upsert) });
-        const metadata = options.metadata;
-        if (typeof Blob !== "undefined" && fileBody instanceof Blob) {
-          body = new FormData();
-          body.append("cacheControl", options.cacheControl);
-          if (metadata) body.append("metadata", _this3.encodeMetadata(metadata));
-          body.append("", fileBody);
-        } else if (typeof FormData !== "undefined" && fileBody instanceof FormData) {
-          body = fileBody;
-          if (!body.has("cacheControl")) body.append("cacheControl", options.cacheControl);
-          if (metadata && !body.has("metadata")) body.append("metadata", _this3.encodeMetadata(metadata));
-        } else {
-          body = fileBody;
-          headers["cache-control"] = `max-age=${options.cacheControl}`;
-          headers["content-type"] = options.contentType;
-          if (metadata) headers["x-metadata"] = _this3.toBase64(_this3.encodeMetadata(metadata));
-          if ((typeof ReadableStream !== "undefined" && body instanceof ReadableStream || body && typeof body === "object" && "pipe" in body && typeof body.pipe === "function") && !options.duplex) options.duplex = "half";
-        }
-        if (fileOptions === null || fileOptions === void 0 ? void 0 : fileOptions.headers) for (const [key, value] of Object.entries(fileOptions.headers)) headers = setHeader(headers, key, value);
-        return {
-          path: cleanPath,
-          fullPath: (yield put(_this3.fetch, url.toString(), body, _objectSpread22({ headers }, (options === null || options === void 0 ? void 0 : options.duplex) ? { duplex: options.duplex } : {}))).Key
-        };
-      }));
+  async uploadToSignedUrl(path, token, fileBody, fileOptions) {
+    var _this3 = this;
+    const cleanPath = _this3._removeEmptyFolders(path);
+    const _path = _this3._getFinalPath(cleanPath);
+    const url = new URL(_this3.url + `/object/upload/sign/${_path}`);
+    url.searchParams.set("token", token);
+    return _this3.handleOperation(async () => {
+      let body;
+      const options = _objectSpread22(_objectSpread22({}, DEFAULT_FILE_OPTIONS), fileOptions);
+      let headers = _objectSpread22(_objectSpread22({}, _this3.headers), { "x-upsert": String(options.upsert) });
+      const metadata = options.metadata;
+      if (typeof Blob !== "undefined" && fileBody instanceof Blob) {
+        body = new FormData();
+        body.append("cacheControl", options.cacheControl);
+        if (metadata) body.append("metadata", _this3.encodeMetadata(metadata));
+        body.append("", fileBody);
+      } else if (typeof FormData !== "undefined" && fileBody instanceof FormData) {
+        body = fileBody;
+        if (!body.has("cacheControl")) body.append("cacheControl", options.cacheControl);
+        if (metadata && !body.has("metadata")) body.append("metadata", _this3.encodeMetadata(metadata));
+      } else {
+        body = fileBody;
+        headers["cache-control"] = `max-age=${options.cacheControl}`;
+        headers["content-type"] = options.contentType;
+        if (metadata) headers["x-metadata"] = _this3.toBase64(_this3.encodeMetadata(metadata));
+        if ((typeof ReadableStream !== "undefined" && body instanceof ReadableStream || body && typeof body === "object" && "pipe" in body && typeof body.pipe === "function") && !options.duplex) options.duplex = "half";
+      }
+      if (fileOptions === null || fileOptions === void 0 ? void 0 : fileOptions.headers) for (const [key, value] of Object.entries(fileOptions.headers)) headers = setHeader(headers, key, value);
+      return {
+        path: cleanPath,
+        fullPath: (await put(_this3.fetch, url.toString(), body, _objectSpread22({ headers }, (options === null || options === void 0 ? void 0 : options.duplex) ? { duplex: options.duplex } : {}))).Key
+      };
     });
   }
   /**
@@ -10678,23 +10536,21 @@ var StorageFileApi = class extends BaseApiClient {
   *   - `objects` table permissions: `insert`
   * - Refer to the [Storage guide](/docs/guides/storage/security/access-control) on how access control works
   */
-  createSignedUploadUrl(path, options) {
-    return __async(this, null, function* () {
-      var _this4 = this;
-      return _this4.handleOperation(() => __async(this, null, function* () {
-        let _path = _this4._getFinalPath(path);
-        const headers = _objectSpread22({}, _this4.headers);
-        if (options === null || options === void 0 ? void 0 : options.upsert) headers["x-upsert"] = "true";
-        const data = yield post(_this4.fetch, `${_this4.url}/object/upload/sign/${_path}`, {}, { headers });
-        const url = new URL(_this4.url + data.url);
-        const token = url.searchParams.get("token");
-        if (!token) throw new StorageError("No token returned by API");
-        return {
-          signedUrl: url.toString(),
-          path,
-          token
-        };
-      }));
+  async createSignedUploadUrl(path, options) {
+    var _this4 = this;
+    return _this4.handleOperation(async () => {
+      let _path = _this4._getFinalPath(path);
+      const headers = _objectSpread22({}, _this4.headers);
+      if (options === null || options === void 0 ? void 0 : options.upsert) headers["x-upsert"] = "true";
+      const data = await post(_this4.fetch, `${_this4.url}/object/upload/sign/${_path}`, {}, { headers });
+      const url = new URL(_this4.url + data.url);
+      const token = url.searchParams.get("token");
+      if (!token) throw new StorageError("No token returned by API");
+      return {
+        signedUrl: url.toString(),
+        path,
+        token
+      };
     });
   }
   /**
@@ -10752,10 +10608,8 @@ var StorageFileApi = class extends BaseApiClient {
   * - Refer to the [Storage guide](/docs/guides/storage/security/access-control) on how access control works
   * - For React Native, using either `Blob`, `File` or `FormData` does not work as intended. Update file using `ArrayBuffer` from base64 file data instead, see example below.
   */
-  update(path, fileBody, fileOptions) {
-    return __async(this, null, function* () {
-      return this.uploadOrUpdate("PUT", path, fileBody, fileOptions);
-    });
+  async update(path, fileBody, fileOptions) {
+    return this.uploadOrUpdate("PUT", path, fileBody, fileOptions);
   }
   /**
   * Moves an existing file to a new path in the same bucket.
@@ -10791,17 +10645,15 @@ var StorageFileApi = class extends BaseApiClient {
   *   - `objects` table permissions: `update` and `select`
   * - Refer to the [Storage guide](/docs/guides/storage/security/access-control) on how access control works
   */
-  move(fromPath, toPath, options) {
-    return __async(this, null, function* () {
-      var _this6 = this;
-      return _this6.handleOperation(() => __async(this, null, function* () {
-        return yield post(_this6.fetch, `${_this6.url}/object/move`, {
-          bucketId: _this6.bucketId,
-          sourceKey: fromPath,
-          destinationKey: toPath,
-          destinationBucket: options === null || options === void 0 ? void 0 : options.destinationBucket
-        }, { headers: _this6.headers });
-      }));
+  async move(fromPath, toPath, options) {
+    var _this6 = this;
+    return _this6.handleOperation(async () => {
+      return await post(_this6.fetch, `${_this6.url}/object/move`, {
+        bucketId: _this6.bucketId,
+        sourceKey: fromPath,
+        destinationKey: toPath,
+        destinationBucket: options === null || options === void 0 ? void 0 : options.destinationBucket
+      }, { headers: _this6.headers });
     });
   }
   /**
@@ -10838,17 +10690,15 @@ var StorageFileApi = class extends BaseApiClient {
   *   - `objects` table permissions: `insert` and `select`
   * - Refer to the [Storage guide](/docs/guides/storage/security/access-control) on how access control works
   */
-  copy(fromPath, toPath, options) {
-    return __async(this, null, function* () {
-      var _this7 = this;
-      return _this7.handleOperation(() => __async(this, null, function* () {
-        return { path: (yield post(_this7.fetch, `${_this7.url}/object/copy`, {
-          bucketId: _this7.bucketId,
-          sourceKey: fromPath,
-          destinationKey: toPath,
-          destinationBucket: options === null || options === void 0 ? void 0 : options.destinationBucket
-        }, { headers: _this7.headers })).Key };
-      }));
+  async copy(fromPath, toPath, options) {
+    var _this7 = this;
+    return _this7.handleOperation(async () => {
+      return { path: (await post(_this7.fetch, `${_this7.url}/object/copy`, {
+        bucketId: _this7.bucketId,
+        sourceKey: fromPath,
+        destinationKey: toPath,
+        destinationBucket: options === null || options === void 0 ? void 0 : options.destinationBucket
+      }, { headers: _this7.headers })).Key };
     });
   }
   /**
@@ -10910,19 +10760,17 @@ var StorageFileApi = class extends BaseApiClient {
   *   - `objects` table permissions: `select`
   * - Refer to the [Storage guide](/docs/guides/storage/security/access-control) on how access control works
   */
-  createSignedUrl(path, expiresIn, options) {
-    return __async(this, null, function* () {
-      var _this8 = this;
-      return _this8.handleOperation(() => __async(this, null, function* () {
-        let _path = _this8._getFinalPath(path);
-        const hasTransform = typeof (options === null || options === void 0 ? void 0 : options.transform) === "object" && options.transform !== null && Object.keys(options.transform).length > 0;
-        let data = yield post(_this8.fetch, `${_this8.url}/object/sign/${_path}`, _objectSpread22({ expiresIn }, hasTransform ? { transform: options.transform } : {}), { headers: _this8.headers });
-        const query = new URLSearchParams();
-        if (options === null || options === void 0 ? void 0 : options.download) query.set("download", options.download === true ? "" : options.download);
-        if ((options === null || options === void 0 ? void 0 : options.cacheNonce) != null) query.set("cacheNonce", String(options.cacheNonce));
-        const queryString = query.toString();
-        return { signedUrl: encodeURI(`${_this8.url}${data.signedURL}${queryString ? `&${queryString}` : ""}`) };
-      }));
+  async createSignedUrl(path, expiresIn, options) {
+    var _this8 = this;
+    return _this8.handleOperation(async () => {
+      let _path = _this8._getFinalPath(path);
+      const hasTransform = typeof (options === null || options === void 0 ? void 0 : options.transform) === "object" && options.transform !== null && Object.keys(options.transform).length > 0;
+      let data = await post(_this8.fetch, `${_this8.url}/object/sign/${_path}`, _objectSpread22({ expiresIn }, hasTransform ? { transform: options.transform } : {}), { headers: _this8.headers });
+      const query = new URLSearchParams();
+      if (options === null || options === void 0 ? void 0 : options.download) query.set("download", options.download === true ? "" : options.download);
+      if ((options === null || options === void 0 ? void 0 : options.cacheNonce) != null) query.set("cacheNonce", String(options.cacheNonce));
+      const queryString = query.toString();
+      return { signedUrl: encodeURI(`${_this8.url}${data.signedURL}${queryString ? `&${queryString}` : ""}`) };
     });
   }
   /**
@@ -10971,20 +10819,18 @@ var StorageFileApi = class extends BaseApiClient {
   *   - `objects` table permissions: `select`
   * - Refer to the [Storage guide](/docs/guides/storage/security/access-control) on how access control works
   */
-  createSignedUrls(paths, expiresIn, options) {
-    return __async(this, null, function* () {
-      var _this9 = this;
-      return _this9.handleOperation(() => __async(this, null, function* () {
-        const data = yield post(_this9.fetch, `${_this9.url}/object/sign/${_this9.bucketId}`, {
-          expiresIn,
-          paths
-        }, { headers: _this9.headers });
-        const query = new URLSearchParams();
-        if (options === null || options === void 0 ? void 0 : options.download) query.set("download", options.download === true ? "" : options.download);
-        if ((options === null || options === void 0 ? void 0 : options.cacheNonce) != null) query.set("cacheNonce", String(options.cacheNonce));
-        const queryString = query.toString();
-        return data.map((datum) => _objectSpread22(_objectSpread22({}, datum), {}, { signedUrl: datum.signedURL ? encodeURI(`${_this9.url}${datum.signedURL}${queryString ? `&${queryString}` : ""}`) : null }));
-      }));
+  async createSignedUrls(paths, expiresIn, options) {
+    var _this9 = this;
+    return _this9.handleOperation(async () => {
+      const data = await post(_this9.fetch, `${_this9.url}/object/sign/${_this9.bucketId}`, {
+        expiresIn,
+        paths
+      }, { headers: _this9.headers });
+      const query = new URLSearchParams();
+      if (options === null || options === void 0 ? void 0 : options.download) query.set("download", options.download === true ? "" : options.download);
+      if ((options === null || options === void 0 ? void 0 : options.cacheNonce) != null) query.set("cacheNonce", String(options.cacheNonce));
+      const queryString = query.toString();
+      return data.map((datum) => _objectSpread22(_objectSpread22({}, datum), {}, { signedUrl: datum.signedURL ? encodeURI(`${_this9.url}${datum.signedURL}${queryString ? `&${queryString}` : ""}`) : null }));
     });
   }
   /**
@@ -11090,13 +10936,11 @@ var StorageFileApi = class extends BaseApiClient {
   * }
   * ```
   */
-  info(path) {
-    return __async(this, null, function* () {
-      var _this10 = this;
-      const _path = _this10._getFinalPath(path);
-      return _this10.handleOperation(() => __async(this, null, function* () {
-        return recursiveToCamel(yield get(_this10.fetch, `${_this10.url}/object/info/${_path}`, { headers: _this10.headers }));
-      }));
+  async info(path) {
+    var _this10 = this;
+    const _path = _this10._getFinalPath(path);
+    return _this10.handleOperation(async () => {
+      return recursiveToCamel(await get(_this10.fetch, `${_this10.url}/object/info/${_path}`, { headers: _this10.headers }));
     });
   }
   /**
@@ -11115,29 +10959,27 @@ var StorageFileApi = class extends BaseApiClient {
   *   .exists('folder/avatar1.png')
   * ```
   */
-  exists(path) {
-    return __async(this, null, function* () {
-      var _this11 = this;
-      const _path = _this11._getFinalPath(path);
-      try {
-        yield head(_this11.fetch, `${_this11.url}/object/${_path}`, { headers: _this11.headers });
-        return {
-          data: true,
-          error: null
+  async exists(path) {
+    var _this11 = this;
+    const _path = _this11._getFinalPath(path);
+    try {
+      await head(_this11.fetch, `${_this11.url}/object/${_path}`, { headers: _this11.headers });
+      return {
+        data: true,
+        error: null
+      };
+    } catch (error) {
+      if (_this11.shouldThrowOnError) throw error;
+      if (isStorageError(error)) {
+        var _error$originalError;
+        const status = error instanceof StorageApiError ? error.status : error instanceof StorageUnknownError ? (_error$originalError = error.originalError) === null || _error$originalError === void 0 ? void 0 : _error$originalError.status : void 0;
+        if (status !== void 0 && [400, 404].includes(status)) return {
+          data: false,
+          error
         };
-      } catch (error) {
-        if (_this11.shouldThrowOnError) throw error;
-        if (isStorageError(error)) {
-          var _error$originalError;
-          const status = error instanceof StorageApiError ? error.status : error instanceof StorageUnknownError ? (_error$originalError = error.originalError) === null || _error$originalError === void 0 ? void 0 : _error$originalError.status : void 0;
-          if (status !== void 0 && [400, 404].includes(status)) return {
-            data: false,
-            error
-          };
-        }
-        throw error;
       }
-    });
+      throw error;
+    }
   }
   /**
   * A simple convenience function to get the URL for an asset in a public bucket. If you do not want to use this function, you can construct the public URL by concatenating the bucket URL with the path to the asset.
@@ -11241,12 +11083,10 @@ var StorageFileApi = class extends BaseApiClient {
   *   - `objects` table permissions: `delete` and `select`
   * - Refer to the [Storage guide](/docs/guides/storage/security/access-control) on how access control works
   */
-  remove(paths) {
-    return __async(this, null, function* () {
-      var _this12 = this;
-      return _this12.handleOperation(() => __async(this, null, function* () {
-        return yield remove(_this12.fetch, `${_this12.url}/object/${_this12.bucketId}`, { prefixes: paths }, { headers: _this12.headers });
-      }));
+  async remove(paths) {
+    var _this12 = this;
+    return _this12.handleOperation(async () => {
+      return await remove(_this12.fetch, `${_this12.url}/object/${_this12.bucketId}`, { prefixes: paths }, { headers: _this12.headers });
     });
   }
   /**
@@ -11340,13 +11180,11 @@ var StorageFileApi = class extends BaseApiClient {
   *   - `objects` table permissions: `select`
   * - Refer to the [Storage guide](/docs/guides/storage/security/access-control) on how access control works
   */
-  list(path, options, parameters) {
-    return __async(this, null, function* () {
-      var _this13 = this;
-      return _this13.handleOperation(() => __async(this, null, function* () {
-        const body = _objectSpread22(_objectSpread22(_objectSpread22({}, DEFAULT_SEARCH_OPTIONS), options), {}, { prefix: path || "" });
-        return yield post(_this13.fetch, `${_this13.url}/object/list/${_this13.bucketId}`, body, { headers: _this13.headers }, parameters);
-      }));
+  async list(path, options, parameters) {
+    var _this13 = this;
+    return _this13.handleOperation(async () => {
+      const body = _objectSpread22(_objectSpread22(_objectSpread22({}, DEFAULT_SEARCH_OPTIONS), options), {}, { prefix: path || "" });
+      return await post(_this13.fetch, `${_this13.url}/object/list/${_this13.bucketId}`, body, { headers: _this13.headers }, parameters);
     });
   }
   /**
@@ -11396,13 +11234,11 @@ var StorageFileApi = class extends BaseApiClient {
   * })
   * ```
   */
-  listV2(options, parameters) {
-    return __async(this, null, function* () {
-      var _this14 = this;
-      return _this14.handleOperation(() => __async(this, null, function* () {
-        const body = _objectSpread22({}, options);
-        return yield post(_this14.fetch, `${_this14.url}/object/list-v2/${_this14.bucketId}`, body, { headers: _this14.headers }, parameters);
-      }));
+  async listV2(options, parameters) {
+    var _this14 = this;
+    return _this14.handleOperation(async () => {
+      const body = _objectSpread22({}, options);
+      return await post(_this14.fetch, `${_this14.url}/object/list-v2/${_this14.bucketId}`, body, { headers: _this14.headers }, parameters);
     });
   }
   encodeMetadata(metadata) {
@@ -11479,13 +11315,11 @@ var StorageBucketApi = class extends BaseApiClient {
   *   - `objects` table permissions: none
   * - Refer to the [Storage guide](/docs/guides/storage/security/access-control) on how access control works
   */
-  listBuckets(options) {
-    return __async(this, null, function* () {
-      var _this = this;
-      return _this.handleOperation(() => __async(this, null, function* () {
-        const queryString = _this.listBucketOptionsToQueryString(options);
-        return yield get(_this.fetch, `${_this.url}/bucket${queryString}`, { headers: _this.headers });
-      }));
+  async listBuckets(options) {
+    var _this = this;
+    return _this.handleOperation(async () => {
+      const queryString = _this.listBucketOptionsToQueryString(options);
+      return await get(_this.fetch, `${_this.url}/bucket${queryString}`, { headers: _this.headers });
     });
   }
   /**
@@ -11528,12 +11362,10 @@ var StorageBucketApi = class extends BaseApiClient {
   *   - `objects` table permissions: none
   * - Refer to the [Storage guide](/docs/guides/storage/security/access-control) on how access control works
   */
-  getBucket(id) {
-    return __async(this, null, function* () {
-      var _this2 = this;
-      return _this2.handleOperation(() => __async(this, null, function* () {
-        return yield get(_this2.fetch, `${_this2.url}/bucket/${id}`, { headers: _this2.headers });
-      }));
+  async getBucket(id) {
+    var _this2 = this;
+    return _this2.handleOperation(async () => {
+      return await get(_this2.fetch, `${_this2.url}/bucket/${id}`, { headers: _this2.headers });
     });
   }
   /**
@@ -11580,19 +11412,17 @@ var StorageBucketApi = class extends BaseApiClient {
   *   - `objects` table permissions: none
   * - Refer to the [Storage guide](/docs/guides/storage/security/access-control) on how access control works
   */
-  createBucket(_0) {
-    return __async(this, arguments, function* (id, options = { public: false }) {
-      var _this3 = this;
-      return _this3.handleOperation(() => __async(this, null, function* () {
-        return yield post(_this3.fetch, `${_this3.url}/bucket`, {
-          id,
-          name: id,
-          type: options.type,
-          public: options.public,
-          file_size_limit: options.fileSizeLimit,
-          allowed_mime_types: options.allowedMimeTypes
-        }, { headers: _this3.headers });
-      }));
+  async createBucket(id, options = { public: false }) {
+    var _this3 = this;
+    return _this3.handleOperation(async () => {
+      return await post(_this3.fetch, `${_this3.url}/bucket`, {
+        id,
+        name: id,
+        type: options.type,
+        public: options.public,
+        file_size_limit: options.fileSizeLimit,
+        allowed_mime_types: options.allowedMimeTypes
+      }, { headers: _this3.headers });
     });
   }
   /**
@@ -11637,18 +11467,16 @@ var StorageBucketApi = class extends BaseApiClient {
   *   - `objects` table permissions: none
   * - Refer to the [Storage guide](/docs/guides/storage/security/access-control) on how access control works
   */
-  updateBucket(id, options) {
-    return __async(this, null, function* () {
-      var _this4 = this;
-      return _this4.handleOperation(() => __async(this, null, function* () {
-        return yield put(_this4.fetch, `${_this4.url}/bucket/${id}`, {
-          id,
-          name: id,
-          public: options.public,
-          file_size_limit: options.fileSizeLimit,
-          allowed_mime_types: options.allowedMimeTypes
-        }, { headers: _this4.headers });
-      }));
+  async updateBucket(id, options) {
+    var _this4 = this;
+    return _this4.handleOperation(async () => {
+      return await put(_this4.fetch, `${_this4.url}/bucket/${id}`, {
+        id,
+        name: id,
+        public: options.public,
+        file_size_limit: options.fileSizeLimit,
+        allowed_mime_types: options.allowedMimeTypes
+      }, { headers: _this4.headers });
     });
   }
   /**
@@ -11682,12 +11510,10 @@ var StorageBucketApi = class extends BaseApiClient {
   *   - `objects` table permissions: `select` and `delete`
   * - Refer to the [Storage guide](/docs/guides/storage/security/access-control) on how access control works
   */
-  emptyBucket(id) {
-    return __async(this, null, function* () {
-      var _this5 = this;
-      return _this5.handleOperation(() => __async(this, null, function* () {
-        return yield post(_this5.fetch, `${_this5.url}/bucket/${id}/empty`, {}, { headers: _this5.headers });
-      }));
+  async emptyBucket(id) {
+    var _this5 = this;
+    return _this5.handleOperation(async () => {
+      return await post(_this5.fetch, `${_this5.url}/bucket/${id}/empty`, {}, { headers: _this5.headers });
     });
   }
   /**
@@ -11722,12 +11548,10 @@ var StorageBucketApi = class extends BaseApiClient {
   *   - `objects` table permissions: none
   * - Refer to the [Storage guide](/docs/guides/storage/security/access-control) on how access control works
   */
-  deleteBucket(id) {
-    return __async(this, null, function* () {
-      var _this6 = this;
-      return _this6.handleOperation(() => __async(this, null, function* () {
-        return yield remove(_this6.fetch, `${_this6.url}/bucket/${id}`, {}, { headers: _this6.headers });
-      }));
+  async deleteBucket(id) {
+    var _this6 = this;
+    return _this6.handleOperation(async () => {
+      return await remove(_this6.fetch, `${_this6.url}/bucket/${id}`, {}, { headers: _this6.headers });
     });
   }
   listBucketOptionsToQueryString(options) {
@@ -11815,12 +11639,10 @@ var StorageAnalyticsClient = class extends BaseApiClient {
   * - Creates a new analytics bucket using Iceberg tables
   * - Analytics buckets are optimized for analytical queries and data processing
   */
-  createBucket(name) {
-    return __async(this, null, function* () {
-      var _this = this;
-      return _this.handleOperation(() => __async(this, null, function* () {
-        return yield post(_this.fetch, `${_this.url}/bucket`, { name }, { headers: _this.headers });
-      }));
+  async createBucket(name) {
+    var _this = this;
+    return _this.handleOperation(async () => {
+      return await post(_this.fetch, `${_this.url}/bucket`, { name }, { headers: _this.headers });
     });
   }
   /**
@@ -11874,20 +11696,18 @@ var StorageAnalyticsClient = class extends BaseApiClient {
   * - Retrieves the details of all Analytics Storage buckets within an existing project
   * - Only returns buckets of type 'ANALYTICS'
   */
-  listBuckets(options) {
-    return __async(this, null, function* () {
-      var _this2 = this;
-      return _this2.handleOperation(() => __async(this, null, function* () {
-        const queryParams = new URLSearchParams();
-        if ((options === null || options === void 0 ? void 0 : options.limit) !== void 0) queryParams.set("limit", options.limit.toString());
-        if ((options === null || options === void 0 ? void 0 : options.offset) !== void 0) queryParams.set("offset", options.offset.toString());
-        if (options === null || options === void 0 ? void 0 : options.sortColumn) queryParams.set("sortColumn", options.sortColumn);
-        if (options === null || options === void 0 ? void 0 : options.sortOrder) queryParams.set("sortOrder", options.sortOrder);
-        if (options === null || options === void 0 ? void 0 : options.search) queryParams.set("search", options.search);
-        const queryString = queryParams.toString();
-        const url = queryString ? `${_this2.url}/bucket?${queryString}` : `${_this2.url}/bucket`;
-        return yield get(_this2.fetch, url, { headers: _this2.headers });
-      }));
+  async listBuckets(options) {
+    var _this2 = this;
+    return _this2.handleOperation(async () => {
+      const queryParams = new URLSearchParams();
+      if ((options === null || options === void 0 ? void 0 : options.limit) !== void 0) queryParams.set("limit", options.limit.toString());
+      if ((options === null || options === void 0 ? void 0 : options.offset) !== void 0) queryParams.set("offset", options.offset.toString());
+      if (options === null || options === void 0 ? void 0 : options.sortColumn) queryParams.set("sortColumn", options.sortColumn);
+      if (options === null || options === void 0 ? void 0 : options.sortOrder) queryParams.set("sortOrder", options.sortOrder);
+      if (options === null || options === void 0 ? void 0 : options.search) queryParams.set("search", options.search);
+      const queryString = queryParams.toString();
+      const url = queryString ? `${_this2.url}/bucket?${queryString}` : `${_this2.url}/bucket`;
+      return await get(_this2.fetch, url, { headers: _this2.headers });
     });
   }
   /**
@@ -11925,12 +11745,10 @@ var StorageAnalyticsClient = class extends BaseApiClient {
   * @remarks
   * - Deletes an analytics bucket
   */
-  deleteBucket(bucketName) {
-    return __async(this, null, function* () {
-      var _this3 = this;
-      return _this3.handleOperation(() => __async(this, null, function* () {
-        return yield remove(_this3.fetch, `${_this3.url}/bucket/${bucketName}`, {}, { headers: _this3.headers });
-      }));
+  async deleteBucket(bucketName) {
+    var _this3 = this;
+    return _this3.handleOperation(async () => {
+      return await remove(_this3.fetch, `${_this3.url}/bucket/${bucketName}`, {}, { headers: _this3.headers });
     });
   }
   /**
@@ -12065,9 +11883,7 @@ var StorageAnalyticsClient = class extends BaseApiClient {
       catalogName: bucketName,
       auth: {
         type: "custom",
-        getHeaders: () => __async(this, null, function* () {
-          return _this4.headers;
-        })
+        getHeaders: async () => _this4.headers
       },
       fetch: this.fetch
     });
@@ -12075,10 +11891,10 @@ var StorageAnalyticsClient = class extends BaseApiClient {
     return new Proxy(catalog, { get(target, prop) {
       const value = target[prop];
       if (typeof value !== "function") return value;
-      return (...args) => __async(null, null, function* () {
+      return async (...args) => {
         try {
           return {
-            data: yield value.apply(target, args),
+            data: await value.apply(target, args),
             error: null
           };
         } catch (error) {
@@ -12088,7 +11904,7 @@ var StorageAnalyticsClient = class extends BaseApiClient {
             error
           };
         }
-      });
+      };
     } });
   }
 };
@@ -12100,45 +11916,37 @@ var VectorIndexApi = class extends BaseApiClient {
     super(finalUrl, finalHeaders, fetch$1, "vectors");
   }
   /** Creates a new vector index within a bucket */
-  createIndex(options) {
-    return __async(this, null, function* () {
-      var _this = this;
-      return _this.handleOperation(() => __async(this, null, function* () {
-        return (yield vectorsApi.post(_this.fetch, `${_this.url}/CreateIndex`, options, { headers: _this.headers })) || {};
-      }));
+  async createIndex(options) {
+    var _this = this;
+    return _this.handleOperation(async () => {
+      return await vectorsApi.post(_this.fetch, `${_this.url}/CreateIndex`, options, { headers: _this.headers }) || {};
     });
   }
   /** Retrieves metadata for a specific vector index */
-  getIndex(vectorBucketName, indexName) {
-    return __async(this, null, function* () {
-      var _this2 = this;
-      return _this2.handleOperation(() => __async(this, null, function* () {
-        return yield vectorsApi.post(_this2.fetch, `${_this2.url}/GetIndex`, {
-          vectorBucketName,
-          indexName
-        }, { headers: _this2.headers });
-      }));
+  async getIndex(vectorBucketName, indexName) {
+    var _this2 = this;
+    return _this2.handleOperation(async () => {
+      return await vectorsApi.post(_this2.fetch, `${_this2.url}/GetIndex`, {
+        vectorBucketName,
+        indexName
+      }, { headers: _this2.headers });
     });
   }
   /** Lists vector indexes within a bucket with optional filtering and pagination */
-  listIndexes(options) {
-    return __async(this, null, function* () {
-      var _this3 = this;
-      return _this3.handleOperation(() => __async(this, null, function* () {
-        return yield vectorsApi.post(_this3.fetch, `${_this3.url}/ListIndexes`, options, { headers: _this3.headers });
-      }));
+  async listIndexes(options) {
+    var _this3 = this;
+    return _this3.handleOperation(async () => {
+      return await vectorsApi.post(_this3.fetch, `${_this3.url}/ListIndexes`, options, { headers: _this3.headers });
     });
   }
   /** Deletes a vector index and all its data */
-  deleteIndex(vectorBucketName, indexName) {
-    return __async(this, null, function* () {
-      var _this4 = this;
-      return _this4.handleOperation(() => __async(this, null, function* () {
-        return (yield vectorsApi.post(_this4.fetch, `${_this4.url}/DeleteIndex`, {
-          vectorBucketName,
-          indexName
-        }, { headers: _this4.headers })) || {};
-      }));
+  async deleteIndex(vectorBucketName, indexName) {
+    var _this4 = this;
+    return _this4.handleOperation(async () => {
+      return await vectorsApi.post(_this4.fetch, `${_this4.url}/DeleteIndex`, {
+        vectorBucketName,
+        indexName
+      }, { headers: _this4.headers }) || {};
     });
   }
 };
@@ -12150,56 +11958,46 @@ var VectorDataApi = class extends BaseApiClient {
     super(finalUrl, finalHeaders, fetch$1, "vectors");
   }
   /** Inserts or updates vectors in batch (1-500 per request) */
-  putVectors(options) {
-    return __async(this, null, function* () {
-      var _this = this;
-      if (options.vectors.length < 1 || options.vectors.length > 500) throw new Error("Vector batch size must be between 1 and 500 items");
-      return _this.handleOperation(() => __async(this, null, function* () {
-        return (yield vectorsApi.post(_this.fetch, `${_this.url}/PutVectors`, options, { headers: _this.headers })) || {};
-      }));
+  async putVectors(options) {
+    var _this = this;
+    if (options.vectors.length < 1 || options.vectors.length > 500) throw new Error("Vector batch size must be between 1 and 500 items");
+    return _this.handleOperation(async () => {
+      return await vectorsApi.post(_this.fetch, `${_this.url}/PutVectors`, options, { headers: _this.headers }) || {};
     });
   }
   /** Retrieves vectors by their keys in batch */
-  getVectors(options) {
-    return __async(this, null, function* () {
-      var _this2 = this;
-      return _this2.handleOperation(() => __async(this, null, function* () {
-        return yield vectorsApi.post(_this2.fetch, `${_this2.url}/GetVectors`, options, { headers: _this2.headers });
-      }));
+  async getVectors(options) {
+    var _this2 = this;
+    return _this2.handleOperation(async () => {
+      return await vectorsApi.post(_this2.fetch, `${_this2.url}/GetVectors`, options, { headers: _this2.headers });
     });
   }
   /** Lists vectors in an index with pagination */
-  listVectors(options) {
-    return __async(this, null, function* () {
-      var _this3 = this;
-      if (options.segmentCount !== void 0) {
-        if (options.segmentCount < 1 || options.segmentCount > 16) throw new Error("segmentCount must be between 1 and 16");
-        if (options.segmentIndex !== void 0) {
-          if (options.segmentIndex < 0 || options.segmentIndex >= options.segmentCount) throw new Error(`segmentIndex must be between 0 and ${options.segmentCount - 1}`);
-        }
+  async listVectors(options) {
+    var _this3 = this;
+    if (options.segmentCount !== void 0) {
+      if (options.segmentCount < 1 || options.segmentCount > 16) throw new Error("segmentCount must be between 1 and 16");
+      if (options.segmentIndex !== void 0) {
+        if (options.segmentIndex < 0 || options.segmentIndex >= options.segmentCount) throw new Error(`segmentIndex must be between 0 and ${options.segmentCount - 1}`);
       }
-      return _this3.handleOperation(() => __async(this, null, function* () {
-        return yield vectorsApi.post(_this3.fetch, `${_this3.url}/ListVectors`, options, { headers: _this3.headers });
-      }));
+    }
+    return _this3.handleOperation(async () => {
+      return await vectorsApi.post(_this3.fetch, `${_this3.url}/ListVectors`, options, { headers: _this3.headers });
     });
   }
   /** Queries for similar vectors using approximate nearest neighbor search */
-  queryVectors(options) {
-    return __async(this, null, function* () {
-      var _this4 = this;
-      return _this4.handleOperation(() => __async(this, null, function* () {
-        return yield vectorsApi.post(_this4.fetch, `${_this4.url}/QueryVectors`, options, { headers: _this4.headers });
-      }));
+  async queryVectors(options) {
+    var _this4 = this;
+    return _this4.handleOperation(async () => {
+      return await vectorsApi.post(_this4.fetch, `${_this4.url}/QueryVectors`, options, { headers: _this4.headers });
     });
   }
   /** Deletes vectors by their keys in batch (1-500 per request) */
-  deleteVectors(options) {
-    return __async(this, null, function* () {
-      var _this5 = this;
-      if (options.keys.length < 1 || options.keys.length > 500) throw new Error("Keys batch size must be between 1 and 500 items");
-      return _this5.handleOperation(() => __async(this, null, function* () {
-        return (yield vectorsApi.post(_this5.fetch, `${_this5.url}/DeleteVectors`, options, { headers: _this5.headers })) || {};
-      }));
+  async deleteVectors(options) {
+    var _this5 = this;
+    if (options.keys.length < 1 || options.keys.length > 500) throw new Error("Keys batch size must be between 1 and 500 items");
+    return _this5.handleOperation(async () => {
+      return await vectorsApi.post(_this5.fetch, `${_this5.url}/DeleteVectors`, options, { headers: _this5.headers }) || {};
     });
   }
 };
@@ -12211,43 +12009,35 @@ var VectorBucketApi = class extends BaseApiClient {
     super(finalUrl, finalHeaders, fetch$1, "vectors");
   }
   /** Creates a new vector bucket */
-  createBucket(vectorBucketName) {
-    return __async(this, null, function* () {
-      var _this = this;
-      return _this.handleOperation(() => __async(this, null, function* () {
-        return (yield vectorsApi.post(_this.fetch, `${_this.url}/CreateVectorBucket`, { vectorBucketName }, { headers: _this.headers })) || {};
-      }));
+  async createBucket(vectorBucketName) {
+    var _this = this;
+    return _this.handleOperation(async () => {
+      return await vectorsApi.post(_this.fetch, `${_this.url}/CreateVectorBucket`, { vectorBucketName }, { headers: _this.headers }) || {};
     });
   }
   /** Retrieves metadata for a specific vector bucket */
-  getBucket(vectorBucketName) {
-    return __async(this, null, function* () {
-      var _this2 = this;
-      return _this2.handleOperation(() => __async(this, null, function* () {
-        return yield vectorsApi.post(_this2.fetch, `${_this2.url}/GetVectorBucket`, { vectorBucketName }, { headers: _this2.headers });
-      }));
+  async getBucket(vectorBucketName) {
+    var _this2 = this;
+    return _this2.handleOperation(async () => {
+      return await vectorsApi.post(_this2.fetch, `${_this2.url}/GetVectorBucket`, { vectorBucketName }, { headers: _this2.headers });
     });
   }
   /** Lists vector buckets with optional filtering and pagination */
-  listBuckets() {
-    return __async(this, arguments, function* (options = {}) {
-      var _this3 = this;
-      return _this3.handleOperation(() => __async(this, null, function* () {
-        return yield vectorsApi.post(_this3.fetch, `${_this3.url}/ListVectorBuckets`, options, { headers: _this3.headers });
-      }));
+  async listBuckets(options = {}) {
+    var _this3 = this;
+    return _this3.handleOperation(async () => {
+      return await vectorsApi.post(_this3.fetch, `${_this3.url}/ListVectorBuckets`, options, { headers: _this3.headers });
     });
   }
   /** Deletes a vector bucket (must be empty first) */
-  deleteBucket(vectorBucketName) {
-    return __async(this, null, function* () {
-      var _this4 = this;
-      return _this4.handleOperation(() => __async(this, null, function* () {
-        return (yield vectorsApi.post(_this4.fetch, `${_this4.url}/DeleteVectorBucket`, { vectorBucketName }, { headers: _this4.headers })) || {};
-      }));
+  async deleteBucket(vectorBucketName) {
+    var _this4 = this;
+    return _this4.handleOperation(async () => {
+      return await vectorsApi.post(_this4.fetch, `${_this4.url}/DeleteVectorBucket`, { vectorBucketName }, { headers: _this4.headers }) || {};
     });
   }
 };
-var StorageVectorsClient = class _this extends VectorBucketApi {
+var StorageVectorsClient = class extends VectorBucketApi {
   /**
   * @alpha
   *
@@ -12323,11 +12113,9 @@ var StorageVectorsClient = class _this extends VectorBucketApi {
   *   .createBucket('embeddings-prod')
   * ```
   */
-  createBucket(vectorBucketName) {
-    return __async(this, null, function* () {
-      var _superprop_getCreateBucket = () => __superGet(_this.prototype, this, "createBucket"), _this2 = this;
-      return _superprop_getCreateBucket().call(_this2, vectorBucketName);
-    });
+  async createBucket(vectorBucketName) {
+    var _superprop_getCreateBucket = () => super.createBucket, _this = this;
+    return _superprop_getCreateBucket().call(_this, vectorBucketName);
   }
   /**
   *
@@ -12352,11 +12140,9 @@ var StorageVectorsClient = class _this extends VectorBucketApi {
   * console.log('Bucket created:', data?.vectorBucket.creationTime)
   * ```
   */
-  getBucket(vectorBucketName) {
-    return __async(this, null, function* () {
-      var _superprop_getGetBucket = () => __superGet(_this.prototype, this, "getBucket"), _this2 = this;
-      return _superprop_getGetBucket().call(_this2, vectorBucketName);
-    });
+  async getBucket(vectorBucketName) {
+    var _superprop_getGetBucket = () => super.getBucket, _this2 = this;
+    return _superprop_getGetBucket().call(_this2, vectorBucketName);
   }
   /**
   *
@@ -12383,11 +12169,9 @@ var StorageVectorsClient = class _this extends VectorBucketApi {
   * })
   * ```
   */
-  listBuckets() {
-    return __async(this, arguments, function* (options = {}) {
-      var _superprop_getListBuckets = () => __superGet(_this.prototype, this, "listBuckets"), _this3 = this;
-      return _superprop_getListBuckets().call(_this3, options);
-    });
+  async listBuckets(options = {}) {
+    var _superprop_getListBuckets = () => super.listBuckets, _this3 = this;
+    return _superprop_getListBuckets().call(_this3, options);
   }
   /**
   *
@@ -12411,14 +12195,12 @@ var StorageVectorsClient = class _this extends VectorBucketApi {
   *   .deleteBucket('embeddings-old')
   * ```
   */
-  deleteBucket(vectorBucketName) {
-    return __async(this, null, function* () {
-      var _superprop_getDeleteBucket = () => __superGet(_this.prototype, this, "deleteBucket"), _this4 = this;
-      return _superprop_getDeleteBucket().call(_this4, vectorBucketName);
-    });
+  async deleteBucket(vectorBucketName) {
+    var _superprop_getDeleteBucket = () => super.deleteBucket, _this4 = this;
+    return _superprop_getDeleteBucket().call(_this4, vectorBucketName);
   }
 };
-var VectorBucketScope = class _this extends VectorIndexApi {
+var VectorBucketScope = class extends VectorIndexApi {
   /**
   * @alpha
   *
@@ -12465,11 +12247,9 @@ var VectorBucketScope = class _this extends VectorIndexApi {
   * })
   * ```
   */
-  createIndex(options) {
-    return __async(this, null, function* () {
-      var _superprop_getCreateIndex = () => __superGet(_this.prototype, this, "createIndex"), _this5 = this;
-      return _superprop_getCreateIndex().call(_this5, _objectSpread22(_objectSpread22({}, options), {}, { vectorBucketName: _this5.vectorBucketName }));
-    });
+  async createIndex(options) {
+    var _superprop_getCreateIndex = () => super.createIndex, _this5 = this;
+    return _superprop_getCreateIndex().call(_this5, _objectSpread22(_objectSpread22({}, options), {}, { vectorBucketName: _this5.vectorBucketName }));
   }
   /**
   *
@@ -12491,11 +12271,9 @@ var VectorBucketScope = class _this extends VectorIndexApi {
   * const { data } = await bucket.listIndexes({ prefix: 'documents-' })
   * ```
   */
-  listIndexes() {
-    return __async(this, arguments, function* (options = {}) {
-      var _superprop_getListIndexes = () => __superGet(_this.prototype, this, "listIndexes"), _this6 = this;
-      return _superprop_getListIndexes().call(_this6, _objectSpread22(_objectSpread22({}, options), {}, { vectorBucketName: _this6.vectorBucketName }));
-    });
+  async listIndexes(options = {}) {
+    var _superprop_getListIndexes = () => super.listIndexes, _this6 = this;
+    return _superprop_getListIndexes().call(_this6, _objectSpread22(_objectSpread22({}, options), {}, { vectorBucketName: _this6.vectorBucketName }));
   }
   /**
   *
@@ -12518,11 +12296,9 @@ var VectorBucketScope = class _this extends VectorIndexApi {
   * console.log('Dimension:', data?.index.dimension)
   * ```
   */
-  getIndex(indexName) {
-    return __async(this, null, function* () {
-      var _superprop_getGetIndex = () => __superGet(_this.prototype, this, "getIndex"), _this7 = this;
-      return _superprop_getGetIndex().call(_this7, _this7.vectorBucketName, indexName);
-    });
+  async getIndex(indexName) {
+    var _superprop_getGetIndex = () => super.getIndex, _this7 = this;
+    return _superprop_getGetIndex().call(_this7, _this7.vectorBucketName, indexName);
   }
   /**
   *
@@ -12544,11 +12320,9 @@ var VectorBucketScope = class _this extends VectorIndexApi {
   * await bucket.deleteIndex('old-index')
   * ```
   */
-  deleteIndex(indexName) {
-    return __async(this, null, function* () {
-      var _superprop_getDeleteIndex = () => __superGet(_this.prototype, this, "deleteIndex"), _this8 = this;
-      return _superprop_getDeleteIndex().call(_this8, _this8.vectorBucketName, indexName);
-    });
+  async deleteIndex(indexName) {
+    var _superprop_getDeleteIndex = () => super.deleteIndex, _this8 = this;
+    return _superprop_getDeleteIndex().call(_this8, _this8.vectorBucketName, indexName);
   }
   /**
   *
@@ -12586,7 +12360,7 @@ var VectorBucketScope = class _this extends VectorIndexApi {
     return new VectorIndexScope(this.url, this.headers, this.vectorBucketName, indexName, this.fetch);
   }
 };
-var VectorIndexScope = class _this extends VectorDataApi {
+var VectorIndexScope = class extends VectorDataApi {
   /**
   *
   * @alpha
@@ -12635,14 +12409,12 @@ var VectorIndexScope = class _this extends VectorDataApi {
   * })
   * ```
   */
-  putVectors(options) {
-    return __async(this, null, function* () {
-      var _superprop_getPutVectors = () => __superGet(_this.prototype, this, "putVectors"), _this9 = this;
-      return _superprop_getPutVectors().call(_this9, _objectSpread22(_objectSpread22({}, options), {}, {
-        vectorBucketName: _this9.vectorBucketName,
-        indexName: _this9.indexName
-      }));
-    });
+  async putVectors(options) {
+    var _superprop_getPutVectors = () => super.putVectors, _this9 = this;
+    return _superprop_getPutVectors().call(_this9, _objectSpread22(_objectSpread22({}, options), {}, {
+      vectorBucketName: _this9.vectorBucketName,
+      indexName: _this9.indexName
+    }));
   }
   /**
   *
@@ -12667,14 +12439,12 @@ var VectorIndexScope = class _this extends VectorDataApi {
   * })
   * ```
   */
-  getVectors(options) {
-    return __async(this, null, function* () {
-      var _superprop_getGetVectors = () => __superGet(_this.prototype, this, "getVectors"), _this10 = this;
-      return _superprop_getGetVectors().call(_this10, _objectSpread22(_objectSpread22({}, options), {}, {
-        vectorBucketName: _this10.vectorBucketName,
-        indexName: _this10.indexName
-      }));
-    });
+  async getVectors(options) {
+    var _superprop_getGetVectors = () => super.getVectors, _this10 = this;
+    return _superprop_getGetVectors().call(_this10, _objectSpread22(_objectSpread22({}, options), {}, {
+      vectorBucketName: _this10.vectorBucketName,
+      indexName: _this10.indexName
+    }));
   }
   /**
   *
@@ -12699,14 +12469,12 @@ var VectorIndexScope = class _this extends VectorDataApi {
   * })
   * ```
   */
-  listVectors() {
-    return __async(this, arguments, function* (options = {}) {
-      var _superprop_getListVectors = () => __superGet(_this.prototype, this, "listVectors"), _this11 = this;
-      return _superprop_getListVectors().call(_this11, _objectSpread22(_objectSpread22({}, options), {}, {
-        vectorBucketName: _this11.vectorBucketName,
-        indexName: _this11.indexName
-      }));
-    });
+  async listVectors(options = {}) {
+    var _superprop_getListVectors = () => super.listVectors, _this11 = this;
+    return _superprop_getListVectors().call(_this11, _objectSpread22(_objectSpread22({}, options), {}, {
+      vectorBucketName: _this11.vectorBucketName,
+      indexName: _this11.indexName
+    }));
   }
   /**
   *
@@ -12734,14 +12502,12 @@ var VectorIndexScope = class _this extends VectorDataApi {
   * })
   * ```
   */
-  queryVectors(options) {
-    return __async(this, null, function* () {
-      var _superprop_getQueryVectors = () => __superGet(_this.prototype, this, "queryVectors"), _this12 = this;
-      return _superprop_getQueryVectors().call(_this12, _objectSpread22(_objectSpread22({}, options), {}, {
-        vectorBucketName: _this12.vectorBucketName,
-        indexName: _this12.indexName
-      }));
-    });
+  async queryVectors(options) {
+    var _superprop_getQueryVectors = () => super.queryVectors, _this12 = this;
+    return _superprop_getQueryVectors().call(_this12, _objectSpread22(_objectSpread22({}, options), {}, {
+      vectorBucketName: _this12.vectorBucketName,
+      indexName: _this12.indexName
+    }));
   }
   /**
   *
@@ -12765,14 +12531,12 @@ var VectorIndexScope = class _this extends VectorDataApi {
   * })
   * ```
   */
-  deleteVectors(options) {
-    return __async(this, null, function* () {
-      var _superprop_getDeleteVectors = () => __superGet(_this.prototype, this, "deleteVectors"), _this13 = this;
-      return _superprop_getDeleteVectors().call(_this13, _objectSpread22(_objectSpread22({}, options), {}, {
-        vectorBucketName: _this13.vectorBucketName,
-        indexName: _this13.indexName
-      }));
-    });
+  async deleteVectors(options) {
+    var _superprop_getDeleteVectors = () => super.deleteVectors, _this13 = this;
+    return _superprop_getDeleteVectors().call(_this13, _objectSpread22(_objectSpread22({}, options), {}, {
+      vectorBucketName: _this13.vectorBucketName,
+      indexName: _this13.indexName
+    }));
   }
 };
 var StorageClient = class extends StorageBucketApi {
@@ -13226,11 +12990,11 @@ var resolveFetch3 = (customFetch) => {
 var looksLikeFetchResponse = (maybeResponse) => {
   return typeof maybeResponse === "object" && maybeResponse !== null && "status" in maybeResponse && "ok" in maybeResponse && "json" in maybeResponse && typeof maybeResponse.json === "function";
 };
-var setItemAsync = (storage, key, data) => __async(null, null, function* () {
-  yield storage.setItem(key, JSON.stringify(data));
-});
-var getItemAsync = (storage, key) => __async(null, null, function* () {
-  const value = yield storage.getItem(key);
+var setItemAsync = async (storage, key, data) => {
+  await storage.setItem(key, JSON.stringify(data));
+};
+var getItemAsync = async (storage, key) => {
+  const value = await storage.getItem(key);
   if (!value) {
     return null;
   }
@@ -13239,10 +13003,10 @@ var getItemAsync = (storage, key) => __async(null, null, function* () {
   } catch (_a) {
     return null;
   }
-});
-var removeItemAsync = (storage, key) => __async(null, null, function* () {
-  yield storage.removeItem(key);
-});
+};
+var removeItemAsync = async (storage, key) => {
+  await storage.removeItem(key);
+};
 var Deferred = class _Deferred {
   constructor() {
     ;
@@ -13276,20 +13040,18 @@ function decodeJWT(token) {
   };
   return data;
 }
-function sleep2(time) {
-  return __async(this, null, function* () {
-    return yield new Promise((accept) => {
-      setTimeout(() => accept(null), time);
-    });
+async function sleep2(time) {
+  return await new Promise((accept) => {
+    setTimeout(() => accept(null), time);
   });
 }
 function retryable(fn, isRetryable) {
   const promise = new Promise((accept, reject) => {
     ;
-    (() => __async(null, null, function* () {
+    (async () => {
       for (let attempt = 0; attempt < Infinity; attempt++) {
         try {
-          const result = yield fn(attempt);
+          const result = await fn(attempt);
           if (!isRetryable(attempt, null, result)) {
             accept(result);
             return;
@@ -13301,7 +13063,7 @@ function retryable(fn, isRetryable) {
           }
         }
       }
-    }))();
+    })();
   });
   return promise;
 }
@@ -13323,38 +13085,32 @@ function generatePKCEVerifier() {
   crypto.getRandomValues(array);
   return Array.from(array, dec2hex).join("");
 }
-function sha256(randomString) {
-  return __async(this, null, function* () {
-    const encoder = new TextEncoder();
-    const encodedData = encoder.encode(randomString);
-    const hash = yield crypto.subtle.digest("SHA-256", encodedData);
-    const bytes = new Uint8Array(hash);
-    return Array.from(bytes).map((c) => String.fromCharCode(c)).join("");
-  });
+async function sha256(randomString) {
+  const encoder = new TextEncoder();
+  const encodedData = encoder.encode(randomString);
+  const hash = await crypto.subtle.digest("SHA-256", encodedData);
+  const bytes = new Uint8Array(hash);
+  return Array.from(bytes).map((c) => String.fromCharCode(c)).join("");
 }
-function generatePKCEChallenge(verifier) {
-  return __async(this, null, function* () {
-    const hasCryptoSupport = typeof crypto !== "undefined" && typeof crypto.subtle !== "undefined" && typeof TextEncoder !== "undefined";
-    if (!hasCryptoSupport) {
-      console.warn("WebCrypto API is not supported. Code challenge method will default to use plain instead of sha256.");
-      return verifier;
-    }
-    const hashed = yield sha256(verifier);
-    return btoa(hashed).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  });
+async function generatePKCEChallenge(verifier) {
+  const hasCryptoSupport = typeof crypto !== "undefined" && typeof crypto.subtle !== "undefined" && typeof TextEncoder !== "undefined";
+  if (!hasCryptoSupport) {
+    console.warn("WebCrypto API is not supported. Code challenge method will default to use plain instead of sha256.");
+    return verifier;
+  }
+  const hashed = await sha256(verifier);
+  return btoa(hashed).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
-function getCodeChallengeAndMethod(storage, storageKey, isPasswordRecovery = false) {
-  return __async(this, null, function* () {
-    const codeVerifier = generatePKCEVerifier();
-    let storedCodeVerifier = codeVerifier;
-    if (isPasswordRecovery) {
-      storedCodeVerifier += "/recovery";
-    }
-    yield setItemAsync(storage, `${storageKey}-code-verifier`, storedCodeVerifier);
-    const codeChallenge = yield generatePKCEChallenge(codeVerifier);
-    const codeChallengeMethod = codeVerifier === codeChallenge ? "plain" : "s256";
-    return [codeChallenge, codeChallengeMethod];
-  });
+async function getCodeChallengeAndMethod(storage, storageKey, isPasswordRecovery = false) {
+  const codeVerifier = generatePKCEVerifier();
+  let storedCodeVerifier = codeVerifier;
+  if (isPasswordRecovery) {
+    storedCodeVerifier += "/recovery";
+  }
+  await setItemAsync(storage, `${storageKey}-code-verifier`, storedCodeVerifier);
+  const codeChallenge = await generatePKCEChallenge(codeVerifier);
+  const codeChallengeMethod = codeVerifier === codeChallenge ? "plain" : "s256";
+  return [codeChallenge, codeChallengeMethod];
 }
 var API_VERSION_REGEX = /^2[0-9]{3}-(0[1-9]|1[0-2])-(0[1-9]|1[0-9]|2[0-9]|3[0-1])$/i;
 function parseResponseAPIVersion(response) {
@@ -13472,39 +13228,37 @@ var _getErrorMessage2 = (err) => {
   return JSON.stringify(err);
 };
 var NETWORK_ERROR_CODES = [502, 503, 504, 520, 521, 522, 523, 524, 530];
-function handleError2(error) {
-  return __async(this, null, function* () {
-    var _a;
-    if (!looksLikeFetchResponse(error)) {
-      throw new AuthRetryableFetchError(_getErrorMessage2(error), 0);
+async function handleError2(error) {
+  var _a;
+  if (!looksLikeFetchResponse(error)) {
+    throw new AuthRetryableFetchError(_getErrorMessage2(error), 0);
+  }
+  if (NETWORK_ERROR_CODES.includes(error.status)) {
+    throw new AuthRetryableFetchError(_getErrorMessage2(error), error.status);
+  }
+  let data;
+  try {
+    data = await error.json();
+  } catch (e) {
+    throw new AuthUnknownError(_getErrorMessage2(e), e);
+  }
+  let errorCode = void 0;
+  const responseAPIVersion = parseResponseAPIVersion(error);
+  if (responseAPIVersion && responseAPIVersion.getTime() >= API_VERSIONS["2024-01-01"].timestamp && typeof data === "object" && data && typeof data.code === "string") {
+    errorCode = data.code;
+  } else if (typeof data === "object" && data && typeof data.error_code === "string") {
+    errorCode = data.error_code;
+  }
+  if (!errorCode) {
+    if (typeof data === "object" && data && typeof data.weak_password === "object" && data.weak_password && Array.isArray(data.weak_password.reasons) && data.weak_password.reasons.length && data.weak_password.reasons.reduce((a, i) => a && typeof i === "string", true)) {
+      throw new AuthWeakPasswordError(_getErrorMessage2(data), error.status, data.weak_password.reasons);
     }
-    if (NETWORK_ERROR_CODES.includes(error.status)) {
-      throw new AuthRetryableFetchError(_getErrorMessage2(error), error.status);
-    }
-    let data;
-    try {
-      data = yield error.json();
-    } catch (e) {
-      throw new AuthUnknownError(_getErrorMessage2(e), e);
-    }
-    let errorCode = void 0;
-    const responseAPIVersion = parseResponseAPIVersion(error);
-    if (responseAPIVersion && responseAPIVersion.getTime() >= API_VERSIONS["2024-01-01"].timestamp && typeof data === "object" && data && typeof data.code === "string") {
-      errorCode = data.code;
-    } else if (typeof data === "object" && data && typeof data.error_code === "string") {
-      errorCode = data.error_code;
-    }
-    if (!errorCode) {
-      if (typeof data === "object" && data && typeof data.weak_password === "object" && data.weak_password && Array.isArray(data.weak_password.reasons) && data.weak_password.reasons.length && data.weak_password.reasons.reduce((a, i) => a && typeof i === "string", true)) {
-        throw new AuthWeakPasswordError(_getErrorMessage2(data), error.status, data.weak_password.reasons);
-      }
-    } else if (errorCode === "weak_password") {
-      throw new AuthWeakPasswordError(_getErrorMessage2(data), error.status, ((_a = data.weak_password) === null || _a === void 0 ? void 0 : _a.reasons) || []);
-    } else if (errorCode === "session_not_found") {
-      throw new AuthSessionMissingError();
-    }
-    throw new AuthApiError(_getErrorMessage2(data), error.status || 500, errorCode);
-  });
+  } else if (errorCode === "weak_password") {
+    throw new AuthWeakPasswordError(_getErrorMessage2(data), error.status, ((_a = data.weak_password) === null || _a === void 0 ? void 0 : _a.reasons) || []);
+  } else if (errorCode === "session_not_found") {
+    throw new AuthSessionMissingError();
+  }
+  throw new AuthApiError(_getErrorMessage2(data), error.status || 500, errorCode);
 }
 var _getRequestParams2 = (method, options, parameters, body) => {
   const params = { method, headers: (options === null || options === void 0 ? void 0 : options.headers) || {} };
@@ -13515,50 +13269,46 @@ var _getRequestParams2 = (method, options, parameters, body) => {
   params.body = JSON.stringify(body);
   return Object.assign(Object.assign({}, params), parameters);
 };
-function _request(fetcher, method, url, options) {
-  return __async(this, null, function* () {
-    var _a;
-    const headers = Object.assign({}, options === null || options === void 0 ? void 0 : options.headers);
-    if (!headers[API_VERSION_HEADER_NAME]) {
-      headers[API_VERSION_HEADER_NAME] = API_VERSIONS["2024-01-01"].name;
-    }
-    if (options === null || options === void 0 ? void 0 : options.jwt) {
-      headers["Authorization"] = `Bearer ${options.jwt}`;
-    }
-    const qs = (_a = options === null || options === void 0 ? void 0 : options.query) !== null && _a !== void 0 ? _a : {};
-    if (options === null || options === void 0 ? void 0 : options.redirectTo) {
-      qs["redirect_to"] = options.redirectTo;
-    }
-    const queryString = Object.keys(qs).length ? "?" + new URLSearchParams(qs).toString() : "";
-    const data = yield _handleRequest2(fetcher, method, url + queryString, {
-      headers,
-      noResolveJson: options === null || options === void 0 ? void 0 : options.noResolveJson
-    }, {}, options === null || options === void 0 ? void 0 : options.body);
-    return (options === null || options === void 0 ? void 0 : options.xform) ? options === null || options === void 0 ? void 0 : options.xform(data) : { data: Object.assign({}, data), error: null };
-  });
+async function _request(fetcher, method, url, options) {
+  var _a;
+  const headers = Object.assign({}, options === null || options === void 0 ? void 0 : options.headers);
+  if (!headers[API_VERSION_HEADER_NAME]) {
+    headers[API_VERSION_HEADER_NAME] = API_VERSIONS["2024-01-01"].name;
+  }
+  if (options === null || options === void 0 ? void 0 : options.jwt) {
+    headers["Authorization"] = `Bearer ${options.jwt}`;
+  }
+  const qs = (_a = options === null || options === void 0 ? void 0 : options.query) !== null && _a !== void 0 ? _a : {};
+  if (options === null || options === void 0 ? void 0 : options.redirectTo) {
+    qs["redirect_to"] = options.redirectTo;
+  }
+  const queryString = Object.keys(qs).length ? "?" + new URLSearchParams(qs).toString() : "";
+  const data = await _handleRequest2(fetcher, method, url + queryString, {
+    headers,
+    noResolveJson: options === null || options === void 0 ? void 0 : options.noResolveJson
+  }, {}, options === null || options === void 0 ? void 0 : options.body);
+  return (options === null || options === void 0 ? void 0 : options.xform) ? options === null || options === void 0 ? void 0 : options.xform(data) : { data: Object.assign({}, data), error: null };
 }
-function _handleRequest2(fetcher, method, url, options, parameters, body) {
-  return __async(this, null, function* () {
-    const requestParams = _getRequestParams2(method, options, parameters, body);
-    let result;
-    try {
-      result = yield fetcher(url, Object.assign({}, requestParams));
-    } catch (e) {
-      console.error(e);
-      throw new AuthRetryableFetchError(_getErrorMessage2(e), 0);
-    }
-    if (!result.ok) {
-      yield handleError2(result);
-    }
-    if (options === null || options === void 0 ? void 0 : options.noResolveJson) {
-      return result;
-    }
-    try {
-      return yield result.json();
-    } catch (e) {
-      yield handleError2(e);
-    }
-  });
+async function _handleRequest2(fetcher, method, url, options, parameters, body) {
+  const requestParams = _getRequestParams2(method, options, parameters, body);
+  let result;
+  try {
+    result = await fetcher(url, Object.assign({}, requestParams));
+  } catch (e) {
+    console.error(e);
+    throw new AuthRetryableFetchError(_getErrorMessage2(e), 0);
+  }
+  if (!result.ok) {
+    await handleError2(result);
+  }
+  if (options === null || options === void 0 ? void 0 : options.noResolveJson) {
+    return result;
+  }
+  try {
+    return await result.json();
+  } catch (e) {
+    await handleError2(e);
+  }
 }
 function _sessionResponse(data) {
   var _a;
@@ -13675,25 +13425,23 @@ var GoTrueAdminApi = class {
    * @category Auth
    * @subcategory Auth Admin
    */
-  signOut(_0) {
-    return __async(this, arguments, function* (jwt, scope = SIGN_OUT_SCOPES[0]) {
-      if (SIGN_OUT_SCOPES.indexOf(scope) < 0) {
-        throw new Error(`@supabase/auth-js: Parameter scope must be one of ${SIGN_OUT_SCOPES.join(", ")}`);
+  async signOut(jwt, scope = SIGN_OUT_SCOPES[0]) {
+    if (SIGN_OUT_SCOPES.indexOf(scope) < 0) {
+      throw new Error(`@supabase/auth-js: Parameter scope must be one of ${SIGN_OUT_SCOPES.join(", ")}`);
+    }
+    try {
+      await _request(this.fetch, "POST", `${this.url}/logout?scope=${scope}`, {
+        headers: this.headers,
+        jwt,
+        noResolveJson: true
+      });
+      return { data: null, error: null };
+    } catch (error) {
+      if (isAuthError(error)) {
+        return { data: null, error };
       }
-      try {
-        yield _request(this.fetch, "POST", `${this.url}/logout?scope=${scope}`, {
-          headers: this.headers,
-          jwt,
-          noResolveJson: true
-        });
-        return { data: null, error: null };
-      } catch (error) {
-        if (isAuthError(error)) {
-          return { data: null, error };
-        }
-        throw error;
-      }
-    });
+      throw error;
+    }
   }
   /**
    * Sends an invite link to an email address.
@@ -13759,22 +13507,20 @@ var GoTrueAdminApi = class {
    * }
    * ```
    */
-  inviteUserByEmail(_0) {
-    return __async(this, arguments, function* (email, options = {}) {
-      try {
-        return yield _request(this.fetch, "POST", `${this.url}/invite`, {
-          body: { email, data: options.data },
-          headers: this.headers,
-          redirectTo: options.redirectTo,
-          xform: _userResponse
-        });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return { data: { user: null }, error };
-        }
-        throw error;
+  async inviteUserByEmail(email, options = {}) {
+    try {
+      return await _request(this.fetch, "POST", `${this.url}/invite`, {
+        body: { email, data: options.data },
+        headers: this.headers,
+        redirectTo: options.redirectTo,
+        xform: _userResponse
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return { data: { user: null }, error };
       }
-    });
+      throw error;
+    }
   }
   /**
    * Generates email links and OTPs to be sent via a custom email provider.
@@ -13893,34 +13639,32 @@ var GoTrueAdminApi = class {
    * })
    * ```
    */
-  generateLink(params) {
-    return __async(this, null, function* () {
-      try {
-        const { options } = params, rest = __rest(params, ["options"]);
-        const body = Object.assign(Object.assign({}, rest), options);
-        if ("newEmail" in rest) {
-          body.new_email = rest === null || rest === void 0 ? void 0 : rest.newEmail;
-          delete body["newEmail"];
-        }
-        return yield _request(this.fetch, "POST", `${this.url}/admin/generate_link`, {
-          body,
-          headers: this.headers,
-          xform: _generateLinkResponse,
-          redirectTo: options === null || options === void 0 ? void 0 : options.redirectTo
-        });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return {
-            data: {
-              properties: null,
-              user: null
-            },
-            error
-          };
-        }
-        throw error;
+  async generateLink(params) {
+    try {
+      const { options } = params, rest = __rest(params, ["options"]);
+      const body = Object.assign(Object.assign({}, rest), options);
+      if ("newEmail" in rest) {
+        body.new_email = rest === null || rest === void 0 ? void 0 : rest.newEmail;
+        delete body["newEmail"];
       }
-    });
+      return await _request(this.fetch, "POST", `${this.url}/admin/generate_link`, {
+        body,
+        headers: this.headers,
+        xform: _generateLinkResponse,
+        redirectTo: options === null || options === void 0 ? void 0 : options.redirectTo
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return {
+          data: {
+            properties: null,
+            user: null
+          },
+          error
+        };
+      }
+      throw error;
+    }
   }
   // User Admin API
   /**
@@ -14003,21 +13747,19 @@ var GoTrueAdminApi = class {
    * })
    * ```
    */
-  createUser(attributes) {
-    return __async(this, null, function* () {
-      try {
-        return yield _request(this.fetch, "POST", `${this.url}/admin/users`, {
-          body: attributes,
-          headers: this.headers,
-          xform: _userResponse
-        });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return { data: { user: null }, error };
-        }
-        throw error;
+  async createUser(attributes) {
+    try {
+      return await _request(this.fetch, "POST", `${this.url}/admin/users`, {
+        body: attributes,
+        headers: this.headers,
+        xform: _userResponse
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return { data: { user: null }, error };
       }
-    });
+      throw error;
+    }
   }
   /**
    * Get a list of users.
@@ -14044,41 +13786,39 @@ var GoTrueAdminApi = class {
    * })
    * ```
    */
-  listUsers(params) {
-    return __async(this, null, function* () {
-      var _a, _b, _c, _d, _e, _f, _g;
-      try {
-        const pagination = { nextPage: null, lastPage: 0, total: 0 };
-        const response = yield _request(this.fetch, "GET", `${this.url}/admin/users`, {
-          headers: this.headers,
-          noResolveJson: true,
-          query: {
-            page: (_b = (_a = params === null || params === void 0 ? void 0 : params.page) === null || _a === void 0 ? void 0 : _a.toString()) !== null && _b !== void 0 ? _b : "",
-            per_page: (_d = (_c = params === null || params === void 0 ? void 0 : params.perPage) === null || _c === void 0 ? void 0 : _c.toString()) !== null && _d !== void 0 ? _d : ""
-          },
-          xform: _noResolveJsonResponse
+  async listUsers(params) {
+    var _a, _b, _c, _d, _e, _f, _g;
+    try {
+      const pagination = { nextPage: null, lastPage: 0, total: 0 };
+      const response = await _request(this.fetch, "GET", `${this.url}/admin/users`, {
+        headers: this.headers,
+        noResolveJson: true,
+        query: {
+          page: (_b = (_a = params === null || params === void 0 ? void 0 : params.page) === null || _a === void 0 ? void 0 : _a.toString()) !== null && _b !== void 0 ? _b : "",
+          per_page: (_d = (_c = params === null || params === void 0 ? void 0 : params.perPage) === null || _c === void 0 ? void 0 : _c.toString()) !== null && _d !== void 0 ? _d : ""
+        },
+        xform: _noResolveJsonResponse
+      });
+      if (response.error)
+        throw response.error;
+      const users = await response.json();
+      const total = (_e = response.headers.get("x-total-count")) !== null && _e !== void 0 ? _e : 0;
+      const links = (_g = (_f = response.headers.get("link")) === null || _f === void 0 ? void 0 : _f.split(",")) !== null && _g !== void 0 ? _g : [];
+      if (links.length > 0) {
+        links.forEach((link) => {
+          const page = parseInt(link.split(";")[0].split("=")[1].substring(0, 1));
+          const rel = JSON.parse(link.split(";")[1].split("=")[1]);
+          pagination[`${rel}Page`] = page;
         });
-        if (response.error)
-          throw response.error;
-        const users = yield response.json();
-        const total = (_e = response.headers.get("x-total-count")) !== null && _e !== void 0 ? _e : 0;
-        const links = (_g = (_f = response.headers.get("link")) === null || _f === void 0 ? void 0 : _f.split(",")) !== null && _g !== void 0 ? _g : [];
-        if (links.length > 0) {
-          links.forEach((link) => {
-            const page = parseInt(link.split(";")[0].split("=")[1].substring(0, 1));
-            const rel = JSON.parse(link.split(";")[1].split("=")[1]);
-            pagination[`${rel}Page`] = page;
-          });
-          pagination.total = parseInt(total);
-        }
-        return { data: Object.assign(Object.assign({}, users), pagination), error: null };
-      } catch (error) {
-        if (isAuthError(error)) {
-          return { data: { users: [] }, error };
-        }
-        throw error;
+        pagination.total = parseInt(total);
       }
-    });
+      return { data: Object.assign(Object.assign({}, users), pagination), error: null };
+    } catch (error) {
+      if (isAuthError(error)) {
+        return { data: { users: [] }, error };
+      }
+      throw error;
+    }
   }
   /**
    * Get user by id.
@@ -14142,21 +13882,19 @@ var GoTrueAdminApi = class {
    * }
    * ```
    */
-  getUserById(uid) {
-    return __async(this, null, function* () {
-      validateUUID(uid);
-      try {
-        return yield _request(this.fetch, "GET", `${this.url}/admin/users/${uid}`, {
-          headers: this.headers,
-          xform: _userResponse
-        });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return { data: { user: null }, error };
-        }
-        throw error;
+  async getUserById(uid) {
+    validateUUID(uid);
+    try {
+      return await _request(this.fetch, "GET", `${this.url}/admin/users/${uid}`, {
+        headers: this.headers,
+        xform: _userResponse
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return { data: { user: null }, error };
       }
-    });
+      throw error;
+    }
   }
   /**
    * Updates the user data. Changes are applied directly without confirmation flows.
@@ -14302,22 +14040,20 @@ var GoTrueAdminApi = class {
    * )
    * ```
    */
-  updateUserById(uid, attributes) {
-    return __async(this, null, function* () {
-      validateUUID(uid);
-      try {
-        return yield _request(this.fetch, "PUT", `${this.url}/admin/users/${uid}`, {
-          body: attributes,
-          headers: this.headers,
-          xform: _userResponse
-        });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return { data: { user: null }, error };
-        }
-        throw error;
+  async updateUserById(uid, attributes) {
+    validateUUID(uid);
+    try {
+      return await _request(this.fetch, "PUT", `${this.url}/admin/users/${uid}`, {
+        body: attributes,
+        headers: this.headers,
+        xform: _userResponse
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return { data: { user: null }, error };
       }
-    });
+      throw error;
+    }
   }
   /**
    * Delete a user. Requires a `service_role` key.
@@ -14351,60 +14087,54 @@ var GoTrueAdminApi = class {
    * }
    * ```
    */
-  deleteUser(id, shouldSoftDelete = false) {
-    return __async(this, null, function* () {
-      validateUUID(id);
-      try {
-        return yield _request(this.fetch, "DELETE", `${this.url}/admin/users/${id}`, {
-          headers: this.headers,
-          body: {
-            should_soft_delete: shouldSoftDelete
-          },
-          xform: _userResponse
-        });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return { data: { user: null }, error };
-        }
-        throw error;
+  async deleteUser(id, shouldSoftDelete = false) {
+    validateUUID(id);
+    try {
+      return await _request(this.fetch, "DELETE", `${this.url}/admin/users/${id}`, {
+        headers: this.headers,
+        body: {
+          should_soft_delete: shouldSoftDelete
+        },
+        xform: _userResponse
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return { data: { user: null }, error };
       }
-    });
+      throw error;
+    }
   }
-  _listFactors(params) {
-    return __async(this, null, function* () {
-      validateUUID(params.userId);
-      try {
-        const { data, error } = yield _request(this.fetch, "GET", `${this.url}/admin/users/${params.userId}/factors`, {
-          headers: this.headers,
-          xform: (factors) => {
-            return { data: { factors }, error: null };
-          }
-        });
-        return { data, error };
-      } catch (error) {
-        if (isAuthError(error)) {
-          return { data: null, error };
+  async _listFactors(params) {
+    validateUUID(params.userId);
+    try {
+      const { data, error } = await _request(this.fetch, "GET", `${this.url}/admin/users/${params.userId}/factors`, {
+        headers: this.headers,
+        xform: (factors) => {
+          return { data: { factors }, error: null };
         }
-        throw error;
+      });
+      return { data, error };
+    } catch (error) {
+      if (isAuthError(error)) {
+        return { data: null, error };
       }
-    });
+      throw error;
+    }
   }
-  _deleteFactor(params) {
-    return __async(this, null, function* () {
-      validateUUID(params.userId);
-      validateUUID(params.id);
-      try {
-        const data = yield _request(this.fetch, "DELETE", `${this.url}/admin/users/${params.userId}/factors/${params.id}`, {
-          headers: this.headers
-        });
-        return { data, error: null };
-      } catch (error) {
-        if (isAuthError(error)) {
-          return { data: null, error };
-        }
-        throw error;
+  async _deleteFactor(params) {
+    validateUUID(params.userId);
+    validateUUID(params.id);
+    try {
+      const data = await _request(this.fetch, "DELETE", `${this.url}/admin/users/${params.userId}/factors/${params.id}`, {
+        headers: this.headers
+      });
+      return { data, error: null };
+    } catch (error) {
+      if (isAuthError(error)) {
+        return { data: null, error };
       }
-    });
+      throw error;
+    }
   }
   /**
    * Lists all OAuth clients with optional pagination.
@@ -14412,41 +14142,39 @@ var GoTrueAdminApi = class {
    *
    * This function should only be called on a server. Never expose your `service_role` key in the browser.
    */
-  _listOAuthClients(params) {
-    return __async(this, null, function* () {
-      var _a, _b, _c, _d, _e, _f, _g;
-      try {
-        const pagination = { nextPage: null, lastPage: 0, total: 0 };
-        const response = yield _request(this.fetch, "GET", `${this.url}/admin/oauth/clients`, {
-          headers: this.headers,
-          noResolveJson: true,
-          query: {
-            page: (_b = (_a = params === null || params === void 0 ? void 0 : params.page) === null || _a === void 0 ? void 0 : _a.toString()) !== null && _b !== void 0 ? _b : "",
-            per_page: (_d = (_c = params === null || params === void 0 ? void 0 : params.perPage) === null || _c === void 0 ? void 0 : _c.toString()) !== null && _d !== void 0 ? _d : ""
-          },
-          xform: _noResolveJsonResponse
+  async _listOAuthClients(params) {
+    var _a, _b, _c, _d, _e, _f, _g;
+    try {
+      const pagination = { nextPage: null, lastPage: 0, total: 0 };
+      const response = await _request(this.fetch, "GET", `${this.url}/admin/oauth/clients`, {
+        headers: this.headers,
+        noResolveJson: true,
+        query: {
+          page: (_b = (_a = params === null || params === void 0 ? void 0 : params.page) === null || _a === void 0 ? void 0 : _a.toString()) !== null && _b !== void 0 ? _b : "",
+          per_page: (_d = (_c = params === null || params === void 0 ? void 0 : params.perPage) === null || _c === void 0 ? void 0 : _c.toString()) !== null && _d !== void 0 ? _d : ""
+        },
+        xform: _noResolveJsonResponse
+      });
+      if (response.error)
+        throw response.error;
+      const clients = await response.json();
+      const total = (_e = response.headers.get("x-total-count")) !== null && _e !== void 0 ? _e : 0;
+      const links = (_g = (_f = response.headers.get("link")) === null || _f === void 0 ? void 0 : _f.split(",")) !== null && _g !== void 0 ? _g : [];
+      if (links.length > 0) {
+        links.forEach((link) => {
+          const page = parseInt(link.split(";")[0].split("=")[1].substring(0, 1));
+          const rel = JSON.parse(link.split(";")[1].split("=")[1]);
+          pagination[`${rel}Page`] = page;
         });
-        if (response.error)
-          throw response.error;
-        const clients = yield response.json();
-        const total = (_e = response.headers.get("x-total-count")) !== null && _e !== void 0 ? _e : 0;
-        const links = (_g = (_f = response.headers.get("link")) === null || _f === void 0 ? void 0 : _f.split(",")) !== null && _g !== void 0 ? _g : [];
-        if (links.length > 0) {
-          links.forEach((link) => {
-            const page = parseInt(link.split(";")[0].split("=")[1].substring(0, 1));
-            const rel = JSON.parse(link.split(";")[1].split("=")[1]);
-            pagination[`${rel}Page`] = page;
-          });
-          pagination.total = parseInt(total);
-        }
-        return { data: Object.assign(Object.assign({}, clients), pagination), error: null };
-      } catch (error) {
-        if (isAuthError(error)) {
-          return { data: { clients: [] }, error };
-        }
-        throw error;
+        pagination.total = parseInt(total);
       }
-    });
+      return { data: Object.assign(Object.assign({}, clients), pagination), error: null };
+    } catch (error) {
+      if (isAuthError(error)) {
+        return { data: { clients: [] }, error };
+      }
+      throw error;
+    }
   }
   /**
    * Creates a new OAuth client.
@@ -14454,23 +14182,21 @@ var GoTrueAdminApi = class {
    *
    * This function should only be called on a server. Never expose your `service_role` key in the browser.
    */
-  _createOAuthClient(params) {
-    return __async(this, null, function* () {
-      try {
-        return yield _request(this.fetch, "POST", `${this.url}/admin/oauth/clients`, {
-          body: params,
-          headers: this.headers,
-          xform: (client) => {
-            return { data: client, error: null };
-          }
-        });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return { data: null, error };
+  async _createOAuthClient(params) {
+    try {
+      return await _request(this.fetch, "POST", `${this.url}/admin/oauth/clients`, {
+        body: params,
+        headers: this.headers,
+        xform: (client) => {
+          return { data: client, error: null };
         }
-        throw error;
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return { data: null, error };
       }
-    });
+      throw error;
+    }
   }
   /**
    * Gets details of a specific OAuth client.
@@ -14478,22 +14204,20 @@ var GoTrueAdminApi = class {
    *
    * This function should only be called on a server. Never expose your `service_role` key in the browser.
    */
-  _getOAuthClient(clientId) {
-    return __async(this, null, function* () {
-      try {
-        return yield _request(this.fetch, "GET", `${this.url}/admin/oauth/clients/${clientId}`, {
-          headers: this.headers,
-          xform: (client) => {
-            return { data: client, error: null };
-          }
-        });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return { data: null, error };
+  async _getOAuthClient(clientId) {
+    try {
+      return await _request(this.fetch, "GET", `${this.url}/admin/oauth/clients/${clientId}`, {
+        headers: this.headers,
+        xform: (client) => {
+          return { data: client, error: null };
         }
-        throw error;
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return { data: null, error };
       }
-    });
+      throw error;
+    }
   }
   /**
    * Updates an existing OAuth client.
@@ -14501,23 +14225,21 @@ var GoTrueAdminApi = class {
    *
    * This function should only be called on a server. Never expose your `service_role` key in the browser.
    */
-  _updateOAuthClient(clientId, params) {
-    return __async(this, null, function* () {
-      try {
-        return yield _request(this.fetch, "PUT", `${this.url}/admin/oauth/clients/${clientId}`, {
-          body: params,
-          headers: this.headers,
-          xform: (client) => {
-            return { data: client, error: null };
-          }
-        });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return { data: null, error };
+  async _updateOAuthClient(clientId, params) {
+    try {
+      return await _request(this.fetch, "PUT", `${this.url}/admin/oauth/clients/${clientId}`, {
+        body: params,
+        headers: this.headers,
+        xform: (client) => {
+          return { data: client, error: null };
         }
-        throw error;
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return { data: null, error };
       }
-    });
+      throw error;
+    }
   }
   /**
    * Deletes an OAuth client.
@@ -14525,21 +14247,19 @@ var GoTrueAdminApi = class {
    *
    * This function should only be called on a server. Never expose your `service_role` key in the browser.
    */
-  _deleteOAuthClient(clientId) {
-    return __async(this, null, function* () {
-      try {
-        yield _request(this.fetch, "DELETE", `${this.url}/admin/oauth/clients/${clientId}`, {
-          headers: this.headers,
-          noResolveJson: true
-        });
-        return { data: null, error: null };
-      } catch (error) {
-        if (isAuthError(error)) {
-          return { data: null, error };
-        }
-        throw error;
+  async _deleteOAuthClient(clientId) {
+    try {
+      await _request(this.fetch, "DELETE", `${this.url}/admin/oauth/clients/${clientId}`, {
+        headers: this.headers,
+        noResolveJson: true
+      });
+      return { data: null, error: null };
+    } catch (error) {
+      if (isAuthError(error)) {
+        return { data: null, error };
       }
-    });
+      throw error;
+    }
   }
   /**
    * Regenerates the secret for an OAuth client.
@@ -14547,50 +14267,46 @@ var GoTrueAdminApi = class {
    *
    * This function should only be called on a server. Never expose your `service_role` key in the browser.
    */
-  _regenerateOAuthClientSecret(clientId) {
-    return __async(this, null, function* () {
-      try {
-        return yield _request(this.fetch, "POST", `${this.url}/admin/oauth/clients/${clientId}/regenerate_secret`, {
-          headers: this.headers,
-          xform: (client) => {
-            return { data: client, error: null };
-          }
-        });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return { data: null, error };
+  async _regenerateOAuthClientSecret(clientId) {
+    try {
+      return await _request(this.fetch, "POST", `${this.url}/admin/oauth/clients/${clientId}/regenerate_secret`, {
+        headers: this.headers,
+        xform: (client) => {
+          return { data: client, error: null };
         }
-        throw error;
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return { data: null, error };
       }
-    });
+      throw error;
+    }
   }
   /**
    * Lists all custom providers with optional type filter.
    *
    * This function should only be called on a server. Never expose your `service_role` key in the browser.
    */
-  _listCustomProviders(params) {
-    return __async(this, null, function* () {
-      try {
-        const query = {};
-        if (params === null || params === void 0 ? void 0 : params.type) {
-          query.type = params.type;
-        }
-        return yield _request(this.fetch, "GET", `${this.url}/admin/custom-providers`, {
-          headers: this.headers,
-          query,
-          xform: (data) => {
-            var _a;
-            return { data: { providers: (_a = data === null || data === void 0 ? void 0 : data.providers) !== null && _a !== void 0 ? _a : [] }, error: null };
-          }
-        });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return { data: { providers: [] }, error };
-        }
-        throw error;
+  async _listCustomProviders(params) {
+    try {
+      const query = {};
+      if (params === null || params === void 0 ? void 0 : params.type) {
+        query.type = params.type;
       }
-    });
+      return await _request(this.fetch, "GET", `${this.url}/admin/custom-providers`, {
+        headers: this.headers,
+        query,
+        xform: (data) => {
+          var _a;
+          return { data: { providers: (_a = data === null || data === void 0 ? void 0 : data.providers) !== null && _a !== void 0 ? _a : [] }, error: null };
+        }
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return { data: { providers: [] }, error };
+      }
+      throw error;
+    }
   }
   /**
    * Creates a new custom OIDC/OAuth provider.
@@ -14603,45 +14319,41 @@ var GoTrueAdminApi = class {
    *
    * This function should only be called on a server. Never expose your `service_role` key in the browser.
    */
-  _createCustomProvider(params) {
-    return __async(this, null, function* () {
-      try {
-        return yield _request(this.fetch, "POST", `${this.url}/admin/custom-providers`, {
-          body: params,
-          headers: this.headers,
-          xform: (provider) => {
-            return { data: provider, error: null };
-          }
-        });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return { data: null, error };
+  async _createCustomProvider(params) {
+    try {
+      return await _request(this.fetch, "POST", `${this.url}/admin/custom-providers`, {
+        body: params,
+        headers: this.headers,
+        xform: (provider) => {
+          return { data: provider, error: null };
         }
-        throw error;
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return { data: null, error };
       }
-    });
+      throw error;
+    }
   }
   /**
    * Gets details of a specific custom provider by identifier.
    *
    * This function should only be called on a server. Never expose your `service_role` key in the browser.
    */
-  _getCustomProvider(identifier) {
-    return __async(this, null, function* () {
-      try {
-        return yield _request(this.fetch, "GET", `${this.url}/admin/custom-providers/${identifier}`, {
-          headers: this.headers,
-          xform: (provider) => {
-            return { data: provider, error: null };
-          }
-        });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return { data: null, error };
+  async _getCustomProvider(identifier) {
+    try {
+      return await _request(this.fetch, "GET", `${this.url}/admin/custom-providers/${identifier}`, {
+        headers: this.headers,
+        xform: (provider) => {
+          return { data: provider, error: null };
         }
-        throw error;
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return { data: null, error };
       }
-    });
+      throw error;
+    }
   }
   /**
    * Updates an existing custom provider.
@@ -14653,44 +14365,40 @@ var GoTrueAdminApi = class {
    *
    * This function should only be called on a server. Never expose your `service_role` key in the browser.
    */
-  _updateCustomProvider(identifier, params) {
-    return __async(this, null, function* () {
-      try {
-        return yield _request(this.fetch, "PUT", `${this.url}/admin/custom-providers/${identifier}`, {
-          body: params,
-          headers: this.headers,
-          xform: (provider) => {
-            return { data: provider, error: null };
-          }
-        });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return { data: null, error };
+  async _updateCustomProvider(identifier, params) {
+    try {
+      return await _request(this.fetch, "PUT", `${this.url}/admin/custom-providers/${identifier}`, {
+        body: params,
+        headers: this.headers,
+        xform: (provider) => {
+          return { data: provider, error: null };
         }
-        throw error;
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return { data: null, error };
       }
-    });
+      throw error;
+    }
   }
   /**
    * Deletes a custom provider.
    *
    * This function should only be called on a server. Never expose your `service_role` key in the browser.
    */
-  _deleteCustomProvider(identifier) {
-    return __async(this, null, function* () {
-      try {
-        yield _request(this.fetch, "DELETE", `${this.url}/admin/custom-providers/${identifier}`, {
-          headers: this.headers,
-          noResolveJson: true
-        });
-        return { data: null, error: null };
-      } catch (error) {
-        if (isAuthError(error)) {
-          return { data: null, error };
-        }
-        throw error;
+  async _deleteCustomProvider(identifier) {
+    try {
+      await _request(this.fetch, "DELETE", `${this.url}/admin/custom-providers/${identifier}`, {
+        headers: this.headers,
+        noResolveJson: true
+      });
+      return { data: null, error: null };
+    } catch (error) {
+      if (isAuthError(error)) {
+        return { data: null, error };
       }
-    });
+      throw error;
+    }
   }
   /**
    * Lists all passkeys for a user.
@@ -14699,19 +14407,17 @@ var GoTrueAdminApi = class {
    *
    * Requires `auth.experimental.passkey: true`.
    */
-  _adminListPasskeys(params) {
-    return __async(this, null, function* () {
-      assertPasskeyExperimentalEnabled(this.experimental);
-      validateUUID(params.userId);
-      try {
-        return yield _request(this.fetch, "GET", `${this.url}/admin/users/${params.userId}/passkeys`, { headers: this.headers, xform: (data) => ({ data, error: null }) });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return { data: null, error };
-        }
-        throw error;
+  async _adminListPasskeys(params) {
+    assertPasskeyExperimentalEnabled(this.experimental);
+    validateUUID(params.userId);
+    try {
+      return await _request(this.fetch, "GET", `${this.url}/admin/users/${params.userId}/passkeys`, { headers: this.headers, xform: (data) => ({ data, error: null }) });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return { data: null, error };
       }
-    });
+      throw error;
+    }
   }
   /**
    * Deletes a user's passkey.
@@ -14720,21 +14426,19 @@ var GoTrueAdminApi = class {
    *
    * Requires `auth.experimental.passkey: true`.
    */
-  _adminDeletePasskey(params) {
-    return __async(this, null, function* () {
-      assertPasskeyExperimentalEnabled(this.experimental);
-      validateUUID(params.userId);
-      validateUUID(params.passkeyId);
-      try {
-        yield _request(this.fetch, "DELETE", `${this.url}/admin/users/${params.userId}/passkeys/${params.passkeyId}`, { headers: this.headers, noResolveJson: true });
-        return { data: null, error: null };
-      } catch (error) {
-        if (isAuthError(error)) {
-          return { data: null, error };
-        }
-        throw error;
+  async _adminDeletePasskey(params) {
+    assertPasskeyExperimentalEnabled(this.experimental);
+    validateUUID(params.userId);
+    validateUUID(params.passkeyId);
+    try {
+      await _request(this.fetch, "DELETE", `${this.url}/admin/users/${params.userId}/passkeys/${params.passkeyId}`, { headers: this.headers, noResolveJson: true });
+      return { data: null, error: null };
+    } catch (error) {
+      if (isAuthError(error)) {
+        return { data: null, error };
       }
-    });
+      throw error;
+    }
   }
 };
 
@@ -15179,67 +14883,63 @@ function browserSupportsWebAuthn() {
   var _a, _b;
   return !!(isBrowser() && "PublicKeyCredential" in window && window.PublicKeyCredential && "credentials" in navigator && typeof ((_a = navigator === null || navigator === void 0 ? void 0 : navigator.credentials) === null || _a === void 0 ? void 0 : _a.create) === "function" && typeof ((_b = navigator === null || navigator === void 0 ? void 0 : navigator.credentials) === null || _b === void 0 ? void 0 : _b.get) === "function");
 }
-function createCredential(options) {
-  return __async(this, null, function* () {
-    try {
-      const response = yield navigator.credentials.create(
-        /** we assert the type here until typescript types are updated */
-        options
-      );
-      if (!response) {
-        return {
-          data: null,
-          error: new WebAuthnUnknownError("Empty credential response", response)
-        };
-      }
-      if (!(response instanceof PublicKeyCredential)) {
-        return {
-          data: null,
-          error: new WebAuthnUnknownError("Browser returned unexpected credential type", response)
-        };
-      }
-      return { data: response, error: null };
-    } catch (err) {
+async function createCredential(options) {
+  try {
+    const response = await navigator.credentials.create(
+      /** we assert the type here until typescript types are updated */
+      options
+    );
+    if (!response) {
       return {
         data: null,
-        error: identifyRegistrationError({
-          error: err,
-          options
-        })
+        error: new WebAuthnUnknownError("Empty credential response", response)
       };
     }
-  });
+    if (!(response instanceof PublicKeyCredential)) {
+      return {
+        data: null,
+        error: new WebAuthnUnknownError("Browser returned unexpected credential type", response)
+      };
+    }
+    return { data: response, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error: identifyRegistrationError({
+        error: err,
+        options
+      })
+    };
+  }
 }
-function getCredential(options) {
-  return __async(this, null, function* () {
-    try {
-      const response = yield navigator.credentials.get(
-        /** we assert the type here until typescript types are updated */
-        options
-      );
-      if (!response) {
-        return {
-          data: null,
-          error: new WebAuthnUnknownError("Empty credential response", response)
-        };
-      }
-      if (!(response instanceof PublicKeyCredential)) {
-        return {
-          data: null,
-          error: new WebAuthnUnknownError("Browser returned unexpected credential type", response)
-        };
-      }
-      return { data: response, error: null };
-    } catch (err) {
+async function getCredential(options) {
+  try {
+    const response = await navigator.credentials.get(
+      /** we assert the type here until typescript types are updated */
+      options
+    );
+    if (!response) {
       return {
         data: null,
-        error: identifyAuthenticationError({
-          error: err,
-          options
-        })
+        error: new WebAuthnUnknownError("Empty credential response", response)
       };
     }
-  });
+    if (!(response instanceof PublicKeyCredential)) {
+      return {
+        data: null,
+        error: new WebAuthnUnknownError("Browser returned unexpected credential type", response)
+      };
+    }
+    return { data: response, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error: identifyAuthenticationError({
+        error: err,
+        options
+      })
+    };
+  }
 }
 var DEFAULT_CREATION_OPTIONS = {
   hints: ["security-key"],
@@ -15311,10 +15011,8 @@ var WebAuthnApi = class {
    * @returns {Promise<AuthMFAEnrollWebauthnResponse>} Enrolled factor details or error
    * @see {@link https://w3c.github.io/webauthn/#sctn-registering-a-new-credential W3C WebAuthn Spec - Registering a New Credential}
    */
-  _enroll(params) {
-    return __async(this, null, function* () {
-      return this.client.mfa.enroll(Object.assign(Object.assign({}, params), { factorType: "webauthn" }));
-    });
+  async _enroll(params) {
+    return this.client.mfa.enroll(Object.assign(Object.assign({}, params), { factorType: "webauthn" }));
   }
   /**
    * Challenge for WebAuthn credential creation or authentication.
@@ -15330,86 +15028,84 @@ var WebAuthnApi = class {
    * @see {@link https://w3c.github.io/webauthn/#sctn-credential-creation W3C WebAuthn Spec - Credential Creation}
    * @see {@link https://w3c.github.io/webauthn/#sctn-verifying-assertion W3C WebAuthn Spec - Verifying Assertion}
    */
-  _challenge(_0, _1) {
-    return __async(this, arguments, function* ({ factorId, webauthn, friendlyName, signal }, overrides) {
-      var _a;
-      try {
-        const { data: challengeResponse, error: challengeError } = yield this.client.mfa.challenge({
-          factorId,
-          webauthn
-        });
-        if (!challengeResponse) {
-          return { data: null, error: challengeError };
-        }
-        const abortSignal = signal !== null && signal !== void 0 ? signal : webAuthnAbortService.createNewAbortSignal();
-        if (challengeResponse.webauthn.type === "create") {
-          const { user } = challengeResponse.webauthn.credential_options.publicKey;
-          if (!user.name) {
-            const nameToUse = friendlyName;
-            if (!nameToUse) {
-              const currentUser = yield this.client.getUser();
-              const userData = currentUser.data.user;
-              const fallbackName = ((_a = userData === null || userData === void 0 ? void 0 : userData.user_metadata) === null || _a === void 0 ? void 0 : _a.name) || (userData === null || userData === void 0 ? void 0 : userData.email) || (userData === null || userData === void 0 ? void 0 : userData.id) || "User";
-              user.name = `${user.id}:${fallbackName}`;
-            } else {
-              user.name = `${user.id}:${nameToUse}`;
-            }
-          }
-          if (!user.displayName) {
-            user.displayName = user.name;
+  async _challenge({ factorId, webauthn, friendlyName, signal }, overrides) {
+    var _a;
+    try {
+      const { data: challengeResponse, error: challengeError } = await this.client.mfa.challenge({
+        factorId,
+        webauthn
+      });
+      if (!challengeResponse) {
+        return { data: null, error: challengeError };
+      }
+      const abortSignal = signal !== null && signal !== void 0 ? signal : webAuthnAbortService.createNewAbortSignal();
+      if (challengeResponse.webauthn.type === "create") {
+        const { user } = challengeResponse.webauthn.credential_options.publicKey;
+        if (!user.name) {
+          const nameToUse = friendlyName;
+          if (!nameToUse) {
+            const currentUser = await this.client.getUser();
+            const userData = currentUser.data.user;
+            const fallbackName = ((_a = userData === null || userData === void 0 ? void 0 : userData.user_metadata) === null || _a === void 0 ? void 0 : _a.name) || (userData === null || userData === void 0 ? void 0 : userData.email) || (userData === null || userData === void 0 ? void 0 : userData.id) || "User";
+            user.name = `${user.id}:${fallbackName}`;
+          } else {
+            user.name = `${user.id}:${nameToUse}`;
           }
         }
-        switch (challengeResponse.webauthn.type) {
-          case "create": {
-            const options = mergeCredentialCreationOptions(challengeResponse.webauthn.credential_options.publicKey, overrides === null || overrides === void 0 ? void 0 : overrides.create);
-            const { data, error } = yield createCredential({
-              publicKey: options,
-              signal: abortSignal
-            });
-            if (data) {
-              return {
-                data: {
-                  factorId,
-                  challengeId: challengeResponse.id,
-                  webauthn: {
-                    type: challengeResponse.webauthn.type,
-                    credential_response: data
-                  }
-                },
-                error: null
-              };
-            }
-            return { data: null, error };
-          }
-          case "request": {
-            const options = mergeCredentialRequestOptions(challengeResponse.webauthn.credential_options.publicKey, overrides === null || overrides === void 0 ? void 0 : overrides.request);
-            const { data, error } = yield getCredential(Object.assign(Object.assign({}, challengeResponse.webauthn.credential_options), { publicKey: options, signal: abortSignal }));
-            if (data) {
-              return {
-                data: {
-                  factorId,
-                  challengeId: challengeResponse.id,
-                  webauthn: {
-                    type: challengeResponse.webauthn.type,
-                    credential_response: data
-                  }
-                },
-                error: null
-              };
-            }
-            return { data: null, error };
-          }
+        if (!user.displayName) {
+          user.displayName = user.name;
         }
-      } catch (error) {
-        if (isAuthError(error)) {
+      }
+      switch (challengeResponse.webauthn.type) {
+        case "create": {
+          const options = mergeCredentialCreationOptions(challengeResponse.webauthn.credential_options.publicKey, overrides === null || overrides === void 0 ? void 0 : overrides.create);
+          const { data, error } = await createCredential({
+            publicKey: options,
+            signal: abortSignal
+          });
+          if (data) {
+            return {
+              data: {
+                factorId,
+                challengeId: challengeResponse.id,
+                webauthn: {
+                  type: challengeResponse.webauthn.type,
+                  credential_response: data
+                }
+              },
+              error: null
+            };
+          }
           return { data: null, error };
         }
-        return {
-          data: null,
-          error: new AuthUnknownError("Unexpected error in challenge", error)
-        };
+        case "request": {
+          const options = mergeCredentialRequestOptions(challengeResponse.webauthn.credential_options.publicKey, overrides === null || overrides === void 0 ? void 0 : overrides.request);
+          const { data, error } = await getCredential(Object.assign(Object.assign({}, challengeResponse.webauthn.credential_options), { publicKey: options, signal: abortSignal }));
+          if (data) {
+            return {
+              data: {
+                factorId,
+                challengeId: challengeResponse.id,
+                webauthn: {
+                  type: challengeResponse.webauthn.type,
+                  credential_response: data
+                }
+              },
+              error: null
+            };
+          }
+          return { data: null, error };
+        }
       }
-    });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return { data: null, error };
+      }
+      return {
+        data: null,
+        error: new AuthUnknownError("Unexpected error in challenge", error)
+      };
+    }
   }
   /**
    * Verify a WebAuthn credential with the server.
@@ -15423,13 +15119,11 @@ var WebAuthnApi = class {
    * @returns {Promise<AuthMFAVerifyResponse>} Verification result with session or error
    * @see {@link https://w3c.github.io/webauthn/#sctn-verifying-assertion W3C WebAuthn Spec - Verifying an Authentication Assertion}
    * */
-  _verify(_0) {
-    return __async(this, arguments, function* ({ challengeId, factorId, webauthn }) {
-      return this.client.mfa.verify({
-        factorId,
-        challengeId,
-        webauthn
-      });
+  async _verify({ challengeId, factorId, webauthn }) {
+    return this.client.mfa.verify({
+      factorId,
+      challengeId,
+      webauthn
     });
   }
   /**
@@ -15448,50 +15142,48 @@ var WebAuthnApi = class {
    * @see {@link https://w3c.github.io/webauthn/#sctn-authentication W3C WebAuthn Spec - Authentication Ceremony}
    * @see {@link https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialRequestOptions MDN - PublicKeyCredentialRequestOptions}
    */
-  _authenticate(_0, _1) {
-    return __async(this, arguments, function* ({ factorId, webauthn: { rpId = typeof window !== "undefined" ? window.location.hostname : void 0, rpOrigins = typeof window !== "undefined" ? [window.location.origin] : void 0, signal } = {} }, overrides) {
-      if (!rpId) {
+  async _authenticate({ factorId, webauthn: { rpId = typeof window !== "undefined" ? window.location.hostname : void 0, rpOrigins = typeof window !== "undefined" ? [window.location.origin] : void 0, signal } = {} }, overrides) {
+    if (!rpId) {
+      return {
+        data: null,
+        error: new AuthError("rpId is required for WebAuthn authentication")
+      };
+    }
+    try {
+      if (!browserSupportsWebAuthn()) {
         return {
           data: null,
-          error: new AuthError("rpId is required for WebAuthn authentication")
+          error: new AuthUnknownError("Browser does not support WebAuthn", null)
         };
       }
-      try {
-        if (!browserSupportsWebAuthn()) {
-          return {
-            data: null,
-            error: new AuthUnknownError("Browser does not support WebAuthn", null)
-          };
-        }
-        const { data: challengeResponse, error: challengeError } = yield this.challenge({
-          factorId,
-          webauthn: { rpId, rpOrigins },
-          signal
-        }, { request: overrides });
-        if (!challengeResponse) {
-          return { data: null, error: challengeError };
-        }
-        const { webauthn } = challengeResponse;
-        return this._verify({
-          factorId,
-          challengeId: challengeResponse.challengeId,
-          webauthn: {
-            type: webauthn.type,
-            rpId,
-            rpOrigins,
-            credential_response: webauthn.credential_response
-          }
-        });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return { data: null, error };
-        }
-        return {
-          data: null,
-          error: new AuthUnknownError("Unexpected error in authenticate", error)
-        };
+      const { data: challengeResponse, error: challengeError } = await this.challenge({
+        factorId,
+        webauthn: { rpId, rpOrigins },
+        signal
+      }, { request: overrides });
+      if (!challengeResponse) {
+        return { data: null, error: challengeError };
       }
-    });
+      const { webauthn } = challengeResponse;
+      return this._verify({
+        factorId,
+        challengeId: challengeResponse.challengeId,
+        webauthn: {
+          type: webauthn.type,
+          rpId,
+          rpOrigins,
+          credential_response: webauthn.credential_response
+        }
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return { data: null, error };
+      }
+      return {
+        data: null,
+        error: new AuthUnknownError("Unexpected error in authenticate", error)
+      };
+    }
   }
   /**
    * Complete WebAuthn registration flow.
@@ -15508,62 +15200,60 @@ var WebAuthnApi = class {
    * @see {@link https://w3c.github.io/webauthn/#sctn-registering-a-new-credential W3C WebAuthn Spec - Registration Ceremony}
    * @see {@link https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions MDN - PublicKeyCredentialCreationOptions}
    */
-  _register(_0, _1) {
-    return __async(this, arguments, function* ({ friendlyName, webauthn: { rpId = typeof window !== "undefined" ? window.location.hostname : void 0, rpOrigins = typeof window !== "undefined" ? [window.location.origin] : void 0, signal } = {} }, overrides) {
-      if (!rpId) {
+  async _register({ friendlyName, webauthn: { rpId = typeof window !== "undefined" ? window.location.hostname : void 0, rpOrigins = typeof window !== "undefined" ? [window.location.origin] : void 0, signal } = {} }, overrides) {
+    if (!rpId) {
+      return {
+        data: null,
+        error: new AuthError("rpId is required for WebAuthn registration")
+      };
+    }
+    try {
+      if (!browserSupportsWebAuthn()) {
         return {
           data: null,
-          error: new AuthError("rpId is required for WebAuthn registration")
+          error: new AuthUnknownError("Browser does not support WebAuthn", null)
         };
       }
-      try {
-        if (!browserSupportsWebAuthn()) {
-          return {
-            data: null,
-            error: new AuthUnknownError("Browser does not support WebAuthn", null)
-          };
-        }
-        const { data: factor, error: enrollError } = yield this._enroll({
-          friendlyName
-        });
-        if (!factor) {
-          yield this.client.mfa.listFactors().then((factors) => {
-            var _a;
-            return (_a = factors.data) === null || _a === void 0 ? void 0 : _a.all.find((v) => v.factor_type === "webauthn" && v.friendly_name === friendlyName && v.status !== "unverified");
-          }).then((factor2) => factor2 ? this.client.mfa.unenroll({ factorId: factor2 === null || factor2 === void 0 ? void 0 : factor2.id }) : void 0);
-          return { data: null, error: enrollError };
-        }
-        const { data: challengeResponse, error: challengeError } = yield this._challenge({
-          factorId: factor.id,
-          friendlyName: factor.friendly_name,
-          webauthn: { rpId, rpOrigins },
-          signal
-        }, {
-          create: overrides
-        });
-        if (!challengeResponse) {
-          return { data: null, error: challengeError };
-        }
-        return this._verify({
-          factorId: factor.id,
-          challengeId: challengeResponse.challengeId,
-          webauthn: {
-            rpId,
-            rpOrigins,
-            type: challengeResponse.webauthn.type,
-            credential_response: challengeResponse.webauthn.credential_response
-          }
-        });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return { data: null, error };
-        }
-        return {
-          data: null,
-          error: new AuthUnknownError("Unexpected error in register", error)
-        };
+      const { data: factor, error: enrollError } = await this._enroll({
+        friendlyName
+      });
+      if (!factor) {
+        await this.client.mfa.listFactors().then((factors) => {
+          var _a;
+          return (_a = factors.data) === null || _a === void 0 ? void 0 : _a.all.find((v) => v.factor_type === "webauthn" && v.friendly_name === friendlyName && v.status !== "unverified");
+        }).then((factor2) => factor2 ? this.client.mfa.unenroll({ factorId: factor2 === null || factor2 === void 0 ? void 0 : factor2.id }) : void 0);
+        return { data: null, error: enrollError };
       }
-    });
+      const { data: challengeResponse, error: challengeError } = await this._challenge({
+        factorId: factor.id,
+        friendlyName: factor.friendly_name,
+        webauthn: { rpId, rpOrigins },
+        signal
+      }, {
+        create: overrides
+      });
+      if (!challengeResponse) {
+        return { data: null, error: challengeError };
+      }
+      return this._verify({
+        factorId: factor.id,
+        challengeId: challengeResponse.challengeId,
+        webauthn: {
+          rpId,
+          rpOrigins,
+          type: challengeResponse.webauthn.type,
+          credential_response: challengeResponse.webauthn.credential_response
+        }
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return { data: null, error };
+      }
+      return {
+        data: null,
+        error: new AuthUnknownError("Unexpected error in register", error)
+      };
+    }
   }
 };
 
@@ -15734,14 +15424,14 @@ var GoTrueClient = class _GoTrueClient {
       } catch (e) {
         console.error("Failed to create a new BroadcastChannel, multi-tab state changes will not be available", e);
       }
-      (_c = this.broadcastChannel) === null || _c === void 0 ? void 0 : _c.addEventListener("message", (event) => __async(this, null, function* () {
+      (_c = this.broadcastChannel) === null || _c === void 0 ? void 0 : _c.addEventListener("message", async (event) => {
         this._debug("received broadcast notification from other tab or client", event);
         try {
-          yield this._notifyAllSubscribers(event.data.event, event.data.session, false);
+          await this._notifyAllSubscribers(event.data.event, event.data.session, false);
         } catch (error) {
           this._debug("#broadcastChannel", "error", error);
         }
-      }));
+      });
     }
     if (!settings.skipAutoInitialize) {
       this.initialize().catch((error) => {
@@ -15793,21 +15483,19 @@ var GoTrueClient = class _GoTrueClient {
    *
    * @category Auth
    */
-  initialize() {
-    return __async(this, null, function* () {
-      if (this.initializePromise) {
-        return yield this.initializePromise;
+  async initialize() {
+    if (this.initializePromise) {
+      return await this.initializePromise;
+    }
+    this.initializePromise = (async () => {
+      if (this.lock != null) {
+        return await this._acquireLock(this.lockAcquireTimeout, async () => {
+          return await this._initialize();
+        });
       }
-      this.initializePromise = (() => __async(this, null, function* () {
-        if (this.lock != null) {
-          return yield this._acquireLock(this.lockAcquireTimeout, () => __async(this, null, function* () {
-            return yield this._initialize();
-          }));
-        }
-        return yield this._initialize();
-      }))();
-      return yield this.initializePromise;
-    });
+      return await this._initialize();
+    })();
+    return await this.initializePromise;
   }
   /**
    * IMPORTANT:
@@ -15815,58 +15503,56 @@ var GoTrueClient = class _GoTrueClient {
    * 2. Never return a session from this method as it would be cached over
    *    the whole lifetime of the client
    */
-  _initialize() {
-    return __async(this, null, function* () {
-      var _a;
-      try {
-        let params = {};
-        let callbackUrlType = "none";
-        if (isBrowser()) {
-          params = parseParametersFromURL(window.location.href);
-          if (this._isImplicitGrantCallback(params)) {
-            callbackUrlType = "implicit";
-          } else if (yield this._isPKCECallback(params)) {
-            callbackUrlType = "pkce";
-          }
+  async _initialize() {
+    var _a;
+    try {
+      let params = {};
+      let callbackUrlType = "none";
+      if (isBrowser()) {
+        params = parseParametersFromURL(window.location.href);
+        if (this._isImplicitGrantCallback(params)) {
+          callbackUrlType = "implicit";
+        } else if (await this._isPKCECallback(params)) {
+          callbackUrlType = "pkce";
         }
-        if (isBrowser() && this.detectSessionInUrl && callbackUrlType !== "none") {
-          const { data, error } = yield this._getSessionFromURL(params, callbackUrlType);
-          if (error) {
-            this._debug("#_initialize()", "error detecting session from URL", error);
-            if (isAuthImplicitGrantRedirectError(error)) {
-              const errorCode = (_a = error.details) === null || _a === void 0 ? void 0 : _a.code;
-              if (errorCode === "identity_already_exists" || errorCode === "identity_not_found" || errorCode === "single_identity_not_deletable") {
-                return { error };
-              }
-            }
-            return { error };
-          }
-          const { session, redirectType } = data;
-          this._debug("#_initialize()", "detected session in URL", session, "redirect type", redirectType);
-          yield this._saveSession(session);
-          setTimeout(() => __async(this, null, function* () {
-            if (redirectType === "recovery") {
-              yield this._notifyAllSubscribers("PASSWORD_RECOVERY", session);
-            } else {
-              yield this._notifyAllSubscribers("SIGNED_IN", session);
-            }
-          }), 0);
-          return { error: null };
-        }
-        yield this._recoverAndRefresh();
-        return { error: null };
-      } catch (error) {
-        if (isAuthError(error)) {
-          return this._returnResult({ error });
-        }
-        return this._returnResult({
-          error: new AuthUnknownError("Unexpected error during initialization", error)
-        });
-      } finally {
-        yield this._handleVisibilityChange();
-        this._debug("#_initialize()", "end");
       }
-    });
+      if (isBrowser() && this.detectSessionInUrl && callbackUrlType !== "none") {
+        const { data, error } = await this._getSessionFromURL(params, callbackUrlType);
+        if (error) {
+          this._debug("#_initialize()", "error detecting session from URL", error);
+          if (isAuthImplicitGrantRedirectError(error)) {
+            const errorCode = (_a = error.details) === null || _a === void 0 ? void 0 : _a.code;
+            if (errorCode === "identity_already_exists" || errorCode === "identity_not_found" || errorCode === "single_identity_not_deletable") {
+              return { error };
+            }
+          }
+          return { error };
+        }
+        const { session, redirectType } = data;
+        this._debug("#_initialize()", "detected session in URL", session, "redirect type", redirectType);
+        await this._saveSession(session);
+        setTimeout(async () => {
+          if (redirectType === "recovery") {
+            await this._notifyAllSubscribers("PASSWORD_RECOVERY", session);
+          } else {
+            await this._notifyAllSubscribers("SIGNED_IN", session);
+          }
+        }, 0);
+        return { error: null };
+      }
+      await this._recoverAndRefresh();
+      return { error: null };
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ error });
+      }
+      return this._returnResult({
+        error: new AuthUnknownError("Unexpected error during initialization", error)
+      });
+    } finally {
+      await this._handleVisibilityChange();
+      this._debug("#_initialize()", "end");
+    }
   }
   /**
    * Creates a new anonymous user.
@@ -15941,36 +15627,34 @@ var GoTrueClient = class _GoTrueClient {
    * })
    * ```
    */
-  signInAnonymously(credentials) {
-    return __async(this, null, function* () {
-      var _a, _b, _c;
-      try {
-        const res = yield _request(this.fetch, "POST", `${this.url}/signup`, {
-          headers: this.headers,
-          body: {
-            data: (_b = (_a = credentials === null || credentials === void 0 ? void 0 : credentials.options) === null || _a === void 0 ? void 0 : _a.data) !== null && _b !== void 0 ? _b : {},
-            gotrue_meta_security: { captcha_token: (_c = credentials === null || credentials === void 0 ? void 0 : credentials.options) === null || _c === void 0 ? void 0 : _c.captchaToken }
-          },
-          xform: _sessionResponse
-        });
-        const { data, error } = res;
-        if (error || !data) {
-          return this._returnResult({ data: { user: null, session: null }, error });
-        }
-        const session = data.session;
-        const user = data.user;
-        if (data.session) {
-          yield this._saveSession(data.session);
-          yield this._notifyAllSubscribers("SIGNED_IN", session);
-        }
-        return this._returnResult({ data: { user, session }, error: null });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return this._returnResult({ data: { user: null, session: null }, error });
-        }
-        throw error;
+  async signInAnonymously(credentials) {
+    var _a, _b, _c;
+    try {
+      const res = await _request(this.fetch, "POST", `${this.url}/signup`, {
+        headers: this.headers,
+        body: {
+          data: (_b = (_a = credentials === null || credentials === void 0 ? void 0 : credentials.options) === null || _a === void 0 ? void 0 : _a.data) !== null && _b !== void 0 ? _b : {},
+          gotrue_meta_security: { captcha_token: (_c = credentials === null || credentials === void 0 ? void 0 : credentials.options) === null || _c === void 0 ? void 0 : _c.captchaToken }
+        },
+        xform: _sessionResponse
+      });
+      const { data, error } = res;
+      if (error || !data) {
+        return this._returnResult({ data: { user: null, session: null }, error });
       }
-    });
+      const session = data.session;
+      const user = data.user;
+      if (data.session) {
+        await this._saveSession(data.session);
+        await this._notifyAllSubscribers("SIGNED_IN", session);
+      }
+      return this._returnResult({ data: { user, session }, error: null });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: { user: null, session: null }, error });
+      }
+      throw error;
+    }
   }
   /**
    * Creates a new user.
@@ -16149,68 +15833,66 @@ var GoTrueClient = class _GoTrueClient {
    * )
    * ```
    */
-  signUp(credentials) {
-    return __async(this, null, function* () {
-      var _a, _b, _c;
-      try {
-        let res;
-        if ("email" in credentials) {
-          const { email, password, options } = credentials;
-          let codeChallenge = null;
-          let codeChallengeMethod = null;
-          if (this.flowType === "pkce") {
-            ;
-            [codeChallenge, codeChallengeMethod] = yield getCodeChallengeAndMethod(this.storage, this.storageKey);
-          }
-          res = yield _request(this.fetch, "POST", `${this.url}/signup`, {
-            headers: this.headers,
-            redirectTo: options === null || options === void 0 ? void 0 : options.emailRedirectTo,
-            body: {
-              email,
-              password,
-              data: (_a = options === null || options === void 0 ? void 0 : options.data) !== null && _a !== void 0 ? _a : {},
-              gotrue_meta_security: { captcha_token: options === null || options === void 0 ? void 0 : options.captchaToken },
-              code_challenge: codeChallenge,
-              code_challenge_method: codeChallengeMethod
-            },
-            xform: _sessionResponse
-          });
-        } else if ("phone" in credentials) {
-          const { phone, password, options } = credentials;
-          res = yield _request(this.fetch, "POST", `${this.url}/signup`, {
-            headers: this.headers,
-            body: {
-              phone,
-              password,
-              data: (_b = options === null || options === void 0 ? void 0 : options.data) !== null && _b !== void 0 ? _b : {},
-              channel: (_c = options === null || options === void 0 ? void 0 : options.channel) !== null && _c !== void 0 ? _c : "sms",
-              gotrue_meta_security: { captcha_token: options === null || options === void 0 ? void 0 : options.captchaToken }
-            },
-            xform: _sessionResponse
-          });
-        } else {
-          throw new AuthInvalidCredentialsError("You must provide either an email or phone number and a password");
+  async signUp(credentials) {
+    var _a, _b, _c;
+    try {
+      let res;
+      if ("email" in credentials) {
+        const { email, password, options } = credentials;
+        let codeChallenge = null;
+        let codeChallengeMethod = null;
+        if (this.flowType === "pkce") {
+          ;
+          [codeChallenge, codeChallengeMethod] = await getCodeChallengeAndMethod(this.storage, this.storageKey);
         }
-        const { data, error } = res;
-        if (error || !data) {
-          yield removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
-          return this._returnResult({ data: { user: null, session: null }, error });
-        }
-        const session = data.session;
-        const user = data.user;
-        if (data.session) {
-          yield this._saveSession(data.session);
-          yield this._notifyAllSubscribers("SIGNED_IN", session);
-        }
-        return this._returnResult({ data: { user, session }, error: null });
-      } catch (error) {
-        yield removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
-        if (isAuthError(error)) {
-          return this._returnResult({ data: { user: null, session: null }, error });
-        }
-        throw error;
+        res = await _request(this.fetch, "POST", `${this.url}/signup`, {
+          headers: this.headers,
+          redirectTo: options === null || options === void 0 ? void 0 : options.emailRedirectTo,
+          body: {
+            email,
+            password,
+            data: (_a = options === null || options === void 0 ? void 0 : options.data) !== null && _a !== void 0 ? _a : {},
+            gotrue_meta_security: { captcha_token: options === null || options === void 0 ? void 0 : options.captchaToken },
+            code_challenge: codeChallenge,
+            code_challenge_method: codeChallengeMethod
+          },
+          xform: _sessionResponse
+        });
+      } else if ("phone" in credentials) {
+        const { phone, password, options } = credentials;
+        res = await _request(this.fetch, "POST", `${this.url}/signup`, {
+          headers: this.headers,
+          body: {
+            phone,
+            password,
+            data: (_b = options === null || options === void 0 ? void 0 : options.data) !== null && _b !== void 0 ? _b : {},
+            channel: (_c = options === null || options === void 0 ? void 0 : options.channel) !== null && _c !== void 0 ? _c : "sms",
+            gotrue_meta_security: { captcha_token: options === null || options === void 0 ? void 0 : options.captchaToken }
+          },
+          xform: _sessionResponse
+        });
+      } else {
+        throw new AuthInvalidCredentialsError("You must provide either an email or phone number and a password");
       }
-    });
+      const { data, error } = res;
+      if (error || !data) {
+        await removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
+        return this._returnResult({ data: { user: null, session: null }, error });
+      }
+      const session = data.session;
+      const user = data.user;
+      if (data.session) {
+        await this._saveSession(data.session);
+        await this._notifyAllSubscribers("SIGNED_IN", session);
+      }
+      return this._returnResult({ data: { user, session }, error: null });
+    } catch (error) {
+      await removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
+      if (isAuthError(error)) {
+        return this._returnResult({ data: { user: null, session: null }, error });
+      }
+      throw error;
+    }
   }
   /**
    * Log in an existing user with an email and password or phone and password.
@@ -16344,57 +16026,55 @@ var GoTrueClient = class _GoTrueClient {
    * }
    * ```
    */
-  signInWithPassword(credentials) {
-    return __async(this, null, function* () {
-      try {
-        let res;
-        if ("email" in credentials) {
-          const { email, password, options } = credentials;
-          res = yield _request(this.fetch, "POST", `${this.url}/token?grant_type=password`, {
-            headers: this.headers,
-            body: {
-              email,
-              password,
-              gotrue_meta_security: { captcha_token: options === null || options === void 0 ? void 0 : options.captchaToken }
-            },
-            xform: _sessionResponsePassword
-          });
-        } else if ("phone" in credentials) {
-          const { phone, password, options } = credentials;
-          res = yield _request(this.fetch, "POST", `${this.url}/token?grant_type=password`, {
-            headers: this.headers,
-            body: {
-              phone,
-              password,
-              gotrue_meta_security: { captcha_token: options === null || options === void 0 ? void 0 : options.captchaToken }
-            },
-            xform: _sessionResponsePassword
-          });
-        } else {
-          throw new AuthInvalidCredentialsError("You must provide either an email or phone number and a password");
-        }
-        const { data, error } = res;
-        if (error) {
-          return this._returnResult({ data: { user: null, session: null }, error });
-        } else if (!data || !data.session || !data.user) {
-          const invalidTokenError = new AuthInvalidTokenResponseError();
-          return this._returnResult({ data: { user: null, session: null }, error: invalidTokenError });
-        }
-        if (data.session) {
-          yield this._saveSession(data.session);
-          yield this._notifyAllSubscribers("SIGNED_IN", data.session);
-        }
-        return this._returnResult({
-          data: Object.assign({ user: data.user, session: data.session }, data.weak_password ? { weakPassword: data.weak_password } : null),
-          error
+  async signInWithPassword(credentials) {
+    try {
+      let res;
+      if ("email" in credentials) {
+        const { email, password, options } = credentials;
+        res = await _request(this.fetch, "POST", `${this.url}/token?grant_type=password`, {
+          headers: this.headers,
+          body: {
+            email,
+            password,
+            gotrue_meta_security: { captcha_token: options === null || options === void 0 ? void 0 : options.captchaToken }
+          },
+          xform: _sessionResponsePassword
         });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return this._returnResult({ data: { user: null, session: null }, error });
-        }
-        throw error;
+      } else if ("phone" in credentials) {
+        const { phone, password, options } = credentials;
+        res = await _request(this.fetch, "POST", `${this.url}/token?grant_type=password`, {
+          headers: this.headers,
+          body: {
+            phone,
+            password,
+            gotrue_meta_security: { captcha_token: options === null || options === void 0 ? void 0 : options.captchaToken }
+          },
+          xform: _sessionResponsePassword
+        });
+      } else {
+        throw new AuthInvalidCredentialsError("You must provide either an email or phone number and a password");
       }
-    });
+      const { data, error } = res;
+      if (error) {
+        return this._returnResult({ data: { user: null, session: null }, error });
+      } else if (!data || !data.session || !data.user) {
+        const invalidTokenError = new AuthInvalidTokenResponseError();
+        return this._returnResult({ data: { user: null, session: null }, error: invalidTokenError });
+      }
+      if (data.session) {
+        await this._saveSession(data.session);
+        await this._notifyAllSubscribers("SIGNED_IN", data.session);
+      }
+      return this._returnResult({
+        data: Object.assign({ user: data.user, session: data.session }, data.weak_password ? { weakPassword: data.weak_password } : null),
+        error
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: { user: null, session: null }, error });
+      }
+      throw error;
+    }
   }
   /**
    * Log in an existing user via a third-party provider.
@@ -16475,15 +16155,13 @@ var GoTrueClient = class _GoTrueClient {
    * })
    * ```
    */
-  signInWithOAuth(credentials) {
-    return __async(this, null, function* () {
-      var _a, _b, _c, _d;
-      return yield this._handleProviderSignIn(credentials.provider, {
-        redirectTo: (_a = credentials.options) === null || _a === void 0 ? void 0 : _a.redirectTo,
-        scopes: (_b = credentials.options) === null || _b === void 0 ? void 0 : _b.scopes,
-        queryParams: (_c = credentials.options) === null || _c === void 0 ? void 0 : _c.queryParams,
-        skipBrowserRedirect: (_d = credentials.options) === null || _d === void 0 ? void 0 : _d.skipBrowserRedirect
-      });
+  async signInWithOAuth(credentials) {
+    var _a, _b, _c, _d;
+    return await this._handleProviderSignIn(credentials.provider, {
+      redirectTo: (_a = credentials.options) === null || _a === void 0 ? void 0 : _a.redirectTo,
+      scopes: (_b = credentials.options) === null || _b === void 0 ? void 0 : _b.scopes,
+      queryParams: (_c = credentials.options) === null || _c === void 0 ? void 0 : _c.queryParams,
+      skipBrowserRedirect: (_d = credentials.options) === null || _d === void 0 ? void 0 : _d.skipBrowserRedirect
     });
   }
   /**
@@ -16656,16 +16334,14 @@ var GoTrueClient = class _GoTrueClient {
    * }
    * ```
    */
-  exchangeCodeForSession(authCode) {
-    return __async(this, null, function* () {
-      yield this.initializePromise;
-      if (this.lock != null) {
-        return this._acquireLock(this.lockAcquireTimeout, () => __async(this, null, function* () {
-          return this._exchangeCodeForSession(authCode);
-        }));
-      }
-      return this._exchangeCodeForSession(authCode);
-    });
+  async exchangeCodeForSession(authCode) {
+    await this.initializePromise;
+    if (this.lock != null) {
+      return this._acquireLock(this.lockAcquireTimeout, async () => {
+        return this._exchangeCodeForSession(authCode);
+      });
+    }
+    return this._exchangeCodeForSession(authCode);
   }
   /**
    * Signs in a user by verifying a message signed by the user's private key.
@@ -16755,257 +16431,249 @@ var GoTrueClient = class _GoTrueClient {
    * }
    * ```
    */
-  signInWithWeb3(credentials) {
-    return __async(this, null, function* () {
-      const { chain } = credentials;
-      switch (chain) {
-        case "ethereum":
-          return yield this.signInWithEthereum(credentials);
-        case "solana":
-          return yield this.signInWithSolana(credentials);
-        default:
-          throw new Error(`@supabase/auth-js: Unsupported chain "${chain}"`);
-      }
-    });
+  async signInWithWeb3(credentials) {
+    const { chain } = credentials;
+    switch (chain) {
+      case "ethereum":
+        return await this.signInWithEthereum(credentials);
+      case "solana":
+        return await this.signInWithSolana(credentials);
+      default:
+        throw new Error(`@supabase/auth-js: Unsupported chain "${chain}"`);
+    }
   }
-  signInWithEthereum(credentials) {
-    return __async(this, null, function* () {
-      var _a, _b, _c, _d, _f, _g, _h, _j, _k, _l, _m;
-      let message;
-      let signature;
-      if ("message" in credentials) {
-        message = credentials.message;
-        signature = credentials.signature;
+  async signInWithEthereum(credentials) {
+    var _a, _b, _c, _d, _f, _g, _h, _j, _k, _l, _m;
+    let message;
+    let signature;
+    if ("message" in credentials) {
+      message = credentials.message;
+      signature = credentials.signature;
+    } else {
+      const { chain, wallet, statement, options } = credentials;
+      let resolvedWallet;
+      if (!isBrowser()) {
+        if (typeof wallet !== "object" || !(options === null || options === void 0 ? void 0 : options.url)) {
+          throw new Error("@supabase/auth-js: Both wallet and url must be specified in non-browser environments.");
+        }
+        resolvedWallet = wallet;
+      } else if (typeof wallet === "object") {
+        resolvedWallet = wallet;
       } else {
-        const { chain, wallet, statement, options } = credentials;
-        let resolvedWallet;
-        if (!isBrowser()) {
-          if (typeof wallet !== "object" || !(options === null || options === void 0 ? void 0 : options.url)) {
-            throw new Error("@supabase/auth-js: Both wallet and url must be specified in non-browser environments.");
-          }
-          resolvedWallet = wallet;
-        } else if (typeof wallet === "object") {
-          resolvedWallet = wallet;
+        const windowAny = window;
+        if ("ethereum" in windowAny && typeof windowAny.ethereum === "object" && "request" in windowAny.ethereum && typeof windowAny.ethereum.request === "function") {
+          resolvedWallet = windowAny.ethereum;
         } else {
-          const windowAny = window;
-          if ("ethereum" in windowAny && typeof windowAny.ethereum === "object" && "request" in windowAny.ethereum && typeof windowAny.ethereum.request === "function") {
-            resolvedWallet = windowAny.ethereum;
-          } else {
-            throw new Error(`@supabase/auth-js: No compatible Ethereum wallet interface on the window object (window.ethereum) detected. Make sure the user already has a wallet installed and connected for this app. Prefer passing the wallet interface object directly to signInWithWeb3({ chain: 'ethereum', wallet: resolvedUserWallet }) instead.`);
-          }
+          throw new Error(`@supabase/auth-js: No compatible Ethereum wallet interface on the window object (window.ethereum) detected. Make sure the user already has a wallet installed and connected for this app. Prefer passing the wallet interface object directly to signInWithWeb3({ chain: 'ethereum', wallet: resolvedUserWallet }) instead.`);
         }
-        const url = new URL((_a = options === null || options === void 0 ? void 0 : options.url) !== null && _a !== void 0 ? _a : window.location.href);
-        const accounts = yield resolvedWallet.request({
-          method: "eth_requestAccounts"
-        }).then((accs) => accs).catch(() => {
-          throw new Error(`@supabase/auth-js: Wallet method eth_requestAccounts is missing or invalid`);
+      }
+      const url = new URL((_a = options === null || options === void 0 ? void 0 : options.url) !== null && _a !== void 0 ? _a : window.location.href);
+      const accounts = await resolvedWallet.request({
+        method: "eth_requestAccounts"
+      }).then((accs) => accs).catch(() => {
+        throw new Error(`@supabase/auth-js: Wallet method eth_requestAccounts is missing or invalid`);
+      });
+      if (!accounts || accounts.length === 0) {
+        throw new Error(`@supabase/auth-js: No accounts available. Please ensure the wallet is connected.`);
+      }
+      const address = getAddress(accounts[0]);
+      let chainId = (_b = options === null || options === void 0 ? void 0 : options.signInWithEthereum) === null || _b === void 0 ? void 0 : _b.chainId;
+      if (!chainId) {
+        const chainIdHex = await resolvedWallet.request({
+          method: "eth_chainId"
         });
-        if (!accounts || accounts.length === 0) {
-          throw new Error(`@supabase/auth-js: No accounts available. Please ensure the wallet is connected.`);
+        chainId = fromHex(chainIdHex);
+      }
+      const siweMessage = {
+        domain: url.host,
+        address,
+        statement,
+        uri: url.href,
+        version: "1",
+        chainId,
+        nonce: (_c = options === null || options === void 0 ? void 0 : options.signInWithEthereum) === null || _c === void 0 ? void 0 : _c.nonce,
+        issuedAt: (_f = (_d = options === null || options === void 0 ? void 0 : options.signInWithEthereum) === null || _d === void 0 ? void 0 : _d.issuedAt) !== null && _f !== void 0 ? _f : /* @__PURE__ */ new Date(),
+        expirationTime: (_g = options === null || options === void 0 ? void 0 : options.signInWithEthereum) === null || _g === void 0 ? void 0 : _g.expirationTime,
+        notBefore: (_h = options === null || options === void 0 ? void 0 : options.signInWithEthereum) === null || _h === void 0 ? void 0 : _h.notBefore,
+        requestId: (_j = options === null || options === void 0 ? void 0 : options.signInWithEthereum) === null || _j === void 0 ? void 0 : _j.requestId,
+        resources: (_k = options === null || options === void 0 ? void 0 : options.signInWithEthereum) === null || _k === void 0 ? void 0 : _k.resources
+      };
+      message = createSiweMessage(siweMessage);
+      signature = await resolvedWallet.request({
+        method: "personal_sign",
+        params: [toHex(message), address]
+      });
+    }
+    try {
+      const { data, error } = await _request(this.fetch, "POST", `${this.url}/token?grant_type=web3`, {
+        headers: this.headers,
+        body: Object.assign({
+          chain: "ethereum",
+          message,
+          signature
+        }, ((_l = credentials.options) === null || _l === void 0 ? void 0 : _l.captchaToken) ? { gotrue_meta_security: { captcha_token: (_m = credentials.options) === null || _m === void 0 ? void 0 : _m.captchaToken } } : null),
+        xform: _sessionResponse
+      });
+      if (error) {
+        throw error;
+      }
+      if (!data || !data.session || !data.user) {
+        const invalidTokenError = new AuthInvalidTokenResponseError();
+        return this._returnResult({ data: { user: null, session: null }, error: invalidTokenError });
+      }
+      if (data.session) {
+        await this._saveSession(data.session);
+        await this._notifyAllSubscribers("SIGNED_IN", data.session);
+      }
+      return this._returnResult({ data: Object.assign({}, data), error });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: { user: null, session: null }, error });
+      }
+      throw error;
+    }
+  }
+  async signInWithSolana(credentials) {
+    var _a, _b, _c, _d, _f, _g, _h, _j, _k, _l, _m, _o;
+    let message;
+    let signature;
+    if ("message" in credentials) {
+      message = credentials.message;
+      signature = credentials.signature;
+    } else {
+      const { chain, wallet, statement, options } = credentials;
+      let resolvedWallet;
+      if (!isBrowser()) {
+        if (typeof wallet !== "object" || !(options === null || options === void 0 ? void 0 : options.url)) {
+          throw new Error("@supabase/auth-js: Both wallet and url must be specified in non-browser environments.");
         }
-        const address = getAddress(accounts[0]);
-        let chainId = (_b = options === null || options === void 0 ? void 0 : options.signInWithEthereum) === null || _b === void 0 ? void 0 : _b.chainId;
-        if (!chainId) {
-          const chainIdHex = yield resolvedWallet.request({
-            method: "eth_chainId"
-          });
-          chainId = fromHex(chainIdHex);
+        resolvedWallet = wallet;
+      } else if (typeof wallet === "object") {
+        resolvedWallet = wallet;
+      } else {
+        const windowAny = window;
+        if ("solana" in windowAny && typeof windowAny.solana === "object" && ("signIn" in windowAny.solana && typeof windowAny.solana.signIn === "function" || "signMessage" in windowAny.solana && typeof windowAny.solana.signMessage === "function")) {
+          resolvedWallet = windowAny.solana;
+        } else {
+          throw new Error(`@supabase/auth-js: No compatible Solana wallet interface on the window object (window.solana) detected. Make sure the user already has a wallet installed and connected for this app. Prefer passing the wallet interface object directly to signInWithWeb3({ chain: 'solana', wallet: resolvedUserWallet }) instead.`);
         }
-        const siweMessage = {
-          domain: url.host,
-          address,
-          statement,
-          uri: url.href,
+      }
+      const url = new URL((_a = options === null || options === void 0 ? void 0 : options.url) !== null && _a !== void 0 ? _a : window.location.href);
+      if ("signIn" in resolvedWallet && resolvedWallet.signIn) {
+        const output = await resolvedWallet.signIn(Object.assign(Object.assign(Object.assign({ issuedAt: (/* @__PURE__ */ new Date()).toISOString() }, options === null || options === void 0 ? void 0 : options.signInWithSolana), {
+          // non-overridable properties
           version: "1",
-          chainId,
-          nonce: (_c = options === null || options === void 0 ? void 0 : options.signInWithEthereum) === null || _c === void 0 ? void 0 : _c.nonce,
-          issuedAt: (_f = (_d = options === null || options === void 0 ? void 0 : options.signInWithEthereum) === null || _d === void 0 ? void 0 : _d.issuedAt) !== null && _f !== void 0 ? _f : /* @__PURE__ */ new Date(),
-          expirationTime: (_g = options === null || options === void 0 ? void 0 : options.signInWithEthereum) === null || _g === void 0 ? void 0 : _g.expirationTime,
-          notBefore: (_h = options === null || options === void 0 ? void 0 : options.signInWithEthereum) === null || _h === void 0 ? void 0 : _h.notBefore,
-          requestId: (_j = options === null || options === void 0 ? void 0 : options.signInWithEthereum) === null || _j === void 0 ? void 0 : _j.requestId,
-          resources: (_k = options === null || options === void 0 ? void 0 : options.signInWithEthereum) === null || _k === void 0 ? void 0 : _k.resources
-        };
-        message = createSiweMessage(siweMessage);
-        signature = yield resolvedWallet.request({
-          method: "personal_sign",
-          params: [toHex(message), address]
-        });
-      }
-      try {
-        const { data, error } = yield _request(this.fetch, "POST", `${this.url}/token?grant_type=web3`, {
-          headers: this.headers,
-          body: Object.assign({
-            chain: "ethereum",
-            message,
-            signature
-          }, ((_l = credentials.options) === null || _l === void 0 ? void 0 : _l.captchaToken) ? { gotrue_meta_security: { captcha_token: (_m = credentials.options) === null || _m === void 0 ? void 0 : _m.captchaToken } } : null),
-          xform: _sessionResponse
-        });
-        if (error) {
-          throw error;
+          domain: url.host,
+          uri: url.href
+        }), statement ? { statement } : null));
+        let outputToProcess;
+        if (Array.isArray(output) && output[0] && typeof output[0] === "object") {
+          outputToProcess = output[0];
+        } else if (output && typeof output === "object" && "signedMessage" in output && "signature" in output) {
+          outputToProcess = output;
+        } else {
+          throw new Error("@supabase/auth-js: Wallet method signIn() returned unrecognized value");
         }
-        if (!data || !data.session || !data.user) {
-          const invalidTokenError = new AuthInvalidTokenResponseError();
-          return this._returnResult({ data: { user: null, session: null }, error: invalidTokenError });
+        if ("signedMessage" in outputToProcess && "signature" in outputToProcess && (typeof outputToProcess.signedMessage === "string" || outputToProcess.signedMessage instanceof Uint8Array) && outputToProcess.signature instanceof Uint8Array) {
+          message = typeof outputToProcess.signedMessage === "string" ? outputToProcess.signedMessage : new TextDecoder().decode(outputToProcess.signedMessage);
+          signature = outputToProcess.signature;
+        } else {
+          throw new Error("@supabase/auth-js: Wallet method signIn() API returned object without signedMessage and signature fields");
         }
-        if (data.session) {
-          yield this._saveSession(data.session);
-          yield this._notifyAllSubscribers("SIGNED_IN", data.session);
-        }
-        return this._returnResult({ data: Object.assign({}, data), error });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return this._returnResult({ data: { user: null, session: null }, error });
-        }
-        throw error;
-      }
-    });
-  }
-  signInWithSolana(credentials) {
-    return __async(this, null, function* () {
-      var _a, _b, _c, _d, _f, _g, _h, _j, _k, _l, _m, _o;
-      let message;
-      let signature;
-      if ("message" in credentials) {
-        message = credentials.message;
-        signature = credentials.signature;
       } else {
-        const { chain, wallet, statement, options } = credentials;
-        let resolvedWallet;
-        if (!isBrowser()) {
-          if (typeof wallet !== "object" || !(options === null || options === void 0 ? void 0 : options.url)) {
-            throw new Error("@supabase/auth-js: Both wallet and url must be specified in non-browser environments.");
-          }
-          resolvedWallet = wallet;
-        } else if (typeof wallet === "object") {
-          resolvedWallet = wallet;
-        } else {
-          const windowAny = window;
-          if ("solana" in windowAny && typeof windowAny.solana === "object" && ("signIn" in windowAny.solana && typeof windowAny.solana.signIn === "function" || "signMessage" in windowAny.solana && typeof windowAny.solana.signMessage === "function")) {
-            resolvedWallet = windowAny.solana;
-          } else {
-            throw new Error(`@supabase/auth-js: No compatible Solana wallet interface on the window object (window.solana) detected. Make sure the user already has a wallet installed and connected for this app. Prefer passing the wallet interface object directly to signInWithWeb3({ chain: 'solana', wallet: resolvedUserWallet }) instead.`);
-          }
+        if (!("signMessage" in resolvedWallet) || typeof resolvedWallet.signMessage !== "function" || !("publicKey" in resolvedWallet) || typeof resolvedWallet !== "object" || !resolvedWallet.publicKey || !("toBase58" in resolvedWallet.publicKey) || typeof resolvedWallet.publicKey.toBase58 !== "function") {
+          throw new Error("@supabase/auth-js: Wallet does not have a compatible signMessage() and publicKey.toBase58() API");
         }
-        const url = new URL((_a = options === null || options === void 0 ? void 0 : options.url) !== null && _a !== void 0 ? _a : window.location.href);
-        if ("signIn" in resolvedWallet && resolvedWallet.signIn) {
-          const output = yield resolvedWallet.signIn(Object.assign(Object.assign(Object.assign({ issuedAt: (/* @__PURE__ */ new Date()).toISOString() }, options === null || options === void 0 ? void 0 : options.signInWithSolana), {
-            // non-overridable properties
-            version: "1",
-            domain: url.host,
-            uri: url.href
-          }), statement ? { statement } : null));
-          let outputToProcess;
-          if (Array.isArray(output) && output[0] && typeof output[0] === "object") {
-            outputToProcess = output[0];
-          } else if (output && typeof output === "object" && "signedMessage" in output && "signature" in output) {
-            outputToProcess = output;
-          } else {
-            throw new Error("@supabase/auth-js: Wallet method signIn() returned unrecognized value");
-          }
-          if ("signedMessage" in outputToProcess && "signature" in outputToProcess && (typeof outputToProcess.signedMessage === "string" || outputToProcess.signedMessage instanceof Uint8Array) && outputToProcess.signature instanceof Uint8Array) {
-            message = typeof outputToProcess.signedMessage === "string" ? outputToProcess.signedMessage : new TextDecoder().decode(outputToProcess.signedMessage);
-            signature = outputToProcess.signature;
-          } else {
-            throw new Error("@supabase/auth-js: Wallet method signIn() API returned object without signedMessage and signature fields");
-          }
-        } else {
-          if (!("signMessage" in resolvedWallet) || typeof resolvedWallet.signMessage !== "function" || !("publicKey" in resolvedWallet) || typeof resolvedWallet !== "object" || !resolvedWallet.publicKey || !("toBase58" in resolvedWallet.publicKey) || typeof resolvedWallet.publicKey.toBase58 !== "function") {
-            throw new Error("@supabase/auth-js: Wallet does not have a compatible signMessage() and publicKey.toBase58() API");
-          }
-          message = [
-            `${url.host} wants you to sign in with your Solana account:`,
-            resolvedWallet.publicKey.toBase58(),
-            ...statement ? ["", statement, ""] : [""],
-            "Version: 1",
-            `URI: ${url.href}`,
-            `Issued At: ${(_c = (_b = options === null || options === void 0 ? void 0 : options.signInWithSolana) === null || _b === void 0 ? void 0 : _b.issuedAt) !== null && _c !== void 0 ? _c : (/* @__PURE__ */ new Date()).toISOString()}`,
-            ...((_d = options === null || options === void 0 ? void 0 : options.signInWithSolana) === null || _d === void 0 ? void 0 : _d.notBefore) ? [`Not Before: ${options.signInWithSolana.notBefore}`] : [],
-            ...((_f = options === null || options === void 0 ? void 0 : options.signInWithSolana) === null || _f === void 0 ? void 0 : _f.expirationTime) ? [`Expiration Time: ${options.signInWithSolana.expirationTime}`] : [],
-            ...((_g = options === null || options === void 0 ? void 0 : options.signInWithSolana) === null || _g === void 0 ? void 0 : _g.chainId) ? [`Chain ID: ${options.signInWithSolana.chainId}`] : [],
-            ...((_h = options === null || options === void 0 ? void 0 : options.signInWithSolana) === null || _h === void 0 ? void 0 : _h.nonce) ? [`Nonce: ${options.signInWithSolana.nonce}`] : [],
-            ...((_j = options === null || options === void 0 ? void 0 : options.signInWithSolana) === null || _j === void 0 ? void 0 : _j.requestId) ? [`Request ID: ${options.signInWithSolana.requestId}`] : [],
-            ...((_l = (_k = options === null || options === void 0 ? void 0 : options.signInWithSolana) === null || _k === void 0 ? void 0 : _k.resources) === null || _l === void 0 ? void 0 : _l.length) ? [
-              "Resources",
-              ...options.signInWithSolana.resources.map((resource) => `- ${resource}`)
-            ] : []
-          ].join("\n");
-          const maybeSignature = yield resolvedWallet.signMessage(new TextEncoder().encode(message), "utf8");
-          if (!maybeSignature || !(maybeSignature instanceof Uint8Array)) {
-            throw new Error("@supabase/auth-js: Wallet signMessage() API returned an recognized value");
-          }
-          signature = maybeSignature;
+        message = [
+          `${url.host} wants you to sign in with your Solana account:`,
+          resolvedWallet.publicKey.toBase58(),
+          ...statement ? ["", statement, ""] : [""],
+          "Version: 1",
+          `URI: ${url.href}`,
+          `Issued At: ${(_c = (_b = options === null || options === void 0 ? void 0 : options.signInWithSolana) === null || _b === void 0 ? void 0 : _b.issuedAt) !== null && _c !== void 0 ? _c : (/* @__PURE__ */ new Date()).toISOString()}`,
+          ...((_d = options === null || options === void 0 ? void 0 : options.signInWithSolana) === null || _d === void 0 ? void 0 : _d.notBefore) ? [`Not Before: ${options.signInWithSolana.notBefore}`] : [],
+          ...((_f = options === null || options === void 0 ? void 0 : options.signInWithSolana) === null || _f === void 0 ? void 0 : _f.expirationTime) ? [`Expiration Time: ${options.signInWithSolana.expirationTime}`] : [],
+          ...((_g = options === null || options === void 0 ? void 0 : options.signInWithSolana) === null || _g === void 0 ? void 0 : _g.chainId) ? [`Chain ID: ${options.signInWithSolana.chainId}`] : [],
+          ...((_h = options === null || options === void 0 ? void 0 : options.signInWithSolana) === null || _h === void 0 ? void 0 : _h.nonce) ? [`Nonce: ${options.signInWithSolana.nonce}`] : [],
+          ...((_j = options === null || options === void 0 ? void 0 : options.signInWithSolana) === null || _j === void 0 ? void 0 : _j.requestId) ? [`Request ID: ${options.signInWithSolana.requestId}`] : [],
+          ...((_l = (_k = options === null || options === void 0 ? void 0 : options.signInWithSolana) === null || _k === void 0 ? void 0 : _k.resources) === null || _l === void 0 ? void 0 : _l.length) ? [
+            "Resources",
+            ...options.signInWithSolana.resources.map((resource) => `- ${resource}`)
+          ] : []
+        ].join("\n");
+        const maybeSignature = await resolvedWallet.signMessage(new TextEncoder().encode(message), "utf8");
+        if (!maybeSignature || !(maybeSignature instanceof Uint8Array)) {
+          throw new Error("@supabase/auth-js: Wallet signMessage() API returned an recognized value");
         }
+        signature = maybeSignature;
       }
-      try {
-        const { data, error } = yield _request(this.fetch, "POST", `${this.url}/token?grant_type=web3`, {
-          headers: this.headers,
-          body: Object.assign({ chain: "solana", message, signature: bytesToBase64URL(signature) }, ((_m = credentials.options) === null || _m === void 0 ? void 0 : _m.captchaToken) ? { gotrue_meta_security: { captcha_token: (_o = credentials.options) === null || _o === void 0 ? void 0 : _o.captchaToken } } : null),
-          xform: _sessionResponse
-        });
-        if (error) {
-          throw error;
-        }
-        if (!data || !data.session || !data.user) {
-          const invalidTokenError = new AuthInvalidTokenResponseError();
-          return this._returnResult({ data: { user: null, session: null }, error: invalidTokenError });
-        }
-        if (data.session) {
-          yield this._saveSession(data.session);
-          yield this._notifyAllSubscribers("SIGNED_IN", data.session);
-        }
-        return this._returnResult({ data: Object.assign({}, data), error });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return this._returnResult({ data: { user: null, session: null }, error });
-        }
+    }
+    try {
+      const { data, error } = await _request(this.fetch, "POST", `${this.url}/token?grant_type=web3`, {
+        headers: this.headers,
+        body: Object.assign({ chain: "solana", message, signature: bytesToBase64URL(signature) }, ((_m = credentials.options) === null || _m === void 0 ? void 0 : _m.captchaToken) ? { gotrue_meta_security: { captcha_token: (_o = credentials.options) === null || _o === void 0 ? void 0 : _o.captchaToken } } : null),
+        xform: _sessionResponse
+      });
+      if (error) {
         throw error;
       }
-    });
+      if (!data || !data.session || !data.user) {
+        const invalidTokenError = new AuthInvalidTokenResponseError();
+        return this._returnResult({ data: { user: null, session: null }, error: invalidTokenError });
+      }
+      if (data.session) {
+        await this._saveSession(data.session);
+        await this._notifyAllSubscribers("SIGNED_IN", data.session);
+      }
+      return this._returnResult({ data: Object.assign({}, data), error });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: { user: null, session: null }, error });
+      }
+      throw error;
+    }
   }
-  _exchangeCodeForSession(authCode) {
-    return __async(this, null, function* () {
-      const storageItem = yield getItemAsync(this.storage, `${this.storageKey}-code-verifier`);
-      const [codeVerifier, redirectType] = (storageItem !== null && storageItem !== void 0 ? storageItem : "").split("/");
-      try {
-        if (!codeVerifier && this.flowType === "pkce") {
-          throw new AuthPKCECodeVerifierMissingError();
-        }
-        const { data, error } = yield _request(this.fetch, "POST", `${this.url}/token?grant_type=pkce`, {
-          headers: this.headers,
-          body: {
-            auth_code: authCode,
-            code_verifier: codeVerifier
-          },
-          xform: _sessionResponse
-        });
-        yield removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
-        if (error) {
-          throw error;
-        }
-        if (!data || !data.session || !data.user) {
-          const invalidTokenError = new AuthInvalidTokenResponseError();
-          return this._returnResult({
-            data: { user: null, session: null, redirectType: null },
-            error: invalidTokenError
-          });
-        }
-        if (data.session) {
-          yield this._saveSession(data.session);
-          yield this._notifyAllSubscribers(redirectType === "recovery" ? "PASSWORD_RECOVERY" : "SIGNED_IN", data.session);
-        }
-        return this._returnResult({ data: Object.assign(Object.assign({}, data), { redirectType: redirectType !== null && redirectType !== void 0 ? redirectType : null }), error });
-      } catch (error) {
-        yield removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
-        if (isAuthError(error)) {
-          return this._returnResult({
-            data: { user: null, session: null, redirectType: null },
-            error
-          });
-        }
+  async _exchangeCodeForSession(authCode) {
+    const storageItem = await getItemAsync(this.storage, `${this.storageKey}-code-verifier`);
+    const [codeVerifier, redirectType] = (storageItem !== null && storageItem !== void 0 ? storageItem : "").split("/");
+    try {
+      if (!codeVerifier && this.flowType === "pkce") {
+        throw new AuthPKCECodeVerifierMissingError();
+      }
+      const { data, error } = await _request(this.fetch, "POST", `${this.url}/token?grant_type=pkce`, {
+        headers: this.headers,
+        body: {
+          auth_code: authCode,
+          code_verifier: codeVerifier
+        },
+        xform: _sessionResponse
+      });
+      await removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
+      if (error) {
         throw error;
       }
-    });
+      if (!data || !data.session || !data.user) {
+        const invalidTokenError = new AuthInvalidTokenResponseError();
+        return this._returnResult({
+          data: { user: null, session: null, redirectType: null },
+          error: invalidTokenError
+        });
+      }
+      if (data.session) {
+        await this._saveSession(data.session);
+        await this._notifyAllSubscribers(redirectType === "recovery" ? "PASSWORD_RECOVERY" : "SIGNED_IN", data.session);
+      }
+      return this._returnResult({ data: Object.assign(Object.assign({}, data), { redirectType: redirectType !== null && redirectType !== void 0 ? redirectType : null }), error });
+    } catch (error) {
+      await removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
+      if (isAuthError(error)) {
+        return this._returnResult({
+          data: { user: null, session: null, redirectType: null },
+          error
+        });
+      }
+      throw error;
+    }
   }
   /**
    * Allows signing in with an OIDC ID token. The authentication provider used
@@ -17082,40 +16750,38 @@ var GoTrueClient = class _GoTrueClient {
    * }
    * ```
    */
-  signInWithIdToken(credentials) {
-    return __async(this, null, function* () {
-      try {
-        const { options, provider, token, access_token, nonce } = credentials;
-        const res = yield _request(this.fetch, "POST", `${this.url}/token?grant_type=id_token`, {
-          headers: this.headers,
-          body: {
-            provider,
-            id_token: token,
-            access_token,
-            nonce,
-            gotrue_meta_security: { captcha_token: options === null || options === void 0 ? void 0 : options.captchaToken }
-          },
-          xform: _sessionResponse
-        });
-        const { data, error } = res;
-        if (error) {
-          return this._returnResult({ data: { user: null, session: null }, error });
-        } else if (!data || !data.session || !data.user) {
-          const invalidTokenError = new AuthInvalidTokenResponseError();
-          return this._returnResult({ data: { user: null, session: null }, error: invalidTokenError });
-        }
-        if (data.session) {
-          yield this._saveSession(data.session);
-          yield this._notifyAllSubscribers("SIGNED_IN", data.session);
-        }
-        return this._returnResult({ data, error });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return this._returnResult({ data: { user: null, session: null }, error });
-        }
-        throw error;
+  async signInWithIdToken(credentials) {
+    try {
+      const { options, provider, token, access_token, nonce } = credentials;
+      const res = await _request(this.fetch, "POST", `${this.url}/token?grant_type=id_token`, {
+        headers: this.headers,
+        body: {
+          provider,
+          id_token: token,
+          access_token,
+          nonce,
+          gotrue_meta_security: { captcha_token: options === null || options === void 0 ? void 0 : options.captchaToken }
+        },
+        xform: _sessionResponse
+      });
+      const { data, error } = res;
+      if (error) {
+        return this._returnResult({ data: { user: null, session: null }, error });
+      } else if (!data || !data.session || !data.user) {
+        const invalidTokenError = new AuthInvalidTokenResponseError();
+        return this._returnResult({ data: { user: null, session: null }, error: invalidTokenError });
       }
-    });
+      if (data.session) {
+        await this._saveSession(data.session);
+        await this._notifyAllSubscribers("SIGNED_IN", data.session);
+      }
+      return this._returnResult({ data, error });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: { user: null, session: null }, error });
+      }
+      throw error;
+    }
   }
   /**
    * Log in a user using magiclink or a one-time password (OTP).
@@ -17194,58 +16860,56 @@ var GoTrueClient = class _GoTrueClient {
    * })
    * ```
    */
-  signInWithOtp(credentials) {
-    return __async(this, null, function* () {
-      var _a, _b, _c, _d, _f;
-      try {
-        if ("email" in credentials) {
-          const { email, options } = credentials;
-          let codeChallenge = null;
-          let codeChallengeMethod = null;
-          if (this.flowType === "pkce") {
-            ;
-            [codeChallenge, codeChallengeMethod] = yield getCodeChallengeAndMethod(this.storage, this.storageKey);
-          }
-          const { error } = yield _request(this.fetch, "POST", `${this.url}/otp`, {
-            headers: this.headers,
-            body: {
-              email,
-              data: (_a = options === null || options === void 0 ? void 0 : options.data) !== null && _a !== void 0 ? _a : {},
-              create_user: (_b = options === null || options === void 0 ? void 0 : options.shouldCreateUser) !== null && _b !== void 0 ? _b : true,
-              gotrue_meta_security: { captcha_token: options === null || options === void 0 ? void 0 : options.captchaToken },
-              code_challenge: codeChallenge,
-              code_challenge_method: codeChallengeMethod
-            },
-            redirectTo: options === null || options === void 0 ? void 0 : options.emailRedirectTo
-          });
-          return this._returnResult({ data: { user: null, session: null }, error });
+  async signInWithOtp(credentials) {
+    var _a, _b, _c, _d, _f;
+    try {
+      if ("email" in credentials) {
+        const { email, options } = credentials;
+        let codeChallenge = null;
+        let codeChallengeMethod = null;
+        if (this.flowType === "pkce") {
+          ;
+          [codeChallenge, codeChallengeMethod] = await getCodeChallengeAndMethod(this.storage, this.storageKey);
         }
-        if ("phone" in credentials) {
-          const { phone, options } = credentials;
-          const { data, error } = yield _request(this.fetch, "POST", `${this.url}/otp`, {
-            headers: this.headers,
-            body: {
-              phone,
-              data: (_c = options === null || options === void 0 ? void 0 : options.data) !== null && _c !== void 0 ? _c : {},
-              create_user: (_d = options === null || options === void 0 ? void 0 : options.shouldCreateUser) !== null && _d !== void 0 ? _d : true,
-              gotrue_meta_security: { captcha_token: options === null || options === void 0 ? void 0 : options.captchaToken },
-              channel: (_f = options === null || options === void 0 ? void 0 : options.channel) !== null && _f !== void 0 ? _f : "sms"
-            }
-          });
-          return this._returnResult({
-            data: { user: null, session: null, messageId: data === null || data === void 0 ? void 0 : data.message_id },
-            error
-          });
-        }
-        throw new AuthInvalidCredentialsError("You must provide either an email or phone number.");
-      } catch (error) {
-        yield removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
-        if (isAuthError(error)) {
-          return this._returnResult({ data: { user: null, session: null }, error });
-        }
-        throw error;
+        const { error } = await _request(this.fetch, "POST", `${this.url}/otp`, {
+          headers: this.headers,
+          body: {
+            email,
+            data: (_a = options === null || options === void 0 ? void 0 : options.data) !== null && _a !== void 0 ? _a : {},
+            create_user: (_b = options === null || options === void 0 ? void 0 : options.shouldCreateUser) !== null && _b !== void 0 ? _b : true,
+            gotrue_meta_security: { captcha_token: options === null || options === void 0 ? void 0 : options.captchaToken },
+            code_challenge: codeChallenge,
+            code_challenge_method: codeChallengeMethod
+          },
+          redirectTo: options === null || options === void 0 ? void 0 : options.emailRedirectTo
+        });
+        return this._returnResult({ data: { user: null, session: null }, error });
       }
-    });
+      if ("phone" in credentials) {
+        const { phone, options } = credentials;
+        const { data, error } = await _request(this.fetch, "POST", `${this.url}/otp`, {
+          headers: this.headers,
+          body: {
+            phone,
+            data: (_c = options === null || options === void 0 ? void 0 : options.data) !== null && _c !== void 0 ? _c : {},
+            create_user: (_d = options === null || options === void 0 ? void 0 : options.shouldCreateUser) !== null && _d !== void 0 ? _d : true,
+            gotrue_meta_security: { captcha_token: options === null || options === void 0 ? void 0 : options.captchaToken },
+            channel: (_f = options === null || options === void 0 ? void 0 : options.channel) !== null && _f !== void 0 ? _f : "sms"
+          }
+        });
+        return this._returnResult({
+          data: { user: null, session: null, messageId: data === null || data === void 0 ? void 0 : data.message_id },
+          error
+        });
+      }
+      throw new AuthInvalidCredentialsError("You must provide either an email or phone number.");
+    } catch (error) {
+      await removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
+      if (isAuthError(error)) {
+        return this._returnResult({ data: { user: null, session: null }, error });
+      }
+      throw error;
+    }
   }
   /**
    * Log in a user given a User supplied OTP or TokenHash received through mobile or email.
@@ -17384,43 +17048,41 @@ var GoTrueClient = class _GoTrueClient {
    * const { data, error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'email'})
    * ```
    */
-  verifyOtp(params) {
-    return __async(this, null, function* () {
-      var _a, _b;
-      try {
-        let redirectTo = void 0;
-        let captchaToken = void 0;
-        if ("options" in params) {
-          redirectTo = (_a = params.options) === null || _a === void 0 ? void 0 : _a.redirectTo;
-          captchaToken = (_b = params.options) === null || _b === void 0 ? void 0 : _b.captchaToken;
-        }
-        const { data, error } = yield _request(this.fetch, "POST", `${this.url}/verify`, {
-          headers: this.headers,
-          body: Object.assign(Object.assign({}, params), { gotrue_meta_security: { captcha_token: captchaToken } }),
-          redirectTo,
-          xform: _sessionResponse
-        });
-        if (error) {
-          throw error;
-        }
-        if (!data) {
-          const tokenVerificationError = new Error("An error occurred on token verification.");
-          throw tokenVerificationError;
-        }
-        const session = data.session;
-        const user = data.user;
-        if (session === null || session === void 0 ? void 0 : session.access_token) {
-          yield this._saveSession(session);
-          yield this._notifyAllSubscribers(params.type == "recovery" ? "PASSWORD_RECOVERY" : "SIGNED_IN", session);
-        }
-        return this._returnResult({ data: { user, session }, error: null });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return this._returnResult({ data: { user: null, session: null }, error });
-        }
+  async verifyOtp(params) {
+    var _a, _b;
+    try {
+      let redirectTo = void 0;
+      let captchaToken = void 0;
+      if ("options" in params) {
+        redirectTo = (_a = params.options) === null || _a === void 0 ? void 0 : _a.redirectTo;
+        captchaToken = (_b = params.options) === null || _b === void 0 ? void 0 : _b.captchaToken;
+      }
+      const { data, error } = await _request(this.fetch, "POST", `${this.url}/verify`, {
+        headers: this.headers,
+        body: Object.assign(Object.assign({}, params), { gotrue_meta_security: { captcha_token: captchaToken } }),
+        redirectTo,
+        xform: _sessionResponse
+      });
+      if (error) {
         throw error;
       }
-    });
+      if (!data) {
+        const tokenVerificationError = new Error("An error occurred on token verification.");
+        throw tokenVerificationError;
+      }
+      const session = data.session;
+      const user = data.user;
+      if (session === null || session === void 0 ? void 0 : session.access_token) {
+        await this._saveSession(session);
+        await this._notifyAllSubscribers(params.type == "recovery" ? "PASSWORD_RECOVERY" : "SIGNED_IN", session);
+      }
+      return this._returnResult({ data: { user, session }, error: null });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: { user: null, session: null }, error });
+      }
+      throw error;
+    }
   }
   /**
    * Attempts a single-sign on using an enterprise Identity Provider. A
@@ -17475,33 +17137,31 @@ var GoTrueClient = class _GoTrueClient {
    *   }
    * ```
    */
-  signInWithSSO(params) {
-    return __async(this, null, function* () {
-      var _a, _b, _c, _d, _f;
-      try {
-        let codeChallenge = null;
-        let codeChallengeMethod = null;
-        if (this.flowType === "pkce") {
-          ;
-          [codeChallenge, codeChallengeMethod] = yield getCodeChallengeAndMethod(this.storage, this.storageKey);
-        }
-        const result = yield _request(this.fetch, "POST", `${this.url}/sso`, {
-          body: Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, "providerId" in params ? { provider_id: params.providerId } : null), "domain" in params ? { domain: params.domain } : null), { redirect_to: (_b = (_a = params.options) === null || _a === void 0 ? void 0 : _a.redirectTo) !== null && _b !== void 0 ? _b : void 0 }), ((_c = params === null || params === void 0 ? void 0 : params.options) === null || _c === void 0 ? void 0 : _c.captchaToken) ? { gotrue_meta_security: { captcha_token: params.options.captchaToken } } : null), { skip_http_redirect: true, code_challenge: codeChallenge, code_challenge_method: codeChallengeMethod }),
-          headers: this.headers,
-          xform: _ssoResponse
-        });
-        if (((_d = result.data) === null || _d === void 0 ? void 0 : _d.url) && isBrowser() && !((_f = params.options) === null || _f === void 0 ? void 0 : _f.skipBrowserRedirect)) {
-          window.location.assign(result.data.url);
-        }
-        return this._returnResult(result);
-      } catch (error) {
-        yield removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
-        if (isAuthError(error)) {
-          return this._returnResult({ data: null, error });
-        }
-        throw error;
+  async signInWithSSO(params) {
+    var _a, _b, _c, _d, _f;
+    try {
+      let codeChallenge = null;
+      let codeChallengeMethod = null;
+      if (this.flowType === "pkce") {
+        ;
+        [codeChallenge, codeChallengeMethod] = await getCodeChallengeAndMethod(this.storage, this.storageKey);
       }
-    });
+      const result = await _request(this.fetch, "POST", `${this.url}/sso`, {
+        body: Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, "providerId" in params ? { provider_id: params.providerId } : null), "domain" in params ? { domain: params.domain } : null), { redirect_to: (_b = (_a = params.options) === null || _a === void 0 ? void 0 : _a.redirectTo) !== null && _b !== void 0 ? _b : void 0 }), ((_c = params === null || params === void 0 ? void 0 : params.options) === null || _c === void 0 ? void 0 : _c.captchaToken) ? { gotrue_meta_security: { captcha_token: params.options.captchaToken } } : null), { skip_http_redirect: true, code_challenge: codeChallenge, code_challenge_method: codeChallengeMethod }),
+        headers: this.headers,
+        xform: _ssoResponse
+      });
+      if (((_d = result.data) === null || _d === void 0 ? void 0 : _d.url) && isBrowser() && !((_f = params.options) === null || _f === void 0 ? void 0 : _f.skipBrowserRedirect)) {
+        window.location.assign(result.data.url);
+      }
+      return this._returnResult(result);
+    } catch (error) {
+      await removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
+      if (isAuthError(error)) {
+        return this._returnResult({ data: null, error });
+      }
+      throw error;
+    }
   }
   /**
    * Sends a reauthentication OTP to the user's email or phone number.
@@ -17524,39 +17184,35 @@ var GoTrueClient = class _GoTrueClient {
    * const { error } = await supabase.auth.reauthenticate()
    * ```
    */
-  reauthenticate() {
-    return __async(this, null, function* () {
-      yield this.initializePromise;
-      if (this.lock != null) {
-        return yield this._acquireLock(this.lockAcquireTimeout, () => __async(this, null, function* () {
-          return yield this._reauthenticate();
-        }));
-      }
-      return yield this._reauthenticate();
-    });
+  async reauthenticate() {
+    await this.initializePromise;
+    if (this.lock != null) {
+      return await this._acquireLock(this.lockAcquireTimeout, async () => {
+        return await this._reauthenticate();
+      });
+    }
+    return await this._reauthenticate();
   }
-  _reauthenticate() {
-    return __async(this, null, function* () {
-      try {
-        return yield this._useSession((result) => __async(this, null, function* () {
-          const { data: { session }, error: sessionError } = result;
-          if (sessionError)
-            throw sessionError;
-          if (!session)
-            throw new AuthSessionMissingError();
-          const { error } = yield _request(this.fetch, "GET", `${this.url}/reauthenticate`, {
-            headers: this.headers,
-            jwt: session.access_token
-          });
-          return this._returnResult({ data: { user: null, session: null }, error });
-        }));
-      } catch (error) {
-        if (isAuthError(error)) {
-          return this._returnResult({ data: { user: null, session: null }, error });
-        }
-        throw error;
+  async _reauthenticate() {
+    try {
+      return await this._useSession(async (result) => {
+        const { data: { session }, error: sessionError } = result;
+        if (sessionError)
+          throw sessionError;
+        if (!session)
+          throw new AuthSessionMissingError();
+        const { error } = await _request(this.fetch, "GET", `${this.url}/reauthenticate`, {
+          headers: this.headers,
+          jwt: session.access_token
+        });
+        return this._returnResult({ data: { user: null, session: null }, error });
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: { user: null, session: null }, error });
       }
-    });
+      throw error;
+    }
   }
   /**
    * Resends an existing signup confirmation email, email change email, SMS OTP or phone change OTP.
@@ -17617,57 +17273,55 @@ var GoTrueClient = class _GoTrueClient {
    * })
    * ```
    */
-  resend(credentials) {
-    return __async(this, null, function* () {
-      try {
-        const endpoint = `${this.url}/resend`;
-        if ("email" in credentials) {
-          const { email, type, options } = credentials;
-          let codeChallenge = null;
-          let codeChallengeMethod = null;
-          if (this.flowType === "pkce") {
-            ;
-            [codeChallenge, codeChallengeMethod] = yield getCodeChallengeAndMethod(this.storage, this.storageKey);
-          }
-          const { error } = yield _request(this.fetch, "POST", endpoint, {
-            headers: this.headers,
-            body: {
-              email,
-              type,
-              gotrue_meta_security: { captcha_token: options === null || options === void 0 ? void 0 : options.captchaToken },
-              code_challenge: codeChallenge,
-              code_challenge_method: codeChallengeMethod
-            },
-            redirectTo: options === null || options === void 0 ? void 0 : options.emailRedirectTo
-          });
-          if (error) {
-            yield removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
-          }
-          return this._returnResult({ data: { user: null, session: null }, error });
-        } else if ("phone" in credentials) {
-          const { phone, type, options } = credentials;
-          const { data, error } = yield _request(this.fetch, "POST", endpoint, {
-            headers: this.headers,
-            body: {
-              phone,
-              type,
-              gotrue_meta_security: { captcha_token: options === null || options === void 0 ? void 0 : options.captchaToken }
-            }
-          });
-          return this._returnResult({
-            data: { user: null, session: null, messageId: data === null || data === void 0 ? void 0 : data.message_id },
-            error
-          });
+  async resend(credentials) {
+    try {
+      const endpoint = `${this.url}/resend`;
+      if ("email" in credentials) {
+        const { email, type, options } = credentials;
+        let codeChallenge = null;
+        let codeChallengeMethod = null;
+        if (this.flowType === "pkce") {
+          ;
+          [codeChallenge, codeChallengeMethod] = await getCodeChallengeAndMethod(this.storage, this.storageKey);
         }
-        throw new AuthInvalidCredentialsError("You must provide either an email or phone number and a type");
-      } catch (error) {
-        yield removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
-        if (isAuthError(error)) {
-          return this._returnResult({ data: { user: null, session: null }, error });
+        const { error } = await _request(this.fetch, "POST", endpoint, {
+          headers: this.headers,
+          body: {
+            email,
+            type,
+            gotrue_meta_security: { captcha_token: options === null || options === void 0 ? void 0 : options.captchaToken },
+            code_challenge: codeChallenge,
+            code_challenge_method: codeChallengeMethod
+          },
+          redirectTo: options === null || options === void 0 ? void 0 : options.emailRedirectTo
+        });
+        if (error) {
+          await removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
         }
-        throw error;
+        return this._returnResult({ data: { user: null, session: null }, error });
+      } else if ("phone" in credentials) {
+        const { phone, type, options } = credentials;
+        const { data, error } = await _request(this.fetch, "POST", endpoint, {
+          headers: this.headers,
+          body: {
+            phone,
+            type,
+            gotrue_meta_security: { captcha_token: options === null || options === void 0 ? void 0 : options.captchaToken }
+          }
+        });
+        return this._returnResult({
+          data: { user: null, session: null, messageId: data === null || data === void 0 ? void 0 : data.message_id },
+          error
+        });
       }
-    });
+      throw new AuthInvalidCredentialsError("You must provide either an email or phone number and a type");
+    } catch (error) {
+      await removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
+      if (isAuthError(error)) {
+        return this._returnResult({ data: { user: null, session: null }, error });
+      }
+      throw error;
+    }
   }
   /**
    * Returns the session, refreshing it if necessary.
@@ -17754,19 +17408,17 @@ var GoTrueClient = class _GoTrueClient {
    * }
    * ```
    */
-  getSession() {
-    return __async(this, null, function* () {
-      yield this.initializePromise;
-      if (this.lock != null) {
-        return yield this._acquireLock(this.lockAcquireTimeout, () => __async(this, null, function* () {
-          return this._useSession((result) => __async(this, null, function* () {
-            return result;
-          }));
-        }));
-      }
-      return yield this._useSession((result) => __async(this, null, function* () {
-        return result;
-      }));
+  async getSession() {
+    await this.initializePromise;
+    if (this.lock != null) {
+      return await this._acquireLock(this.lockAcquireTimeout, async () => {
+        return this._useSession(async (result) => {
+          return result;
+        });
+      });
+    }
+    return await this._useSession(async (result) => {
+      return result;
     });
   }
   /**
@@ -17776,123 +17428,117 @@ var GoTrueClient = class _GoTrueClient {
    * `this.lock` is non-null (custom lock supplied via constructor). The
    * default lockless path bypasses this entirely.
    */
-  _acquireLock(acquireTimeout, fn) {
-    return __async(this, null, function* () {
-      this._debug("#_acquireLock", "begin", acquireTimeout);
-      try {
-        if (this.lockAcquired) {
-          const last = this.pendingInLock.length ? this.pendingInLock[this.pendingInLock.length - 1] : Promise.resolve();
-          const result = (() => __async(this, null, function* () {
-            yield last;
-            return yield fn();
-          }))();
-          this.pendingInLock.push((() => __async(this, null, function* () {
-            try {
-              yield result;
-            } catch (_e) {
-            }
-          }))());
-          return result;
-        }
-        return yield this.lock(`lock:${this.storageKey}`, acquireTimeout, () => __async(this, null, function* () {
-          this._debug("#_acquireLock", "lock acquired for storage key", this.storageKey);
+  async _acquireLock(acquireTimeout, fn) {
+    this._debug("#_acquireLock", "begin", acquireTimeout);
+    try {
+      if (this.lockAcquired) {
+        const last = this.pendingInLock.length ? this.pendingInLock[this.pendingInLock.length - 1] : Promise.resolve();
+        const result = (async () => {
+          await last;
+          return await fn();
+        })();
+        this.pendingInLock.push((async () => {
           try {
-            this.lockAcquired = true;
-            const result = fn();
-            this.pendingInLock.push((() => __async(this, null, function* () {
-              try {
-                yield result;
-              } catch (e) {
-              }
-            }))());
-            yield result;
-            while (this.pendingInLock.length) {
-              const waitOn = [...this.pendingInLock];
-              yield Promise.all(waitOn);
-              this.pendingInLock.splice(0, waitOn.length);
-            }
-            return yield result;
-          } finally {
-            this._debug("#_acquireLock", "lock released for storage key", this.storageKey);
-            this.lockAcquired = false;
+            await result;
+          } catch (_e) {
           }
-        }));
-      } finally {
-        this._debug("#_acquireLock", "end");
+        })());
+        return result;
       }
-    });
+      return await this.lock(`lock:${this.storageKey}`, acquireTimeout, async () => {
+        this._debug("#_acquireLock", "lock acquired for storage key", this.storageKey);
+        try {
+          this.lockAcquired = true;
+          const result = fn();
+          this.pendingInLock.push((async () => {
+            try {
+              await result;
+            } catch (e) {
+            }
+          })());
+          await result;
+          while (this.pendingInLock.length) {
+            const waitOn = [...this.pendingInLock];
+            await Promise.all(waitOn);
+            this.pendingInLock.splice(0, waitOn.length);
+          }
+          return await result;
+        } finally {
+          this._debug("#_acquireLock", "lock released for storage key", this.storageKey);
+          this.lockAcquired = false;
+        }
+      });
+    } finally {
+      this._debug("#_acquireLock", "end");
+    }
   }
   /**
    * Use instead of {@link #getSession} inside the library. Loads the session
    * via `__loadSession` (which may trigger a refresh if the access token is
    * within the expiry margin) and runs `fn` with the result.
    */
-  _useSession(fn) {
-    return __async(this, null, function* () {
-      this._debug("#_useSession", "begin");
-      try {
-        const result = yield this.__loadSession();
-        return yield fn(result);
-      } finally {
-        this._debug("#_useSession", "end");
-      }
-    });
+  async _useSession(fn) {
+    this._debug("#_useSession", "begin");
+    try {
+      const result = await this.__loadSession();
+      return await fn(result);
+    } finally {
+      this._debug("#_useSession", "end");
+    }
   }
   /**
    * NEVER USE DIRECTLY!
    *
    * Always use {@link #_useSession}.
    */
-  __loadSession() {
-    return __async(this, null, function* () {
-      this._debug("#__loadSession()", "begin");
-      if (this.lock != null && !this.lockAcquired) {
-        this._debug("#__loadSession()", "used outside of an acquired lock!", new Error().stack);
+  async __loadSession() {
+    this._debug("#__loadSession()", "begin");
+    if (this.lock != null && !this.lockAcquired) {
+      this._debug("#__loadSession()", "used outside of an acquired lock!", new Error().stack);
+    }
+    try {
+      let currentSession = null;
+      const maybeSession = await getItemAsync(this.storage, this.storageKey);
+      this._debug("#getSession()", "session from storage", maybeSession);
+      if (maybeSession !== null) {
+        if (this._isValidSession(maybeSession)) {
+          currentSession = maybeSession;
+        } else {
+          this._debug("#getSession()", "session from storage is not valid");
+          await this._removeSession();
+        }
       }
-      try {
-        let currentSession = null;
-        const maybeSession = yield getItemAsync(this.storage, this.storageKey);
-        this._debug("#getSession()", "session from storage", maybeSession);
-        if (maybeSession !== null) {
-          if (this._isValidSession(maybeSession)) {
-            currentSession = maybeSession;
+      if (!currentSession) {
+        return { data: { session: null }, error: null };
+      }
+      const hasExpired = currentSession.expires_at ? currentSession.expires_at * 1e3 - Date.now() < EXPIRY_MARGIN_MS : false;
+      this._debug("#__loadSession()", `session has${hasExpired ? "" : " not"} expired`, "expires_at", currentSession.expires_at);
+      if (!hasExpired) {
+        if (this.userStorage) {
+          const maybeUser = await getItemAsync(this.userStorage, this.storageKey + "-user");
+          if (maybeUser === null || maybeUser === void 0 ? void 0 : maybeUser.user) {
+            currentSession.user = maybeUser.user;
           } else {
-            this._debug("#getSession()", "session from storage is not valid");
-            yield this._removeSession();
+            currentSession.user = userNotAvailableProxy();
           }
         }
-        if (!currentSession) {
-          return { data: { session: null }, error: null };
-        }
-        const hasExpired = currentSession.expires_at ? currentSession.expires_at * 1e3 - Date.now() < EXPIRY_MARGIN_MS : false;
-        this._debug("#__loadSession()", `session has${hasExpired ? "" : " not"} expired`, "expires_at", currentSession.expires_at);
-        if (!hasExpired) {
-          if (this.userStorage) {
-            const maybeUser = yield getItemAsync(this.userStorage, this.storageKey + "-user");
-            if (maybeUser === null || maybeUser === void 0 ? void 0 : maybeUser.user) {
-              currentSession.user = maybeUser.user;
-            } else {
-              currentSession.user = userNotAvailableProxy();
-            }
+        if (this.storage.isServer && currentSession.user && !currentSession.user.__isUserNotAvailableProxy) {
+          const suppressWarningRef = { value: this.suppressGetSessionWarning };
+          currentSession.user = insecureUserWarningProxy(currentSession.user, suppressWarningRef);
+          if (suppressWarningRef.value) {
+            this.suppressGetSessionWarning = true;
           }
-          if (this.storage.isServer && currentSession.user && !currentSession.user.__isUserNotAvailableProxy) {
-            const suppressWarningRef = { value: this.suppressGetSessionWarning };
-            currentSession.user = insecureUserWarningProxy(currentSession.user, suppressWarningRef);
-            if (suppressWarningRef.value) {
-              this.suppressGetSessionWarning = true;
-            }
-          }
-          return { data: { session: currentSession }, error: null };
         }
-        const { data: session, error } = yield this._callRefreshToken(currentSession.refresh_token);
-        if (error) {
-          return this._returnResult({ data: { session: null }, error });
-        }
-        return this._returnResult({ data: { session }, error: null });
-      } finally {
-        this._debug("#__loadSession()", "end");
+        return { data: { session: currentSession }, error: null };
       }
-    });
+      const { data: session, error } = await this._callRefreshToken(currentSession.refresh_token);
+      if (error) {
+        return this._returnResult({ data: { session: null }, error });
+      }
+      return this._returnResult({ data: { session }, error: null });
+    } finally {
+      this._debug("#__loadSession()", "end");
+    }
   }
   /**
    * Gets the current user details if there is an existing session. This method
@@ -17970,62 +17616,58 @@ var GoTrueClient = class _GoTrueClient {
    * const { data: { user } } = await supabase.auth.getUser(jwt)
    * ```
    */
-  getUser(jwt) {
-    return __async(this, null, function* () {
-      if (jwt) {
-        return yield this._getUser(jwt);
-      }
-      yield this.initializePromise;
-      let result;
-      if (this.lock != null) {
-        result = yield this._acquireLock(this.lockAcquireTimeout, () => __async(this, null, function* () {
-          return yield this._getUser();
-        }));
-      } else {
-        result = yield this._getUser();
-      }
-      if (result.data.user) {
-        this.suppressGetSessionWarning = true;
-      }
-      return result;
-    });
+  async getUser(jwt) {
+    if (jwt) {
+      return await this._getUser(jwt);
+    }
+    await this.initializePromise;
+    let result;
+    if (this.lock != null) {
+      result = await this._acquireLock(this.lockAcquireTimeout, async () => {
+        return await this._getUser();
+      });
+    } else {
+      result = await this._getUser();
+    }
+    if (result.data.user) {
+      this.suppressGetSessionWarning = true;
+    }
+    return result;
   }
-  _getUser(jwt) {
-    return __async(this, null, function* () {
-      try {
-        if (jwt) {
-          return yield _request(this.fetch, "GET", `${this.url}/user`, {
-            headers: this.headers,
-            jwt,
-            xform: _userResponse
-          });
-        }
-        return yield this._useSession((result) => __async(this, null, function* () {
-          var _a, _b, _c;
-          const { data, error } = result;
-          if (error) {
-            throw error;
-          }
-          if (!((_a = data.session) === null || _a === void 0 ? void 0 : _a.access_token) && !this.hasCustomAuthorizationHeader) {
-            return { data: { user: null }, error: new AuthSessionMissingError() };
-          }
-          return yield _request(this.fetch, "GET", `${this.url}/user`, {
-            headers: this.headers,
-            jwt: (_c = (_b = data.session) === null || _b === void 0 ? void 0 : _b.access_token) !== null && _c !== void 0 ? _c : void 0,
-            xform: _userResponse
-          });
-        }));
-      } catch (error) {
-        if (isAuthError(error)) {
-          if (isAuthSessionMissingError(error)) {
-            yield this._removeSession();
-            yield removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
-          }
-          return this._returnResult({ data: { user: null }, error });
-        }
-        throw error;
+  async _getUser(jwt) {
+    try {
+      if (jwt) {
+        return await _request(this.fetch, "GET", `${this.url}/user`, {
+          headers: this.headers,
+          jwt,
+          xform: _userResponse
+        });
       }
-    });
+      return await this._useSession(async (result) => {
+        var _a, _b, _c;
+        const { data, error } = result;
+        if (error) {
+          throw error;
+        }
+        if (!((_a = data.session) === null || _a === void 0 ? void 0 : _a.access_token) && !this.hasCustomAuthorizationHeader) {
+          return { data: { user: null }, error: new AuthSessionMissingError() };
+        }
+        return await _request(this.fetch, "GET", `${this.url}/user`, {
+          headers: this.headers,
+          jwt: (_c = (_b = data.session) === null || _b === void 0 ? void 0 : _b.access_token) !== null && _c !== void 0 ? _c : void 0,
+          xform: _userResponse
+        });
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        if (isAuthSessionMissingError(error)) {
+          await this._removeSession();
+          await removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
+        }
+        return this._returnResult({ data: { user: null }, error });
+      }
+      throw error;
+    }
   }
   /**
    * Updates user data for a logged in user.
@@ -18141,58 +17783,54 @@ var GoTrueClient = class _GoTrueClient {
    * })
    * ```
    */
-  updateUser(_0) {
-    return __async(this, arguments, function* (attributes, options = {}) {
-      yield this.initializePromise;
-      if (this.lock != null) {
-        return yield this._acquireLock(this.lockAcquireTimeout, () => __async(this, null, function* () {
-          return yield this._updateUser(attributes, options);
-        }));
-      }
-      return yield this._updateUser(attributes, options);
-    });
+  async updateUser(attributes, options = {}) {
+    await this.initializePromise;
+    if (this.lock != null) {
+      return await this._acquireLock(this.lockAcquireTimeout, async () => {
+        return await this._updateUser(attributes, options);
+      });
+    }
+    return await this._updateUser(attributes, options);
   }
-  _updateUser(_0) {
-    return __async(this, arguments, function* (attributes, options = {}) {
-      try {
-        return yield this._useSession((result) => __async(this, null, function* () {
-          const { data: sessionData, error: sessionError } = result;
-          if (sessionError) {
-            throw sessionError;
-          }
-          if (!sessionData.session) {
-            throw new AuthSessionMissingError();
-          }
-          const session = sessionData.session;
-          let codeChallenge = null;
-          let codeChallengeMethod = null;
-          if (this.flowType === "pkce" && attributes.email != null) {
-            ;
-            [codeChallenge, codeChallengeMethod] = yield getCodeChallengeAndMethod(this.storage, this.storageKey);
-          }
-          const { data, error: userError } = yield _request(this.fetch, "PUT", `${this.url}/user`, {
-            headers: this.headers,
-            redirectTo: options === null || options === void 0 ? void 0 : options.emailRedirectTo,
-            body: Object.assign(Object.assign({}, attributes), { code_challenge: codeChallenge, code_challenge_method: codeChallengeMethod }),
-            jwt: session.access_token,
-            xform: _userResponse
-          });
-          if (userError) {
-            throw userError;
-          }
-          session.user = data.user;
-          yield this._saveSession(session);
-          yield this._notifyAllSubscribers("USER_UPDATED", session);
-          return this._returnResult({ data: { user: session.user }, error: null });
-        }));
-      } catch (error) {
-        yield removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
-        if (isAuthError(error)) {
-          return this._returnResult({ data: { user: null }, error });
+  async _updateUser(attributes, options = {}) {
+    try {
+      return await this._useSession(async (result) => {
+        const { data: sessionData, error: sessionError } = result;
+        if (sessionError) {
+          throw sessionError;
         }
-        throw error;
+        if (!sessionData.session) {
+          throw new AuthSessionMissingError();
+        }
+        const session = sessionData.session;
+        let codeChallenge = null;
+        let codeChallengeMethod = null;
+        if (this.flowType === "pkce" && attributes.email != null) {
+          ;
+          [codeChallenge, codeChallengeMethod] = await getCodeChallengeAndMethod(this.storage, this.storageKey);
+        }
+        const { data, error: userError } = await _request(this.fetch, "PUT", `${this.url}/user`, {
+          headers: this.headers,
+          redirectTo: options === null || options === void 0 ? void 0 : options.emailRedirectTo,
+          body: Object.assign(Object.assign({}, attributes), { code_challenge: codeChallenge, code_challenge_method: codeChallengeMethod }),
+          jwt: session.access_token,
+          xform: _userResponse
+        });
+        if (userError) {
+          throw userError;
+        }
+        session.user = data.user;
+        await this._saveSession(session);
+        await this._notifyAllSubscribers("USER_UPDATED", session);
+        return this._returnResult({ data: { user: session.user }, error: null });
+      });
+    } catch (error) {
+      await removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
+      if (isAuthError(error)) {
+        return this._returnResult({ data: { user: null }, error });
       }
-    });
+      throw error;
+    }
   }
   /**
    * Sets the session data from the current session. If the current session is expired, setSession will take care of refreshing it to obtain a new session.
@@ -18318,65 +17956,61 @@ var GoTrueClient = class _GoTrueClient {
    * }
    * ```
    */
-  setSession(currentSession) {
-    return __async(this, null, function* () {
-      yield this.initializePromise;
-      if (this.lock != null) {
-        return yield this._acquireLock(this.lockAcquireTimeout, () => __async(this, null, function* () {
-          return yield this._setSession(currentSession);
-        }));
-      }
-      return yield this._setSession(currentSession);
-    });
+  async setSession(currentSession) {
+    await this.initializePromise;
+    if (this.lock != null) {
+      return await this._acquireLock(this.lockAcquireTimeout, async () => {
+        return await this._setSession(currentSession);
+      });
+    }
+    return await this._setSession(currentSession);
   }
-  _setSession(currentSession) {
-    return __async(this, null, function* () {
-      try {
-        if (!currentSession.access_token || !currentSession.refresh_token) {
-          throw new AuthSessionMissingError();
-        }
-        const timeNow = Date.now() / 1e3;
-        let expiresAt2 = timeNow;
-        let hasExpired = true;
-        let session = null;
-        const { payload } = decodeJWT(currentSession.access_token);
-        if (payload.exp) {
-          expiresAt2 = payload.exp;
-          hasExpired = expiresAt2 <= timeNow;
-        }
-        if (hasExpired) {
-          const { data: refreshedSession, error } = yield this._callRefreshToken(currentSession.refresh_token);
-          if (error) {
-            return this._returnResult({ data: { user: null, session: null }, error });
-          }
-          if (!refreshedSession) {
-            return { data: { user: null, session: null }, error: null };
-          }
-          session = refreshedSession;
-        } else {
-          const { data, error } = yield this._getUser(currentSession.access_token);
-          if (error) {
-            return this._returnResult({ data: { user: null, session: null }, error });
-          }
-          session = {
-            access_token: currentSession.access_token,
-            refresh_token: currentSession.refresh_token,
-            user: data.user,
-            token_type: "bearer",
-            expires_in: expiresAt2 - timeNow,
-            expires_at: expiresAt2
-          };
-          yield this._saveSession(session);
-          yield this._notifyAllSubscribers("SIGNED_IN", session);
-        }
-        return this._returnResult({ data: { user: session.user, session }, error: null });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return this._returnResult({ data: { session: null, user: null }, error });
-        }
-        throw error;
+  async _setSession(currentSession) {
+    try {
+      if (!currentSession.access_token || !currentSession.refresh_token) {
+        throw new AuthSessionMissingError();
       }
-    });
+      const timeNow = Date.now() / 1e3;
+      let expiresAt2 = timeNow;
+      let hasExpired = true;
+      let session = null;
+      const { payload } = decodeJWT(currentSession.access_token);
+      if (payload.exp) {
+        expiresAt2 = payload.exp;
+        hasExpired = expiresAt2 <= timeNow;
+      }
+      if (hasExpired) {
+        const { data: refreshedSession, error } = await this._callRefreshToken(currentSession.refresh_token);
+        if (error) {
+          return this._returnResult({ data: { user: null, session: null }, error });
+        }
+        if (!refreshedSession) {
+          return { data: { user: null, session: null }, error: null };
+        }
+        session = refreshedSession;
+      } else {
+        const { data, error } = await this._getUser(currentSession.access_token);
+        if (error) {
+          return this._returnResult({ data: { user: null, session: null }, error });
+        }
+        session = {
+          access_token: currentSession.access_token,
+          refresh_token: currentSession.refresh_token,
+          user: data.user,
+          token_type: "bearer",
+          expires_in: expiresAt2 - timeNow,
+          expires_at: expiresAt2
+        };
+        await this._saveSession(session);
+        await this._notifyAllSubscribers("SIGNED_IN", session);
+      }
+      return this._returnResult({ data: { user: session.user, session }, error: null });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: { session: null, user: null }, error });
+      }
+      throw error;
+    }
   }
   /**
    * Returns a new session, regardless of expiry status.
@@ -18503,135 +18137,129 @@ var GoTrueClient = class _GoTrueClient {
    * const { session, user } = data
    * ```
    */
-  refreshSession(currentSession) {
-    return __async(this, null, function* () {
-      yield this.initializePromise;
-      if (this.lock != null) {
-        return yield this._acquireLock(this.lockAcquireTimeout, () => __async(this, null, function* () {
-          return yield this._refreshSession(currentSession);
-        }));
-      }
-      return yield this._refreshSession(currentSession);
-    });
+  async refreshSession(currentSession) {
+    await this.initializePromise;
+    if (this.lock != null) {
+      return await this._acquireLock(this.lockAcquireTimeout, async () => {
+        return await this._refreshSession(currentSession);
+      });
+    }
+    return await this._refreshSession(currentSession);
   }
-  _refreshSession(currentSession) {
-    return __async(this, null, function* () {
-      try {
-        return yield this._useSession((result) => __async(this, null, function* () {
-          var _a;
-          if (!currentSession) {
-            const { data, error: error2 } = result;
-            if (error2) {
-              throw error2;
-            }
-            currentSession = (_a = data.session) !== null && _a !== void 0 ? _a : void 0;
+  async _refreshSession(currentSession) {
+    try {
+      return await this._useSession(async (result) => {
+        var _a;
+        if (!currentSession) {
+          const { data, error: error2 } = result;
+          if (error2) {
+            throw error2;
           }
-          if (!(currentSession === null || currentSession === void 0 ? void 0 : currentSession.refresh_token)) {
-            throw new AuthSessionMissingError();
-          }
-          const { data: session, error } = yield this._callRefreshToken(currentSession.refresh_token);
-          if (error) {
-            return this._returnResult({ data: { user: null, session: null }, error });
-          }
-          if (!session) {
-            return this._returnResult({ data: { user: null, session: null }, error: null });
-          }
-          return this._returnResult({ data: { user: session.user, session }, error: null });
-        }));
-      } catch (error) {
-        if (isAuthError(error)) {
+          currentSession = (_a = data.session) !== null && _a !== void 0 ? _a : void 0;
+        }
+        if (!(currentSession === null || currentSession === void 0 ? void 0 : currentSession.refresh_token)) {
+          throw new AuthSessionMissingError();
+        }
+        const { data: session, error } = await this._callRefreshToken(currentSession.refresh_token);
+        if (error) {
           return this._returnResult({ data: { user: null, session: null }, error });
         }
-        throw error;
+        if (!session) {
+          return this._returnResult({ data: { user: null, session: null }, error: null });
+        }
+        return this._returnResult({ data: { user: session.user, session }, error: null });
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: { user: null, session: null }, error });
       }
-    });
+      throw error;
+    }
   }
   /**
    * Gets the session data from a URL string
    */
-  _getSessionFromURL(params, callbackUrlType) {
-    return __async(this, null, function* () {
-      var _a;
-      try {
-        if (!isBrowser())
-          throw new AuthImplicitGrantRedirectError("No browser detected.");
-        if (params.error || params.error_description || params.error_code) {
-          throw new AuthImplicitGrantRedirectError(params.error_description || "Error in URL with unspecified error_description", {
-            error: params.error || "unspecified_error",
-            code: params.error_code || "unspecified_code"
-          });
-        }
-        switch (callbackUrlType) {
-          case "implicit":
-            if (this.flowType === "pkce") {
-              throw new AuthPKCEGrantCodeExchangeError("Not a valid PKCE flow url.");
-            }
-            break;
-          case "pkce":
-            if (this.flowType === "implicit") {
-              throw new AuthImplicitGrantRedirectError("Not a valid implicit grant flow url.");
-            }
-            break;
-          default:
-        }
-        if (callbackUrlType === "pkce") {
-          this._debug("#_initialize()", "begin", "is PKCE flow", true);
-          if (!params.code)
-            throw new AuthPKCEGrantCodeExchangeError("No code detected.");
-          const { data: data2, error: error2 } = yield this._exchangeCodeForSession(params.code);
-          if (error2)
-            throw error2;
-          const url = new URL(window.location.href);
-          url.searchParams.delete("code");
-          window.history.replaceState(window.history.state, "", url.toString());
-          return {
-            data: { session: data2.session, redirectType: (_a = data2.redirectType) !== null && _a !== void 0 ? _a : null },
-            error: null
-          };
-        }
-        const { provider_token, provider_refresh_token, access_token, refresh_token, expires_in, expires_at, token_type } = params;
-        if (!access_token || !expires_in || !refresh_token || !token_type) {
-          throw new AuthImplicitGrantRedirectError("No session defined in URL");
-        }
-        const timeNow = Math.round(Date.now() / 1e3);
-        const expiresIn = parseInt(expires_in);
-        let expiresAt2 = timeNow + expiresIn;
-        if (expires_at) {
-          expiresAt2 = parseInt(expires_at);
-        }
-        const actuallyExpiresIn = expiresAt2 - timeNow;
-        if (actuallyExpiresIn * 1e3 <= AUTO_REFRESH_TICK_DURATION_MS) {
-          console.warn(`@supabase/gotrue-js: Session as retrieved from URL expires in ${actuallyExpiresIn}s, should have been closer to ${expiresIn}s`);
-        }
-        const issuedAt = expiresAt2 - expiresIn;
-        if (timeNow - issuedAt >= 120) {
-          console.warn("@supabase/gotrue-js: Session as retrieved from URL was issued over 120s ago, URL could be stale", issuedAt, expiresAt2, timeNow);
-        } else if (timeNow - issuedAt < 0) {
-          console.warn("@supabase/gotrue-js: Session as retrieved from URL was issued in the future? Check the device clock for skew", issuedAt, expiresAt2, timeNow);
-        }
-        const { data, error } = yield this._getUser(access_token);
-        if (error)
-          throw error;
-        const session = {
-          provider_token,
-          provider_refresh_token,
-          access_token,
-          expires_in: expiresIn,
-          expires_at: expiresAt2,
-          refresh_token,
-          token_type,
-          user: data.user
-        };
-        window.location.hash = "";
-        this._debug("#_getSessionFromURL()", "clearing window.location.hash");
-        return this._returnResult({ data: { session, redirectType: params.type }, error: null });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return this._returnResult({ data: { session: null, redirectType: null }, error });
-        }
-        throw error;
+  async _getSessionFromURL(params, callbackUrlType) {
+    var _a;
+    try {
+      if (!isBrowser())
+        throw new AuthImplicitGrantRedirectError("No browser detected.");
+      if (params.error || params.error_description || params.error_code) {
+        throw new AuthImplicitGrantRedirectError(params.error_description || "Error in URL with unspecified error_description", {
+          error: params.error || "unspecified_error",
+          code: params.error_code || "unspecified_code"
+        });
       }
-    });
+      switch (callbackUrlType) {
+        case "implicit":
+          if (this.flowType === "pkce") {
+            throw new AuthPKCEGrantCodeExchangeError("Not a valid PKCE flow url.");
+          }
+          break;
+        case "pkce":
+          if (this.flowType === "implicit") {
+            throw new AuthImplicitGrantRedirectError("Not a valid implicit grant flow url.");
+          }
+          break;
+        default:
+      }
+      if (callbackUrlType === "pkce") {
+        this._debug("#_initialize()", "begin", "is PKCE flow", true);
+        if (!params.code)
+          throw new AuthPKCEGrantCodeExchangeError("No code detected.");
+        const { data: data2, error: error2 } = await this._exchangeCodeForSession(params.code);
+        if (error2)
+          throw error2;
+        const url = new URL(window.location.href);
+        url.searchParams.delete("code");
+        window.history.replaceState(window.history.state, "", url.toString());
+        return {
+          data: { session: data2.session, redirectType: (_a = data2.redirectType) !== null && _a !== void 0 ? _a : null },
+          error: null
+        };
+      }
+      const { provider_token, provider_refresh_token, access_token, refresh_token, expires_in, expires_at, token_type } = params;
+      if (!access_token || !expires_in || !refresh_token || !token_type) {
+        throw new AuthImplicitGrantRedirectError("No session defined in URL");
+      }
+      const timeNow = Math.round(Date.now() / 1e3);
+      const expiresIn = parseInt(expires_in);
+      let expiresAt2 = timeNow + expiresIn;
+      if (expires_at) {
+        expiresAt2 = parseInt(expires_at);
+      }
+      const actuallyExpiresIn = expiresAt2 - timeNow;
+      if (actuallyExpiresIn * 1e3 <= AUTO_REFRESH_TICK_DURATION_MS) {
+        console.warn(`@supabase/gotrue-js: Session as retrieved from URL expires in ${actuallyExpiresIn}s, should have been closer to ${expiresIn}s`);
+      }
+      const issuedAt = expiresAt2 - expiresIn;
+      if (timeNow - issuedAt >= 120) {
+        console.warn("@supabase/gotrue-js: Session as retrieved from URL was issued over 120s ago, URL could be stale", issuedAt, expiresAt2, timeNow);
+      } else if (timeNow - issuedAt < 0) {
+        console.warn("@supabase/gotrue-js: Session as retrieved from URL was issued in the future? Check the device clock for skew", issuedAt, expiresAt2, timeNow);
+      }
+      const { data, error } = await this._getUser(access_token);
+      if (error)
+        throw error;
+      const session = {
+        provider_token,
+        provider_refresh_token,
+        access_token,
+        expires_in: expiresIn,
+        expires_at: expiresAt2,
+        refresh_token,
+        token_type,
+        user: data.user
+      };
+      window.location.hash = "";
+      this._debug("#_getSessionFromURL()", "clearing window.location.hash");
+      return this._returnResult({ data: { session, redirectType: params.type }, error: null });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: { session: null, redirectType: null }, error });
+      }
+      throw error;
+    }
   }
   /**
    * Checks if the current URL contains parameters given by an implicit oauth grant flow (https://www.rfc-editor.org/rfc/rfc6749.html#section-4.2)
@@ -18649,11 +18277,9 @@ var GoTrueClient = class _GoTrueClient {
   /**
    * Checks if the current URL and backing storage contain parameters given by a PKCE flow
    */
-  _isPKCECallback(params) {
-    return __async(this, null, function* () {
-      const currentStorageContent = yield getItemAsync(this.storage, `${this.storageKey}-code-verifier`);
-      return !!(params.code && currentStorageContent);
-    });
+  async _isPKCECallback(params) {
+    const currentStorageContent = await getItemAsync(this.storage, `${this.storageKey}-code-verifier`);
+    return !!(params.code && currentStorageContent);
   }
   /**
    * Inside a browser context, `signOut()` will remove the logged in user from the browser session and log them out - removing all items from localstorage and then trigger a `"SIGNED_OUT"` event.
@@ -18696,40 +18322,36 @@ var GoTrueClient = class _GoTrueClient {
    * const { error } = await supabase.auth.signOut({ scope: 'others' })
    * ```
    */
-  signOut() {
-    return __async(this, arguments, function* (options = { scope: "global" }) {
-      yield this.initializePromise;
-      if (this.lock != null) {
-        return yield this._acquireLock(this.lockAcquireTimeout, () => __async(this, null, function* () {
-          return yield this._signOut(options);
-        }));
-      }
-      return yield this._signOut(options);
-    });
+  async signOut(options = { scope: "global" }) {
+    await this.initializePromise;
+    if (this.lock != null) {
+      return await this._acquireLock(this.lockAcquireTimeout, async () => {
+        return await this._signOut(options);
+      });
+    }
+    return await this._signOut(options);
   }
-  _signOut() {
-    return __async(this, arguments, function* ({ scope } = { scope: "global" }) {
-      return yield this._useSession((result) => __async(this, null, function* () {
-        var _a;
-        const { data, error: sessionError } = result;
-        if (sessionError && !isAuthSessionMissingError(sessionError)) {
-          return this._returnResult({ error: sessionError });
-        }
-        const accessToken = (_a = data.session) === null || _a === void 0 ? void 0 : _a.access_token;
-        if (accessToken) {
-          const { error } = yield this.admin.signOut(accessToken, scope);
-          if (error) {
-            if (!(isAuthApiError(error) && (error.status === 404 || error.status === 401 || error.status === 403) || isAuthSessionMissingError(error))) {
-              return this._returnResult({ error });
-            }
+  async _signOut({ scope } = { scope: "global" }) {
+    return await this._useSession(async (result) => {
+      var _a;
+      const { data, error: sessionError } = result;
+      if (sessionError && !isAuthSessionMissingError(sessionError)) {
+        return this._returnResult({ error: sessionError });
+      }
+      const accessToken = (_a = data.session) === null || _a === void 0 ? void 0 : _a.access_token;
+      if (accessToken) {
+        const { error } = await this.admin.signOut(accessToken, scope);
+        if (error) {
+          if (!(isAuthApiError(error) && (error.status === 404 || error.status === 401 || error.status === 403) || isAuthSessionMissingError(error))) {
+            return this._returnResult({ error });
           }
         }
-        if (scope !== "others") {
-          yield this._removeSession();
-          yield removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
-        }
-        return this._returnResult({ error: null });
-      }));
+      }
+      if (scope !== "others") {
+        await this._removeSession();
+        await removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
+      }
+      return this._returnResult({ error: null });
     });
   }
   /**  *
@@ -18921,38 +18543,36 @@ var GoTrueClient = class _GoTrueClient {
     };
     this._debug("#onAuthStateChange()", "registered callback with id", id);
     this.stateChangeEmitters.set(id, subscription);
-    (() => __async(this, null, function* () {
-      yield this.initializePromise;
+    (async () => {
+      await this.initializePromise;
       if (this.lock != null) {
-        yield this._acquireLock(this.lockAcquireTimeout, () => __async(this, null, function* () {
+        await this._acquireLock(this.lockAcquireTimeout, async () => {
           this._emitInitialSession(id);
-        }));
+        });
       } else {
-        yield this._emitInitialSession(id);
+        await this._emitInitialSession(id);
       }
-    }))();
+    })();
     return { data: { subscription } };
   }
-  _emitInitialSession(id) {
-    return __async(this, null, function* () {
-      return yield this._useSession((result) => __async(this, null, function* () {
-        var _a, _b;
-        try {
-          const { data: { session }, error } = result;
-          if (error)
-            throw error;
-          yield (_a = this.stateChangeEmitters.get(id)) === null || _a === void 0 ? void 0 : _a.callback("INITIAL_SESSION", session);
-          this._debug("INITIAL_SESSION", "callback id", id, "session", session);
-        } catch (err) {
-          yield (_b = this.stateChangeEmitters.get(id)) === null || _b === void 0 ? void 0 : _b.callback("INITIAL_SESSION", null);
-          this._debug("INITIAL_SESSION", "callback id", id, "error", err);
-          if (isAuthSessionMissingError(err)) {
-            console.warn(err);
-          } else {
-            console.error(err);
-          }
+  async _emitInitialSession(id) {
+    return await this._useSession(async (result) => {
+      var _a, _b;
+      try {
+        const { data: { session }, error } = result;
+        if (error)
+          throw error;
+        await ((_a = this.stateChangeEmitters.get(id)) === null || _a === void 0 ? void 0 : _a.callback("INITIAL_SESSION", session));
+        this._debug("INITIAL_SESSION", "callback id", id, "session", session);
+      } catch (err) {
+        await ((_b = this.stateChangeEmitters.get(id)) === null || _b === void 0 ? void 0 : _b.callback("INITIAL_SESSION", null));
+        this._debug("INITIAL_SESSION", "callback id", id, "error", err);
+        if (isAuthSessionMissingError(err)) {
+          console.warn(err);
+        } else {
+          console.error(err);
         }
-      }));
+      }
     });
   }
   /**
@@ -19022,38 +18642,36 @@ var GoTrueClient = class _GoTrueClient {
    *  }, [])
    * ```
    */
-  resetPasswordForEmail(_0) {
-    return __async(this, arguments, function* (email, options = {}) {
-      let codeChallenge = null;
-      let codeChallengeMethod = null;
-      if (this.flowType === "pkce") {
-        ;
-        [codeChallenge, codeChallengeMethod] = yield getCodeChallengeAndMethod(
-          this.storage,
-          this.storageKey,
-          true
-          // isPasswordRecovery
-        );
+  async resetPasswordForEmail(email, options = {}) {
+    let codeChallenge = null;
+    let codeChallengeMethod = null;
+    if (this.flowType === "pkce") {
+      ;
+      [codeChallenge, codeChallengeMethod] = await getCodeChallengeAndMethod(
+        this.storage,
+        this.storageKey,
+        true
+        // isPasswordRecovery
+      );
+    }
+    try {
+      return await _request(this.fetch, "POST", `${this.url}/recover`, {
+        body: {
+          email,
+          code_challenge: codeChallenge,
+          code_challenge_method: codeChallengeMethod,
+          gotrue_meta_security: { captcha_token: options.captchaToken }
+        },
+        headers: this.headers,
+        redirectTo: options.redirectTo
+      });
+    } catch (error) {
+      await removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
+      if (isAuthError(error)) {
+        return this._returnResult({ data: null, error });
       }
-      try {
-        return yield _request(this.fetch, "POST", `${this.url}/recover`, {
-          body: {
-            email,
-            code_challenge: codeChallenge,
-            code_challenge_method: codeChallengeMethod,
-            gotrue_meta_security: { captcha_token: options.captchaToken }
-          },
-          headers: this.headers,
-          redirectTo: options.redirectTo
-        });
-      } catch (error) {
-        yield removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
-        if (isAuthError(error)) {
-          return this._returnResult({ data: null, error });
-        }
-        throw error;
-      }
-    });
+      throw error;
+    }
   }
   /**
    * Gets all the identities linked to a user.
@@ -19095,21 +18713,19 @@ var GoTrueClient = class _GoTrueClient {
    * }
    * ```
    */
-  getUserIdentities() {
-    return __async(this, null, function* () {
-      var _a;
-      try {
-        const { data, error } = yield this.getUser();
-        if (error)
-          throw error;
-        return this._returnResult({ data: { identities: (_a = data.user.identities) !== null && _a !== void 0 ? _a : [] }, error: null });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return this._returnResult({ data: null, error });
-        }
+  async getUserIdentities() {
+    var _a;
+    try {
+      const { data, error } = await this.getUser();
+      if (error)
         throw error;
+      return this._returnResult({ data: { identities: (_a = data.user.identities) !== null && _a !== void 0 ? _a : [] }, error: null });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: null, error });
       }
-    });
+      throw error;
+    }
   }
   /**  *
    * @category Auth
@@ -19138,95 +18754,89 @@ var GoTrueClient = class _GoTrueClient {
    * }
    * ```
    */
-  linkIdentity(credentials) {
-    return __async(this, null, function* () {
-      if ("token" in credentials) {
-        return this.linkIdentityIdToken(credentials);
-      }
-      return this.linkIdentityOAuth(credentials);
-    });
+  async linkIdentity(credentials) {
+    if ("token" in credentials) {
+      return this.linkIdentityIdToken(credentials);
+    }
+    return this.linkIdentityOAuth(credentials);
   }
-  linkIdentityOAuth(credentials) {
-    return __async(this, null, function* () {
+  async linkIdentityOAuth(credentials) {
+    var _a;
+    try {
+      const { data, error } = await this._useSession(async (result) => {
+        var _a2, _b, _c, _d, _f;
+        const { data: data2, error: error2 } = result;
+        if (error2)
+          throw error2;
+        const url = await this._getUrlForProvider(`${this.url}/user/identities/authorize`, credentials.provider, {
+          redirectTo: (_a2 = credentials.options) === null || _a2 === void 0 ? void 0 : _a2.redirectTo,
+          scopes: (_b = credentials.options) === null || _b === void 0 ? void 0 : _b.scopes,
+          queryParams: (_c = credentials.options) === null || _c === void 0 ? void 0 : _c.queryParams,
+          skipBrowserRedirect: true
+        });
+        return await _request(this.fetch, "GET", url, {
+          headers: this.headers,
+          jwt: (_f = (_d = data2.session) === null || _d === void 0 ? void 0 : _d.access_token) !== null && _f !== void 0 ? _f : void 0
+        });
+      });
+      if (error)
+        throw error;
+      if (isBrowser() && !((_a = credentials.options) === null || _a === void 0 ? void 0 : _a.skipBrowserRedirect)) {
+        window.location.assign(data === null || data === void 0 ? void 0 : data.url);
+      }
+      return this._returnResult({
+        data: { provider: credentials.provider, url: data === null || data === void 0 ? void 0 : data.url },
+        error: null
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: { provider: credentials.provider, url: null }, error });
+      }
+      throw error;
+    }
+  }
+  async linkIdentityIdToken(credentials) {
+    return await this._useSession(async (result) => {
       var _a;
       try {
-        const { data, error } = yield this._useSession((result) => __async(this, null, function* () {
-          var _a2, _b, _c, _d, _f;
-          const { data: data2, error: error2 } = result;
-          if (error2)
-            throw error2;
-          const url = yield this._getUrlForProvider(`${this.url}/user/identities/authorize`, credentials.provider, {
-            redirectTo: (_a2 = credentials.options) === null || _a2 === void 0 ? void 0 : _a2.redirectTo,
-            scopes: (_b = credentials.options) === null || _b === void 0 ? void 0 : _b.scopes,
-            queryParams: (_c = credentials.options) === null || _c === void 0 ? void 0 : _c.queryParams,
-            skipBrowserRedirect: true
-          });
-          return yield _request(this.fetch, "GET", url, {
-            headers: this.headers,
-            jwt: (_f = (_d = data2.session) === null || _d === void 0 ? void 0 : _d.access_token) !== null && _f !== void 0 ? _f : void 0
-          });
-        }));
-        if (error)
-          throw error;
-        if (isBrowser() && !((_a = credentials.options) === null || _a === void 0 ? void 0 : _a.skipBrowserRedirect)) {
-          window.location.assign(data === null || data === void 0 ? void 0 : data.url);
-        }
-        return this._returnResult({
-          data: { provider: credentials.provider, url: data === null || data === void 0 ? void 0 : data.url },
-          error: null
+        const { error: sessionError, data: { session } } = result;
+        if (sessionError)
+          throw sessionError;
+        const { options, provider, token, access_token, nonce } = credentials;
+        const res = await _request(this.fetch, "POST", `${this.url}/token?grant_type=id_token`, {
+          headers: this.headers,
+          jwt: (_a = session === null || session === void 0 ? void 0 : session.access_token) !== null && _a !== void 0 ? _a : void 0,
+          body: {
+            provider,
+            id_token: token,
+            access_token,
+            nonce,
+            link_identity: true,
+            gotrue_meta_security: { captcha_token: options === null || options === void 0 ? void 0 : options.captchaToken }
+          },
+          xform: _sessionResponse
         });
+        const { data, error } = res;
+        if (error) {
+          return this._returnResult({ data: { user: null, session: null }, error });
+        } else if (!data || !data.session || !data.user) {
+          return this._returnResult({
+            data: { user: null, session: null },
+            error: new AuthInvalidTokenResponseError()
+          });
+        }
+        if (data.session) {
+          await this._saveSession(data.session);
+          await this._notifyAllSubscribers("USER_UPDATED", data.session);
+        }
+        return this._returnResult({ data, error });
       } catch (error) {
+        await removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
         if (isAuthError(error)) {
-          return this._returnResult({ data: { provider: credentials.provider, url: null }, error });
+          return this._returnResult({ data: { user: null, session: null }, error });
         }
         throw error;
       }
-    });
-  }
-  linkIdentityIdToken(credentials) {
-    return __async(this, null, function* () {
-      return yield this._useSession((result) => __async(this, null, function* () {
-        var _a;
-        try {
-          const { error: sessionError, data: { session } } = result;
-          if (sessionError)
-            throw sessionError;
-          const { options, provider, token, access_token, nonce } = credentials;
-          const res = yield _request(this.fetch, "POST", `${this.url}/token?grant_type=id_token`, {
-            headers: this.headers,
-            jwt: (_a = session === null || session === void 0 ? void 0 : session.access_token) !== null && _a !== void 0 ? _a : void 0,
-            body: {
-              provider,
-              id_token: token,
-              access_token,
-              nonce,
-              link_identity: true,
-              gotrue_meta_security: { captcha_token: options === null || options === void 0 ? void 0 : options.captchaToken }
-            },
-            xform: _sessionResponse
-          });
-          const { data, error } = res;
-          if (error) {
-            return this._returnResult({ data: { user: null, session: null }, error });
-          } else if (!data || !data.session || !data.user) {
-            return this._returnResult({
-              data: { user: null, session: null },
-              error: new AuthInvalidTokenResponseError()
-            });
-          }
-          if (data.session) {
-            yield this._saveSession(data.session);
-            yield this._notifyAllSubscribers("USER_UPDATED", data.session);
-          }
-          return this._returnResult({ data, error });
-        } catch (error) {
-          yield removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
-          if (isAuthError(error)) {
-            return this._returnResult({ data: { user: null, session: null }, error });
-          }
-          throw error;
-        }
-      }));
     });
   }
   /**
@@ -19254,304 +18864,288 @@ var GoTrueClient = class _GoTrueClient {
    * const { error } = await supabase.auth.unlinkIdentity(googleIdentity)
    * ```
    */
-  unlinkIdentity(identity) {
-    return __async(this, null, function* () {
-      try {
-        return yield this._useSession((result) => __async(this, null, function* () {
-          var _a, _b;
-          const { data, error } = result;
-          if (error) {
-            throw error;
-          }
-          return yield _request(this.fetch, "DELETE", `${this.url}/user/identities/${identity.identity_id}`, {
-            headers: this.headers,
-            jwt: (_b = (_a = data.session) === null || _a === void 0 ? void 0 : _a.access_token) !== null && _b !== void 0 ? _b : void 0
-          });
-        }));
-      } catch (error) {
-        if (isAuthError(error)) {
-          return this._returnResult({ data: null, error });
+  async unlinkIdentity(identity) {
+    try {
+      return await this._useSession(async (result) => {
+        var _a, _b;
+        const { data, error } = result;
+        if (error) {
+          throw error;
         }
-        throw error;
+        return await _request(this.fetch, "DELETE", `${this.url}/user/identities/${identity.identity_id}`, {
+          headers: this.headers,
+          jwt: (_b = (_a = data.session) === null || _a === void 0 ? void 0 : _a.access_token) !== null && _b !== void 0 ? _b : void 0
+        });
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: null, error });
       }
-    });
+      throw error;
+    }
   }
   /**
    * Generates a new JWT.
    * @param refreshToken A valid refresh token that was returned on login.
    */
-  _refreshAccessToken(refreshToken) {
-    return __async(this, null, function* () {
-      const debugName = `#_refreshAccessToken()`;
-      this._debug(debugName, "begin");
-      try {
-        const startedAt = Date.now();
-        return yield retryable((attempt) => __async(this, null, function* () {
-          if (attempt > 0) {
-            yield sleep2(200 * Math.pow(2, attempt - 1));
-          }
-          this._debug(debugName, "refreshing attempt", attempt);
-          return yield _request(this.fetch, "POST", `${this.url}/token?grant_type=refresh_token`, {
-            body: { refresh_token: refreshToken },
-            headers: this.headers,
-            xform: _sessionResponse
-          });
-        }), (attempt, error) => {
-          const nextBackOffInterval = 200 * Math.pow(2, attempt);
-          return error && isAuthRetryableFetchError(error) && // retryable only if the request can be sent before the backoff overflows the tick duration
-          Date.now() + nextBackOffInterval - startedAt < AUTO_REFRESH_TICK_DURATION_MS;
-        });
-      } catch (error) {
-        this._debug(debugName, "error", error);
-        if (isAuthError(error)) {
-          return this._returnResult({ data: { session: null, user: null }, error });
+  async _refreshAccessToken(refreshToken) {
+    const debugName = `#_refreshAccessToken()`;
+    this._debug(debugName, "begin");
+    try {
+      const startedAt = Date.now();
+      return await retryable(async (attempt) => {
+        if (attempt > 0) {
+          await sleep2(200 * Math.pow(2, attempt - 1));
         }
-        throw error;
-      } finally {
-        this._debug(debugName, "end");
+        this._debug(debugName, "refreshing attempt", attempt);
+        return await _request(this.fetch, "POST", `${this.url}/token?grant_type=refresh_token`, {
+          body: { refresh_token: refreshToken },
+          headers: this.headers,
+          xform: _sessionResponse
+        });
+      }, (attempt, error) => {
+        const nextBackOffInterval = 200 * Math.pow(2, attempt);
+        return error && isAuthRetryableFetchError(error) && // retryable only if the request can be sent before the backoff overflows the tick duration
+        Date.now() + nextBackOffInterval - startedAt < AUTO_REFRESH_TICK_DURATION_MS;
+      });
+    } catch (error) {
+      this._debug(debugName, "error", error);
+      if (isAuthError(error)) {
+        return this._returnResult({ data: { session: null, user: null }, error });
       }
-    });
+      throw error;
+    } finally {
+      this._debug(debugName, "end");
+    }
   }
   _isValidSession(maybeSession) {
     const isValidSession = typeof maybeSession === "object" && maybeSession !== null && "access_token" in maybeSession && "refresh_token" in maybeSession && "expires_at" in maybeSession;
     return isValidSession;
   }
-  _handleProviderSignIn(provider, options) {
-    return __async(this, null, function* () {
-      const url = yield this._getUrlForProvider(`${this.url}/authorize`, provider, {
-        redirectTo: options.redirectTo,
-        scopes: options.scopes,
-        queryParams: options.queryParams
-      });
-      this._debug("#_handleProviderSignIn()", "provider", provider, "options", options, "url", url);
-      if (isBrowser() && !options.skipBrowserRedirect) {
-        window.location.assign(url);
-      }
-      return { data: { provider, url }, error: null };
+  async _handleProviderSignIn(provider, options) {
+    const url = await this._getUrlForProvider(`${this.url}/authorize`, provider, {
+      redirectTo: options.redirectTo,
+      scopes: options.scopes,
+      queryParams: options.queryParams
     });
+    this._debug("#_handleProviderSignIn()", "provider", provider, "options", options, "url", url);
+    if (isBrowser() && !options.skipBrowserRedirect) {
+      window.location.assign(url);
+    }
+    return { data: { provider, url }, error: null };
   }
   /**
    * Recovers the session from LocalStorage and refreshes the token
    * Note: this method is async to accommodate for AsyncStorage e.g. in React native.
    */
-  _recoverAndRefresh() {
-    return __async(this, null, function* () {
-      var _a, _b;
-      const debugName = "#_recoverAndRefresh()";
-      this._debug(debugName, "begin");
-      try {
-        const currentSession = yield getItemAsync(this.storage, this.storageKey);
-        if (currentSession && this.userStorage) {
-          let maybeUser = yield getItemAsync(this.userStorage, this.storageKey + "-user");
-          if (!this.storage.isServer && Object.is(this.storage, this.userStorage) && !maybeUser) {
-            maybeUser = { user: currentSession.user };
-            yield setItemAsync(this.userStorage, this.storageKey + "-user", maybeUser);
+  async _recoverAndRefresh() {
+    var _a, _b;
+    const debugName = "#_recoverAndRefresh()";
+    this._debug(debugName, "begin");
+    try {
+      const currentSession = await getItemAsync(this.storage, this.storageKey);
+      if (currentSession && this.userStorage) {
+        let maybeUser = await getItemAsync(this.userStorage, this.storageKey + "-user");
+        if (!this.storage.isServer && Object.is(this.storage, this.userStorage) && !maybeUser) {
+          maybeUser = { user: currentSession.user };
+          await setItemAsync(this.userStorage, this.storageKey + "-user", maybeUser);
+        }
+        currentSession.user = (_a = maybeUser === null || maybeUser === void 0 ? void 0 : maybeUser.user) !== null && _a !== void 0 ? _a : userNotAvailableProxy();
+      } else if (currentSession && !currentSession.user) {
+        if (!currentSession.user) {
+          const separateUser = await getItemAsync(this.storage, this.storageKey + "-user");
+          if (separateUser && (separateUser === null || separateUser === void 0 ? void 0 : separateUser.user)) {
+            currentSession.user = separateUser.user;
+            await removeItemAsync(this.storage, this.storageKey + "-user");
+            await setItemAsync(this.storage, this.storageKey, currentSession);
+          } else {
+            currentSession.user = userNotAvailableProxy();
           }
-          currentSession.user = (_a = maybeUser === null || maybeUser === void 0 ? void 0 : maybeUser.user) !== null && _a !== void 0 ? _a : userNotAvailableProxy();
-        } else if (currentSession && !currentSession.user) {
-          if (!currentSession.user) {
-            const separateUser = yield getItemAsync(this.storage, this.storageKey + "-user");
-            if (separateUser && (separateUser === null || separateUser === void 0 ? void 0 : separateUser.user)) {
-              currentSession.user = separateUser.user;
-              yield removeItemAsync(this.storage, this.storageKey + "-user");
-              yield setItemAsync(this.storage, this.storageKey, currentSession);
+        }
+      }
+      this._debug(debugName, "session from storage", currentSession);
+      if (!this._isValidSession(currentSession)) {
+        this._debug(debugName, "session is not valid");
+        if (currentSession !== null) {
+          await this._removeSession();
+        }
+        return;
+      }
+      const expiresWithMargin = ((_b = currentSession.expires_at) !== null && _b !== void 0 ? _b : Infinity) * 1e3 - Date.now() < EXPIRY_MARGIN_MS;
+      this._debug(debugName, `session has${expiresWithMargin ? "" : " not"} expired with margin of ${EXPIRY_MARGIN_MS}s`);
+      if (expiresWithMargin) {
+        if (this.autoRefreshToken && currentSession.refresh_token) {
+          const { error } = await this._callRefreshToken(currentSession.refresh_token);
+          if (error) {
+            if (isAuthRefreshDiscardedError(error)) {
+              this._debug(debugName, "refresh discarded by commit guard", error);
             } else {
-              currentSession.user = userNotAvailableProxy();
-            }
-          }
-        }
-        this._debug(debugName, "session from storage", currentSession);
-        if (!this._isValidSession(currentSession)) {
-          this._debug(debugName, "session is not valid");
-          if (currentSession !== null) {
-            yield this._removeSession();
-          }
-          return;
-        }
-        const expiresWithMargin = ((_b = currentSession.expires_at) !== null && _b !== void 0 ? _b : Infinity) * 1e3 - Date.now() < EXPIRY_MARGIN_MS;
-        this._debug(debugName, `session has${expiresWithMargin ? "" : " not"} expired with margin of ${EXPIRY_MARGIN_MS}s`);
-        if (expiresWithMargin) {
-          if (this.autoRefreshToken && currentSession.refresh_token) {
-            const { error } = yield this._callRefreshToken(currentSession.refresh_token);
-            if (error) {
-              if (isAuthRefreshDiscardedError(error)) {
-                this._debug(debugName, "refresh discarded by commit guard", error);
-              } else {
-                this._debug(debugName, "refresh failed", error);
-                if (!isAuthRetryableFetchError(error)) {
-                  this._debug(debugName, "refresh failed with a non-retryable error, removing the session", error);
-                  yield this._removeSession();
-                }
+              this._debug(debugName, "refresh failed", error);
+              if (!isAuthRetryableFetchError(error)) {
+                this._debug(debugName, "refresh failed with a non-retryable error, removing the session", error);
+                await this._removeSession();
               }
             }
           }
-        } else if (currentSession.user && currentSession.user.__isUserNotAvailableProxy === true) {
-          try {
-            const { data, error: userError } = yield this._getUser(currentSession.access_token);
-            if (!userError && (data === null || data === void 0 ? void 0 : data.user)) {
-              currentSession.user = data.user;
-              yield this._saveSession(currentSession);
-              yield this._notifyAllSubscribers("SIGNED_IN", currentSession);
-            } else {
-              this._debug(debugName, "could not get user data, skipping SIGNED_IN notification");
-            }
-          } catch (getUserError) {
-            console.error("Error getting user data:", getUserError);
-            this._debug(debugName, "error getting user data, skipping SIGNED_IN notification", getUserError);
-          }
-        } else {
-          yield this._notifyAllSubscribers("SIGNED_IN", currentSession);
         }
-      } catch (err) {
-        this._debug(debugName, "error", err);
-        console.error(err);
-        return;
-      } finally {
-        this._debug(debugName, "end");
+      } else if (currentSession.user && currentSession.user.__isUserNotAvailableProxy === true) {
+        try {
+          const { data, error: userError } = await this._getUser(currentSession.access_token);
+          if (!userError && (data === null || data === void 0 ? void 0 : data.user)) {
+            currentSession.user = data.user;
+            await this._saveSession(currentSession);
+            await this._notifyAllSubscribers("SIGNED_IN", currentSession);
+          } else {
+            this._debug(debugName, "could not get user data, skipping SIGNED_IN notification");
+          }
+        } catch (getUserError) {
+          console.error("Error getting user data:", getUserError);
+          this._debug(debugName, "error getting user data, skipping SIGNED_IN notification", getUserError);
+        }
+      } else {
+        await this._notifyAllSubscribers("SIGNED_IN", currentSession);
       }
-    });
+    } catch (err) {
+      this._debug(debugName, "error", err);
+      console.error(err);
+      return;
+    } finally {
+      this._debug(debugName, "end");
+    }
   }
-  _callRefreshToken(refreshToken) {
-    return __async(this, null, function* () {
-      var _a, _b;
-      if (!refreshToken) {
-        throw new AuthSessionMissingError();
-      }
-      if (this.refreshingDeferred) {
-        return this.refreshingDeferred.promise;
-      }
-      const debugName = `#_callRefreshToken()`;
-      this._debug(debugName, "begin");
-      try {
-        this.refreshingDeferred = new Deferred();
-        const storedAtStart = yield getItemAsync(this.storage, this.storageKey);
-        const { data, error } = yield this._refreshAccessToken(refreshToken);
-        if (error)
-          throw error;
-        if (!data.session)
-          throw new AuthSessionMissingError();
-        const storedAfter = yield getItemAsync(this.storage, this.storageKey);
-        const storageChangedUnderUs = storedAtStart !== null && (storedAfter === null || storedAfter.refresh_token !== storedAtStart.refresh_token);
-        if (storageChangedUnderUs) {
-          this._debug(debugName, "commit guard: storage changed since refresh started, discarding rotated tokens", {
-            // Presence indicators only — never log refresh token fragments,
-            // even partial. Logs may be forwarded to third-party services.
-            startedWith: "present",
-            nowHolds: storedAfter ? "replaced" : "cleared"
-          });
-          const discarded = {
-            data: null,
-            error: new AuthRefreshDiscardedError()
-          };
-          this.refreshingDeferred.resolve(discarded);
-          return discarded;
-        }
-        const epochBeforeSave = this._sessionRemovalEpoch;
-        yield this._saveSession(data.session);
-        if (this._sessionRemovalEpoch !== epochBeforeSave) {
-          this._debug(debugName, "commit guard (post-save): _removeSession ran during _saveSession, undoing write");
-          yield removeItemAsync(this.storage, this.storageKey);
-          if (this.userStorage) {
-            yield removeItemAsync(this.userStorage, this.storageKey + "-user");
-          }
-          const discarded = {
-            data: null,
-            error: new AuthRefreshDiscardedError()
-          };
-          this.refreshingDeferred.resolve(discarded);
-          return discarded;
-        }
-        yield this._notifyAllSubscribers("TOKEN_REFRESHED", data.session);
-        const result = { data: data.session, error: null };
-        this.refreshingDeferred.resolve(result);
-        return result;
-      } catch (error) {
-        this._debug(debugName, "error", error);
-        if (isAuthError(error)) {
-          const result = { data: null, error };
-          if (!isAuthRetryableFetchError(error)) {
-            yield this._removeSession();
-          }
-          (_a = this.refreshingDeferred) === null || _a === void 0 ? void 0 : _a.resolve(result);
-          return result;
-        }
-        (_b = this.refreshingDeferred) === null || _b === void 0 ? void 0 : _b.reject(error);
+  async _callRefreshToken(refreshToken) {
+    var _a, _b;
+    if (!refreshToken) {
+      throw new AuthSessionMissingError();
+    }
+    if (this.refreshingDeferred) {
+      return this.refreshingDeferred.promise;
+    }
+    const debugName = `#_callRefreshToken()`;
+    this._debug(debugName, "begin");
+    try {
+      this.refreshingDeferred = new Deferred();
+      const storedAtStart = await getItemAsync(this.storage, this.storageKey);
+      const { data, error } = await this._refreshAccessToken(refreshToken);
+      if (error)
         throw error;
-      } finally {
-        this.refreshingDeferred = null;
-        this._debug(debugName, "end");
+      if (!data.session)
+        throw new AuthSessionMissingError();
+      const storedAfter = await getItemAsync(this.storage, this.storageKey);
+      const storageChangedUnderUs = storedAtStart !== null && (storedAfter === null || storedAfter.refresh_token !== storedAtStart.refresh_token);
+      if (storageChangedUnderUs) {
+        this._debug(debugName, "commit guard: storage changed since refresh started, discarding rotated tokens", {
+          // Presence indicators only — never log refresh token fragments,
+          // even partial. Logs may be forwarded to third-party services.
+          startedWith: "present",
+          nowHolds: storedAfter ? "replaced" : "cleared"
+        });
+        const discarded = {
+          data: null,
+          error: new AuthRefreshDiscardedError()
+        };
+        this.refreshingDeferred.resolve(discarded);
+        return discarded;
       }
-    });
+      const epochBeforeSave = this._sessionRemovalEpoch;
+      await this._saveSession(data.session);
+      if (this._sessionRemovalEpoch !== epochBeforeSave) {
+        this._debug(debugName, "commit guard (post-save): _removeSession ran during _saveSession, undoing write");
+        await removeItemAsync(this.storage, this.storageKey);
+        if (this.userStorage) {
+          await removeItemAsync(this.userStorage, this.storageKey + "-user");
+        }
+        const discarded = {
+          data: null,
+          error: new AuthRefreshDiscardedError()
+        };
+        this.refreshingDeferred.resolve(discarded);
+        return discarded;
+      }
+      await this._notifyAllSubscribers("TOKEN_REFRESHED", data.session);
+      const result = { data: data.session, error: null };
+      this.refreshingDeferred.resolve(result);
+      return result;
+    } catch (error) {
+      this._debug(debugName, "error", error);
+      if (isAuthError(error)) {
+        const result = { data: null, error };
+        if (!isAuthRetryableFetchError(error)) {
+          await this._removeSession();
+        }
+        (_a = this.refreshingDeferred) === null || _a === void 0 ? void 0 : _a.resolve(result);
+        return result;
+      }
+      (_b = this.refreshingDeferred) === null || _b === void 0 ? void 0 : _b.reject(error);
+      throw error;
+    } finally {
+      this.refreshingDeferred = null;
+      this._debug(debugName, "end");
+    }
   }
-  _notifyAllSubscribers(event, session, broadcast = true) {
-    return __async(this, null, function* () {
-      const debugName = `#_notifyAllSubscribers(${event})`;
-      this._debug(debugName, "begin", session, `broadcast = ${broadcast}`);
-      try {
-        if (this.broadcastChannel && broadcast) {
-          this.broadcastChannel.postMessage({ event, session });
-        }
-        const errors = [];
-        const promises = Array.from(this.stateChangeEmitters.values()).map((x) => __async(this, null, function* () {
-          try {
-            yield x.callback(event, session);
-          } catch (e) {
-            errors.push(e);
-          }
-        }));
-        yield Promise.all(promises);
-        if (errors.length > 0) {
-          for (let i = 0; i < errors.length; i += 1) {
-            console.error(errors[i]);
-          }
-          throw errors[0];
-        }
-      } finally {
-        this._debug(debugName, "end");
+  async _notifyAllSubscribers(event, session, broadcast = true) {
+    const debugName = `#_notifyAllSubscribers(${event})`;
+    this._debug(debugName, "begin", session, `broadcast = ${broadcast}`);
+    try {
+      if (this.broadcastChannel && broadcast) {
+        this.broadcastChannel.postMessage({ event, session });
       }
-    });
+      const errors = [];
+      const promises = Array.from(this.stateChangeEmitters.values()).map(async (x) => {
+        try {
+          await x.callback(event, session);
+        } catch (e) {
+          errors.push(e);
+        }
+      });
+      await Promise.all(promises);
+      if (errors.length > 0) {
+        for (let i = 0; i < errors.length; i += 1) {
+          console.error(errors[i]);
+        }
+        throw errors[0];
+      }
+    } finally {
+      this._debug(debugName, "end");
+    }
   }
   /**
    * set currentSession and currentUser
    * process to _startAutoRefreshToken if possible
    */
-  _saveSession(session) {
-    return __async(this, null, function* () {
-      this._debug("#_saveSession()", session);
-      this.suppressGetSessionWarning = true;
-      yield removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
-      const sessionToProcess = Object.assign({}, session);
-      const userIsProxy = sessionToProcess.user && sessionToProcess.user.__isUserNotAvailableProxy === true;
-      if (this.userStorage) {
-        if (!userIsProxy && sessionToProcess.user) {
-          yield setItemAsync(this.userStorage, this.storageKey + "-user", {
-            user: sessionToProcess.user
-          });
-        } else if (userIsProxy) {
-        }
-        const mainSessionData = Object.assign({}, sessionToProcess);
-        delete mainSessionData.user;
-        const clonedMainSessionData = deepClone(mainSessionData);
-        yield setItemAsync(this.storage, this.storageKey, clonedMainSessionData);
-      } else {
-        const clonedSession = deepClone(sessionToProcess);
-        yield setItemAsync(this.storage, this.storageKey, clonedSession);
+  async _saveSession(session) {
+    this._debug("#_saveSession()", session);
+    this.suppressGetSessionWarning = true;
+    await removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
+    const sessionToProcess = Object.assign({}, session);
+    const userIsProxy = sessionToProcess.user && sessionToProcess.user.__isUserNotAvailableProxy === true;
+    if (this.userStorage) {
+      if (!userIsProxy && sessionToProcess.user) {
+        await setItemAsync(this.userStorage, this.storageKey + "-user", {
+          user: sessionToProcess.user
+        });
+      } else if (userIsProxy) {
       }
-    });
+      const mainSessionData = Object.assign({}, sessionToProcess);
+      delete mainSessionData.user;
+      const clonedMainSessionData = deepClone(mainSessionData);
+      await setItemAsync(this.storage, this.storageKey, clonedMainSessionData);
+    } else {
+      const clonedSession = deepClone(sessionToProcess);
+      await setItemAsync(this.storage, this.storageKey, clonedSession);
+    }
   }
-  _removeSession() {
-    return __async(this, null, function* () {
-      this._sessionRemovalEpoch += 1;
-      this._debug("#_removeSession()");
-      this.suppressGetSessionWarning = false;
-      yield removeItemAsync(this.storage, this.storageKey);
-      yield removeItemAsync(this.storage, this.storageKey + "-code-verifier");
-      yield removeItemAsync(this.storage, this.storageKey + "-user");
-      if (this.userStorage) {
-        yield removeItemAsync(this.userStorage, this.storageKey + "-user");
-      }
-      yield this._notifyAllSubscribers("SIGNED_OUT", null);
-    });
+  async _removeSession() {
+    this._sessionRemovalEpoch += 1;
+    this._debug("#_removeSession()");
+    this.suppressGetSessionWarning = false;
+    await removeItemAsync(this.storage, this.storageKey);
+    await removeItemAsync(this.storage, this.storageKey + "-code-verifier");
+    await removeItemAsync(this.storage, this.storageKey + "-user");
+    if (this.userStorage) {
+      await removeItemAsync(this.userStorage, this.storageKey + "-user");
+    }
+    await this._notifyAllSubscribers("SIGNED_OUT", null);
   }
   /**
    * Removes any registered visibilitychange callback.
@@ -19575,47 +19169,43 @@ var GoTrueClient = class _GoTrueClient {
    * This is the private implementation of {@link #startAutoRefresh}. Use this
    * within the library.
    */
-  _startAutoRefresh() {
-    return __async(this, null, function* () {
-      yield this._stopAutoRefresh();
-      this._debug("#_startAutoRefresh()");
-      const ticker = setInterval(() => this._autoRefreshTokenTick(), AUTO_REFRESH_TICK_DURATION_MS);
-      this.autoRefreshTicker = ticker;
-      if (ticker && typeof ticker === "object" && typeof ticker.unref === "function") {
-        ticker.unref();
-      } else if (typeof Deno !== "undefined" && typeof Deno.unrefTimer === "function") {
-        Deno.unrefTimer(ticker);
-      }
-      const timeout = setTimeout(() => __async(this, null, function* () {
-        yield this.initializePromise;
-        yield this._autoRefreshTokenTick();
-      }), 0);
-      this.autoRefreshTickTimeout = timeout;
-      if (timeout && typeof timeout === "object" && typeof timeout.unref === "function") {
-        timeout.unref();
-      } else if (typeof Deno !== "undefined" && typeof Deno.unrefTimer === "function") {
-        Deno.unrefTimer(timeout);
-      }
-    });
+  async _startAutoRefresh() {
+    await this._stopAutoRefresh();
+    this._debug("#_startAutoRefresh()");
+    const ticker = setInterval(() => this._autoRefreshTokenTick(), AUTO_REFRESH_TICK_DURATION_MS);
+    this.autoRefreshTicker = ticker;
+    if (ticker && typeof ticker === "object" && typeof ticker.unref === "function") {
+      ticker.unref();
+    } else if (typeof Deno !== "undefined" && typeof Deno.unrefTimer === "function") {
+      Deno.unrefTimer(ticker);
+    }
+    const timeout = setTimeout(async () => {
+      await this.initializePromise;
+      await this._autoRefreshTokenTick();
+    }, 0);
+    this.autoRefreshTickTimeout = timeout;
+    if (timeout && typeof timeout === "object" && typeof timeout.unref === "function") {
+      timeout.unref();
+    } else if (typeof Deno !== "undefined" && typeof Deno.unrefTimer === "function") {
+      Deno.unrefTimer(timeout);
+    }
   }
   /**
    * This is the private implementation of {@link #stopAutoRefresh}. Use this
    * within the library.
    */
-  _stopAutoRefresh() {
-    return __async(this, null, function* () {
-      this._debug("#_stopAutoRefresh()");
-      const ticker = this.autoRefreshTicker;
-      this.autoRefreshTicker = null;
-      if (ticker) {
-        clearInterval(ticker);
-      }
-      const timeout = this.autoRefreshTickTimeout;
-      this.autoRefreshTickTimeout = null;
-      if (timeout) {
-        clearTimeout(timeout);
-      }
-    });
+  async _stopAutoRefresh() {
+    this._debug("#_stopAutoRefresh()");
+    const ticker = this.autoRefreshTicker;
+    this.autoRefreshTicker = null;
+    if (ticker) {
+      clearInterval(ticker);
+    }
+    const timeout = this.autoRefreshTickTimeout;
+    this.autoRefreshTickTimeout = null;
+    if (timeout) {
+      clearTimeout(timeout);
+    }
   }
   /**
    * Starts an auto-refresh process in the background. The session is checked
@@ -19661,11 +19251,9 @@ var GoTrueClient = class _GoTrueClient {
    * })
    * ```
    */
-  startAutoRefresh() {
-    return __async(this, null, function* () {
-      this._removeVisibilityChangedCallback();
-      yield this._startAutoRefresh();
-    });
+  async startAutoRefresh() {
+    this._removeVisibilityChangedCallback();
+    await this._startAutoRefresh();
   }
   /**
    * Stops an active auto refresh process running in the background (if any).
@@ -19697,11 +19285,9 @@ var GoTrueClient = class _GoTrueClient {
    * })
    * ```
    */
-  stopAutoRefresh() {
-    return __async(this, null, function* () {
-      this._removeVisibilityChangedCallback();
-      yield this._stopAutoRefresh();
-    });
+  async stopAutoRefresh() {
+    this._removeVisibilityChangedCallback();
+    await this._stopAutoRefresh();
   }
   /**
    * Tears down the client's background work: stops the auto-refresh interval,
@@ -19733,147 +19319,139 @@ var GoTrueClient = class _GoTrueClient {
    * }, [])
    * ```
    */
-  dispose() {
-    return __async(this, null, function* () {
-      var _a;
-      this._removeVisibilityChangedCallback();
-      yield this._stopAutoRefresh();
-      (_a = this.broadcastChannel) === null || _a === void 0 ? void 0 : _a.close();
-      this.broadcastChannel = null;
-      this.stateChangeEmitters.clear();
-    });
+  async dispose() {
+    var _a;
+    this._removeVisibilityChangedCallback();
+    await this._stopAutoRefresh();
+    (_a = this.broadcastChannel) === null || _a === void 0 ? void 0 : _a.close();
+    this.broadcastChannel = null;
+    this.stateChangeEmitters.clear();
   }
   /**
    * Runs the auto refresh token tick.
    */
-  _autoRefreshTokenTick() {
-    return __async(this, null, function* () {
-      this._debug("#_autoRefreshTokenTick()", "begin");
-      if (this.lock != null) {
-        try {
-          yield this._acquireLock(0, () => __async(this, null, function* () {
-            try {
-              const now = Date.now();
-              try {
-                return yield this._useSession((result) => __async(this, null, function* () {
-                  const { data: { session } } = result;
-                  if (!session || !session.refresh_token || !session.expires_at) {
-                    this._debug("#_autoRefreshTokenTick()", "no session");
-                    return;
-                  }
-                  const expiresInTicks = Math.floor((session.expires_at * 1e3 - now) / AUTO_REFRESH_TICK_DURATION_MS);
-                  this._debug("#_autoRefreshTokenTick()", `access token expires in ${expiresInTicks} ticks, a tick lasts ${AUTO_REFRESH_TICK_DURATION_MS}ms, refresh threshold is ${AUTO_REFRESH_TICK_THRESHOLD} ticks`);
-                  if (expiresInTicks <= AUTO_REFRESH_TICK_THRESHOLD) {
-                    yield this._callRefreshToken(session.refresh_token);
-                  }
-                }));
-              } catch (e) {
-                console.error("Auto refresh tick failed with error. This is likely a transient error.", e);
-              }
-            } finally {
-              this._debug("#_autoRefreshTokenTick()", "end");
-            }
-          }));
-        } catch (e) {
-          if (e instanceof LockAcquireTimeoutError) {
-            this._debug("auto refresh token tick lock not available");
-          } else {
-            throw e;
-          }
-        }
-        return;
-      }
-      if (this.refreshingDeferred !== null) {
-        this._debug("#_autoRefreshTokenTick()", "refresh already in flight, skipping");
-        return;
-      }
+  async _autoRefreshTokenTick() {
+    this._debug("#_autoRefreshTokenTick()", "begin");
+    if (this.lock != null) {
       try {
-        const now = Date.now();
-        try {
-          yield this._useSession((result) => __async(this, null, function* () {
-            const { data: { session } } = result;
-            if (!session || !session.refresh_token || !session.expires_at) {
-              this._debug("#_autoRefreshTokenTick()", "no session");
-              return;
+        await this._acquireLock(0, async () => {
+          try {
+            const now = Date.now();
+            try {
+              return await this._useSession(async (result) => {
+                const { data: { session } } = result;
+                if (!session || !session.refresh_token || !session.expires_at) {
+                  this._debug("#_autoRefreshTokenTick()", "no session");
+                  return;
+                }
+                const expiresInTicks = Math.floor((session.expires_at * 1e3 - now) / AUTO_REFRESH_TICK_DURATION_MS);
+                this._debug("#_autoRefreshTokenTick()", `access token expires in ${expiresInTicks} ticks, a tick lasts ${AUTO_REFRESH_TICK_DURATION_MS}ms, refresh threshold is ${AUTO_REFRESH_TICK_THRESHOLD} ticks`);
+                if (expiresInTicks <= AUTO_REFRESH_TICK_THRESHOLD) {
+                  await this._callRefreshToken(session.refresh_token);
+                }
+              });
+            } catch (e) {
+              console.error("Auto refresh tick failed with error. This is likely a transient error.", e);
             }
-            const expiresInTicks = Math.floor((session.expires_at * 1e3 - now) / AUTO_REFRESH_TICK_DURATION_MS);
-            this._debug("#_autoRefreshTokenTick()", `access token expires in ${expiresInTicks} ticks, a tick lasts ${AUTO_REFRESH_TICK_DURATION_MS}ms, refresh threshold is ${AUTO_REFRESH_TICK_THRESHOLD} ticks`);
-            if (expiresInTicks <= AUTO_REFRESH_TICK_THRESHOLD) {
-              yield this._callRefreshToken(session.refresh_token);
-            }
-          }));
-        } catch (e) {
-          console.error("Auto refresh tick failed with error. This is likely a transient error.", e);
+          } finally {
+            this._debug("#_autoRefreshTokenTick()", "end");
+          }
+        });
+      } catch (e) {
+        if (e instanceof LockAcquireTimeoutError) {
+          this._debug("auto refresh token tick lock not available");
+        } else {
+          throw e;
         }
-      } finally {
-        this._debug("#_autoRefreshTokenTick()", "end");
       }
-    });
+      return;
+    }
+    if (this.refreshingDeferred !== null) {
+      this._debug("#_autoRefreshTokenTick()", "refresh already in flight, skipping");
+      return;
+    }
+    try {
+      const now = Date.now();
+      try {
+        await this._useSession(async (result) => {
+          const { data: { session } } = result;
+          if (!session || !session.refresh_token || !session.expires_at) {
+            this._debug("#_autoRefreshTokenTick()", "no session");
+            return;
+          }
+          const expiresInTicks = Math.floor((session.expires_at * 1e3 - now) / AUTO_REFRESH_TICK_DURATION_MS);
+          this._debug("#_autoRefreshTokenTick()", `access token expires in ${expiresInTicks} ticks, a tick lasts ${AUTO_REFRESH_TICK_DURATION_MS}ms, refresh threshold is ${AUTO_REFRESH_TICK_THRESHOLD} ticks`);
+          if (expiresInTicks <= AUTO_REFRESH_TICK_THRESHOLD) {
+            await this._callRefreshToken(session.refresh_token);
+          }
+        });
+      } catch (e) {
+        console.error("Auto refresh tick failed with error. This is likely a transient error.", e);
+      }
+    } finally {
+      this._debug("#_autoRefreshTokenTick()", "end");
+    }
   }
   /**
    * Registers callbacks on the browser / platform, which in-turn run
    * algorithms when the browser window/tab are in foreground. On non-browser
    * platforms it assumes always foreground.
    */
-  _handleVisibilityChange() {
-    return __async(this, null, function* () {
-      this._debug("#_handleVisibilityChange()");
-      if (!isBrowser() || !(window === null || window === void 0 ? void 0 : window.addEventListener)) {
-        if (this.autoRefreshToken) {
-          this.startAutoRefresh();
+  async _handleVisibilityChange() {
+    this._debug("#_handleVisibilityChange()");
+    if (!isBrowser() || !(window === null || window === void 0 ? void 0 : window.addEventListener)) {
+      if (this.autoRefreshToken) {
+        this.startAutoRefresh();
+      }
+      return false;
+    }
+    try {
+      this.visibilityChangedCallback = async () => {
+        try {
+          await this._onVisibilityChanged(false);
+        } catch (error) {
+          this._debug("#visibilityChangedCallback", "error", error);
         }
-        return false;
-      }
-      try {
-        this.visibilityChangedCallback = () => __async(this, null, function* () {
-          try {
-            yield this._onVisibilityChanged(false);
-          } catch (error) {
-            this._debug("#visibilityChangedCallback", "error", error);
-          }
-        });
-        window === null || window === void 0 ? void 0 : window.addEventListener("visibilitychange", this.visibilityChangedCallback);
-        yield this._onVisibilityChanged(true);
-      } catch (error) {
-        console.error("_handleVisibilityChange", error);
-      }
-    });
+      };
+      window === null || window === void 0 ? void 0 : window.addEventListener("visibilitychange", this.visibilityChangedCallback);
+      await this._onVisibilityChanged(true);
+    } catch (error) {
+      console.error("_handleVisibilityChange", error);
+    }
   }
   /**
    * Callback registered with `window.addEventListener('visibilitychange')`.
    */
-  _onVisibilityChanged(calledFromInitialize) {
-    return __async(this, null, function* () {
-      const methodName = `#_onVisibilityChanged(${calledFromInitialize})`;
-      this._debug(methodName, "visibilityState", document.visibilityState);
-      if (document.visibilityState === "visible") {
-        if (this.autoRefreshToken) {
-          this._startAutoRefresh();
-        }
-        if (!calledFromInitialize) {
-          yield this.initializePromise;
-          if (this.lock != null) {
-            yield this._acquireLock(this.lockAcquireTimeout, () => __async(this, null, function* () {
-              if (document.visibilityState !== "visible") {
-                this._debug(methodName, "acquired the lock to recover the session, but the browser visibilityState is no longer visible, aborting");
-                return;
-              }
-              yield this._recoverAndRefresh();
-            }));
-          } else {
+  async _onVisibilityChanged(calledFromInitialize) {
+    const methodName = `#_onVisibilityChanged(${calledFromInitialize})`;
+    this._debug(methodName, "visibilityState", document.visibilityState);
+    if (document.visibilityState === "visible") {
+      if (this.autoRefreshToken) {
+        this._startAutoRefresh();
+      }
+      if (!calledFromInitialize) {
+        await this.initializePromise;
+        if (this.lock != null) {
+          await this._acquireLock(this.lockAcquireTimeout, async () => {
             if (document.visibilityState !== "visible") {
-              this._debug(methodName, "visibilityState is no longer visible, skipping recovery");
+              this._debug(methodName, "acquired the lock to recover the session, but the browser visibilityState is no longer visible, aborting");
               return;
             }
-            yield this._recoverAndRefresh();
+            await this._recoverAndRefresh();
+          });
+        } else {
+          if (document.visibilityState !== "visible") {
+            this._debug(methodName, "visibilityState is no longer visible, skipping recovery");
+            return;
           }
-        }
-      } else if (document.visibilityState === "hidden") {
-        if (this.autoRefreshToken) {
-          this._stopAutoRefresh();
+          await this._recoverAndRefresh();
         }
       }
-    });
+    } else if (document.visibilityState === "hidden") {
+      if (this.autoRefreshToken) {
+        this._stopAutoRefresh();
+      }
+    }
   }
   /**
    * Generates the relevant login URL for a third-party provider.
@@ -19881,66 +19459,93 @@ var GoTrueClient = class _GoTrueClient {
    * @param options.scopes A space-separated list of scopes granted to the OAuth application.
    * @param options.queryParams An object of key-value pairs containing query parameters granted to the OAuth application.
    */
-  _getUrlForProvider(url, provider, options) {
-    return __async(this, null, function* () {
-      const urlParams = [`provider=${encodeURIComponent(provider)}`];
-      if (options === null || options === void 0 ? void 0 : options.redirectTo) {
-        urlParams.push(`redirect_to=${encodeURIComponent(options.redirectTo)}`);
-      }
-      if (options === null || options === void 0 ? void 0 : options.scopes) {
-        urlParams.push(`scopes=${encodeURIComponent(options.scopes)}`);
-      }
-      if (this.flowType === "pkce") {
-        const [codeChallenge, codeChallengeMethod] = yield getCodeChallengeAndMethod(this.storage, this.storageKey);
-        const flowParams = new URLSearchParams({
-          code_challenge: `${encodeURIComponent(codeChallenge)}`,
-          code_challenge_method: `${encodeURIComponent(codeChallengeMethod)}`
-        });
-        urlParams.push(flowParams.toString());
-      }
-      if (options === null || options === void 0 ? void 0 : options.queryParams) {
-        const query = new URLSearchParams(options.queryParams);
-        urlParams.push(query.toString());
-      }
-      if (options === null || options === void 0 ? void 0 : options.skipBrowserRedirect) {
-        urlParams.push(`skip_http_redirect=${options.skipBrowserRedirect}`);
-      }
-      return `${url}?${urlParams.join("&")}`;
-    });
+  async _getUrlForProvider(url, provider, options) {
+    const urlParams = [`provider=${encodeURIComponent(provider)}`];
+    if (options === null || options === void 0 ? void 0 : options.redirectTo) {
+      urlParams.push(`redirect_to=${encodeURIComponent(options.redirectTo)}`);
+    }
+    if (options === null || options === void 0 ? void 0 : options.scopes) {
+      urlParams.push(`scopes=${encodeURIComponent(options.scopes)}`);
+    }
+    if (this.flowType === "pkce") {
+      const [codeChallenge, codeChallengeMethod] = await getCodeChallengeAndMethod(this.storage, this.storageKey);
+      const flowParams = new URLSearchParams({
+        code_challenge: `${encodeURIComponent(codeChallenge)}`,
+        code_challenge_method: `${encodeURIComponent(codeChallengeMethod)}`
+      });
+      urlParams.push(flowParams.toString());
+    }
+    if (options === null || options === void 0 ? void 0 : options.queryParams) {
+      const query = new URLSearchParams(options.queryParams);
+      urlParams.push(query.toString());
+    }
+    if (options === null || options === void 0 ? void 0 : options.skipBrowserRedirect) {
+      urlParams.push(`skip_http_redirect=${options.skipBrowserRedirect}`);
+    }
+    return `${url}?${urlParams.join("&")}`;
   }
-  _unenroll(params) {
-    return __async(this, null, function* () {
+  async _unenroll(params) {
+    try {
+      return await this._useSession(async (result) => {
+        var _a;
+        const { data: sessionData, error: sessionError } = result;
+        if (sessionError) {
+          return this._returnResult({ data: null, error: sessionError });
+        }
+        return await _request(this.fetch, "DELETE", `${this.url}/factors/${params.factorId}`, {
+          headers: this.headers,
+          jwt: (_a = sessionData === null || sessionData === void 0 ? void 0 : sessionData.session) === null || _a === void 0 ? void 0 : _a.access_token
+        });
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: null, error });
+      }
+      throw error;
+    }
+  }
+  async _enroll(params) {
+    try {
+      return await this._useSession(async (result) => {
+        var _a, _b;
+        const { data: sessionData, error: sessionError } = result;
+        if (sessionError) {
+          return this._returnResult({ data: null, error: sessionError });
+        }
+        const body = Object.assign({ friendly_name: params.friendlyName, factor_type: params.factorType }, params.factorType === "phone" ? { phone: params.phone } : params.factorType === "totp" ? { issuer: params.issuer } : {});
+        const { data, error } = await _request(this.fetch, "POST", `${this.url}/factors`, {
+          body,
+          headers: this.headers,
+          jwt: (_a = sessionData === null || sessionData === void 0 ? void 0 : sessionData.session) === null || _a === void 0 ? void 0 : _a.access_token
+        });
+        if (error) {
+          return this._returnResult({ data: null, error });
+        }
+        if (params.factorType === "totp" && data.type === "totp" && ((_b = data === null || data === void 0 ? void 0 : data.totp) === null || _b === void 0 ? void 0 : _b.qr_code)) {
+          data.totp.qr_code = `data:image/svg+xml;utf-8,${data.totp.qr_code}`;
+        }
+        return this._returnResult({ data, error: null });
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: null, error });
+      }
+      throw error;
+    }
+  }
+  async _verify(params) {
+    const run = async () => {
       try {
-        return yield this._useSession((result) => __async(this, null, function* () {
+        return await this._useSession(async (result) => {
           var _a;
           const { data: sessionData, error: sessionError } = result;
           if (sessionError) {
             return this._returnResult({ data: null, error: sessionError });
           }
-          return yield _request(this.fetch, "DELETE", `${this.url}/factors/${params.factorId}`, {
-            headers: this.headers,
-            jwt: (_a = sessionData === null || sessionData === void 0 ? void 0 : sessionData.session) === null || _a === void 0 ? void 0 : _a.access_token
-          });
-        }));
-      } catch (error) {
-        if (isAuthError(error)) {
-          return this._returnResult({ data: null, error });
-        }
-        throw error;
-      }
-    });
-  }
-  _enroll(params) {
-    return __async(this, null, function* () {
-      try {
-        return yield this._useSession((result) => __async(this, null, function* () {
-          var _a, _b;
-          const { data: sessionData, error: sessionError } = result;
-          if (sessionError) {
-            return this._returnResult({ data: null, error: sessionError });
-          }
-          const body = Object.assign({ friendly_name: params.friendlyName, factor_type: params.factorType }, params.factorType === "phone" ? { phone: params.phone } : params.factorType === "totp" ? { issuer: params.issuer } : {});
-          const { data, error } = yield _request(this.fetch, "POST", `${this.url}/factors`, {
+          const body = Object.assign({ challenge_id: params.challengeId }, "webauthn" in params ? {
+            webauthn: Object.assign(Object.assign({}, params.webauthn), { credential_response: params.webauthn.type === "create" ? serializeCredentialCreationResponse(params.webauthn.credential_response) : serializeCredentialRequestResponse(params.webauthn.credential_response) })
+          } : { code: params.code });
+          const { data, error } = await _request(this.fetch, "POST", `${this.url}/factors/${params.factorId}/verify`, {
             body,
             headers: this.headers,
             jwt: (_a = sessionData === null || sessionData === void 0 ? void 0 : sessionData.session) === null || _a === void 0 ? void 0 : _a.access_token
@@ -19948,206 +19553,163 @@ var GoTrueClient = class _GoTrueClient {
           if (error) {
             return this._returnResult({ data: null, error });
           }
-          if (params.factorType === "totp" && data.type === "totp" && ((_b = data === null || data === void 0 ? void 0 : data.totp) === null || _b === void 0 ? void 0 : _b.qr_code)) {
-            data.totp.qr_code = `data:image/svg+xml;utf-8,${data.totp.qr_code}`;
-          }
-          return this._returnResult({ data, error: null });
-        }));
+          await this._saveSession(Object.assign({ expires_at: Math.round(Date.now() / 1e3) + data.expires_in }, data));
+          await this._notifyAllSubscribers("MFA_CHALLENGE_VERIFIED", data);
+          return this._returnResult({ data, error });
+        });
       } catch (error) {
         if (isAuthError(error)) {
           return this._returnResult({ data: null, error });
         }
         throw error;
       }
-    });
+    };
+    if (this.lock != null) {
+      return this._acquireLock(this.lockAcquireTimeout, run);
+    }
+    return run();
   }
-  _verify(params) {
-    return __async(this, null, function* () {
-      const run = () => __async(this, null, function* () {
-        try {
-          return yield this._useSession((result) => __async(this, null, function* () {
-            var _a;
-            const { data: sessionData, error: sessionError } = result;
-            if (sessionError) {
-              return this._returnResult({ data: null, error: sessionError });
-            }
-            const body = Object.assign({ challenge_id: params.challengeId }, "webauthn" in params ? {
-              webauthn: Object.assign(Object.assign({}, params.webauthn), { credential_response: params.webauthn.type === "create" ? serializeCredentialCreationResponse(params.webauthn.credential_response) : serializeCredentialRequestResponse(params.webauthn.credential_response) })
-            } : { code: params.code });
-            const { data, error } = yield _request(this.fetch, "POST", `${this.url}/factors/${params.factorId}/verify`, {
-              body,
-              headers: this.headers,
-              jwt: (_a = sessionData === null || sessionData === void 0 ? void 0 : sessionData.session) === null || _a === void 0 ? void 0 : _a.access_token
-            });
-            if (error) {
-              return this._returnResult({ data: null, error });
-            }
-            yield this._saveSession(Object.assign({ expires_at: Math.round(Date.now() / 1e3) + data.expires_in }, data));
-            yield this._notifyAllSubscribers("MFA_CHALLENGE_VERIFIED", data);
-            return this._returnResult({ data, error });
-          }));
-        } catch (error) {
-          if (isAuthError(error)) {
-            return this._returnResult({ data: null, error });
+  async _challenge(params) {
+    const run = async () => {
+      try {
+        return await this._useSession(async (result) => {
+          var _a;
+          const { data: sessionData, error: sessionError } = result;
+          if (sessionError) {
+            return this._returnResult({ data: null, error: sessionError });
           }
-          throw error;
-        }
-      });
-      if (this.lock != null) {
-        return this._acquireLock(this.lockAcquireTimeout, run);
-      }
-      return run();
-    });
-  }
-  _challenge(params) {
-    return __async(this, null, function* () {
-      const run = () => __async(this, null, function* () {
-        try {
-          return yield this._useSession((result) => __async(this, null, function* () {
-            var _a;
-            const { data: sessionData, error: sessionError } = result;
-            if (sessionError) {
-              return this._returnResult({ data: null, error: sessionError });
-            }
-            const response = yield _request(this.fetch, "POST", `${this.url}/factors/${params.factorId}/challenge`, {
-              body: params,
-              headers: this.headers,
-              jwt: (_a = sessionData === null || sessionData === void 0 ? void 0 : sessionData.session) === null || _a === void 0 ? void 0 : _a.access_token
-            });
-            if (response.error) {
-              return response;
-            }
-            const { data } = response;
-            if (data.type !== "webauthn") {
-              return { data, error: null };
-            }
-            switch (data.webauthn.type) {
-              case "create":
-                return {
-                  data: Object.assign(Object.assign({}, data), { webauthn: Object.assign(Object.assign({}, data.webauthn), { credential_options: Object.assign(Object.assign({}, data.webauthn.credential_options), { publicKey: deserializeCredentialCreationOptions(data.webauthn.credential_options.publicKey) }) }) }),
-                  error: null
-                };
-              case "request":
-                return {
-                  data: Object.assign(Object.assign({}, data), { webauthn: Object.assign(Object.assign({}, data.webauthn), { credential_options: Object.assign(Object.assign({}, data.webauthn.credential_options), { publicKey: deserializeCredentialRequestOptions(data.webauthn.credential_options.publicKey) }) }) }),
-                  error: null
-                };
-            }
-          }));
-        } catch (error) {
-          if (isAuthError(error)) {
-            return this._returnResult({ data: null, error });
+          const response = await _request(this.fetch, "POST", `${this.url}/factors/${params.factorId}/challenge`, {
+            body: params,
+            headers: this.headers,
+            jwt: (_a = sessionData === null || sessionData === void 0 ? void 0 : sessionData.session) === null || _a === void 0 ? void 0 : _a.access_token
+          });
+          if (response.error) {
+            return response;
           }
-          throw error;
+          const { data } = response;
+          if (data.type !== "webauthn") {
+            return { data, error: null };
+          }
+          switch (data.webauthn.type) {
+            case "create":
+              return {
+                data: Object.assign(Object.assign({}, data), { webauthn: Object.assign(Object.assign({}, data.webauthn), { credential_options: Object.assign(Object.assign({}, data.webauthn.credential_options), { publicKey: deserializeCredentialCreationOptions(data.webauthn.credential_options.publicKey) }) }) }),
+                error: null
+              };
+            case "request":
+              return {
+                data: Object.assign(Object.assign({}, data), { webauthn: Object.assign(Object.assign({}, data.webauthn), { credential_options: Object.assign(Object.assign({}, data.webauthn.credential_options), { publicKey: deserializeCredentialRequestOptions(data.webauthn.credential_options.publicKey) }) }) }),
+                error: null
+              };
+          }
+        });
+      } catch (error) {
+        if (isAuthError(error)) {
+          return this._returnResult({ data: null, error });
         }
-      });
-      if (this.lock != null) {
-        return this._acquireLock(this.lockAcquireTimeout, run);
+        throw error;
       }
-      return run();
-    });
+    };
+    if (this.lock != null) {
+      return this._acquireLock(this.lockAcquireTimeout, run);
+    }
+    return run();
   }
   /**
    * {@see GoTrueMFAApi#challengeAndVerify}
    */
-  _challengeAndVerify(params) {
-    return __async(this, null, function* () {
-      const { data: challengeData, error: challengeError } = yield this._challenge({
-        factorId: params.factorId
-      });
-      if (challengeError) {
-        return this._returnResult({ data: null, error: challengeError });
-      }
-      return yield this._verify({
-        factorId: params.factorId,
-        challengeId: challengeData.id,
-        code: params.code
-      });
+  async _challengeAndVerify(params) {
+    const { data: challengeData, error: challengeError } = await this._challenge({
+      factorId: params.factorId
+    });
+    if (challengeError) {
+      return this._returnResult({ data: null, error: challengeError });
+    }
+    return await this._verify({
+      factorId: params.factorId,
+      challengeId: challengeData.id,
+      code: params.code
     });
   }
   /**
    * {@see GoTrueMFAApi#listFactors}
    */
-  _listFactors() {
-    return __async(this, null, function* () {
-      var _a;
-      const { data: { user }, error: userError } = yield this.getUser();
-      if (userError) {
-        return { data: null, error: userError };
+  async _listFactors() {
+    var _a;
+    const { data: { user }, error: userError } = await this.getUser();
+    if (userError) {
+      return { data: null, error: userError };
+    }
+    const data = {
+      all: [],
+      phone: [],
+      totp: [],
+      webauthn: []
+    };
+    for (const factor of (_a = user === null || user === void 0 ? void 0 : user.factors) !== null && _a !== void 0 ? _a : []) {
+      data.all.push(factor);
+      if (factor.status === "verified") {
+        ;
+        data[factor.factor_type].push(factor);
       }
-      const data = {
-        all: [],
-        phone: [],
-        totp: [],
-        webauthn: []
-      };
-      for (const factor of (_a = user === null || user === void 0 ? void 0 : user.factors) !== null && _a !== void 0 ? _a : []) {
-        data.all.push(factor);
-        if (factor.status === "verified") {
-          ;
-          data[factor.factor_type].push(factor);
-        }
-      }
-      return {
-        data,
-        error: null
-      };
-    });
+    }
+    return {
+      data,
+      error: null
+    };
   }
   /**
    * {@see GoTrueMFAApi#getAuthenticatorAssuranceLevel}
    */
-  _getAuthenticatorAssuranceLevel(jwt) {
-    return __async(this, null, function* () {
-      var _a, _b, _c, _d;
-      if (jwt) {
-        try {
-          const { payload: payload2 } = decodeJWT(jwt);
-          let currentLevel2 = null;
-          if (payload2.aal) {
-            currentLevel2 = payload2.aal;
-          }
-          let nextLevel2 = currentLevel2;
-          const { data: { user }, error: userError } = yield this.getUser(jwt);
-          if (userError) {
-            return this._returnResult({ data: null, error: userError });
-          }
-          const verifiedFactors2 = (_b = (_a = user === null || user === void 0 ? void 0 : user.factors) === null || _a === void 0 ? void 0 : _a.filter((factor) => factor.status === "verified")) !== null && _b !== void 0 ? _b : [];
-          if (verifiedFactors2.length > 0) {
-            nextLevel2 = "aal2";
-          }
-          const currentAuthenticationMethods2 = payload2.amr || [];
-          return { data: { currentLevel: currentLevel2, nextLevel: nextLevel2, currentAuthenticationMethods: currentAuthenticationMethods2 }, error: null };
-        } catch (error) {
-          if (isAuthError(error)) {
-            return this._returnResult({ data: null, error });
-          }
-          throw error;
+  async _getAuthenticatorAssuranceLevel(jwt) {
+    var _a, _b, _c, _d;
+    if (jwt) {
+      try {
+        const { payload: payload2 } = decodeJWT(jwt);
+        let currentLevel2 = null;
+        if (payload2.aal) {
+          currentLevel2 = payload2.aal;
         }
+        let nextLevel2 = currentLevel2;
+        const { data: { user }, error: userError } = await this.getUser(jwt);
+        if (userError) {
+          return this._returnResult({ data: null, error: userError });
+        }
+        const verifiedFactors2 = (_b = (_a = user === null || user === void 0 ? void 0 : user.factors) === null || _a === void 0 ? void 0 : _a.filter((factor) => factor.status === "verified")) !== null && _b !== void 0 ? _b : [];
+        if (verifiedFactors2.length > 0) {
+          nextLevel2 = "aal2";
+        }
+        const currentAuthenticationMethods2 = payload2.amr || [];
+        return { data: { currentLevel: currentLevel2, nextLevel: nextLevel2, currentAuthenticationMethods: currentAuthenticationMethods2 }, error: null };
+      } catch (error) {
+        if (isAuthError(error)) {
+          return this._returnResult({ data: null, error });
+        }
+        throw error;
       }
-      const { data: { session }, error: sessionError } = yield this.getSession();
-      if (sessionError) {
-        return this._returnResult({ data: null, error: sessionError });
-      }
-      if (!session) {
-        return {
-          data: { currentLevel: null, nextLevel: null, currentAuthenticationMethods: [] },
-          error: null
-        };
-      }
-      const { payload } = decodeJWT(session.access_token);
-      let currentLevel = null;
-      if (payload.aal) {
-        currentLevel = payload.aal;
-      }
-      let nextLevel = currentLevel;
-      const verifiedFactors = (_d = (_c = session.user.factors) === null || _c === void 0 ? void 0 : _c.filter((factor) => factor.status === "verified")) !== null && _d !== void 0 ? _d : [];
-      if (verifiedFactors.length > 0) {
-        nextLevel = "aal2";
-      }
-      const currentAuthenticationMethods = payload.amr || [];
-      return { data: { currentLevel, nextLevel, currentAuthenticationMethods }, error: null };
-    });
+    }
+    const { data: { session }, error: sessionError } = await this.getSession();
+    if (sessionError) {
+      return this._returnResult({ data: null, error: sessionError });
+    }
+    if (!session) {
+      return {
+        data: { currentLevel: null, nextLevel: null, currentAuthenticationMethods: [] },
+        error: null
+      };
+    }
+    const { payload } = decodeJWT(session.access_token);
+    let currentLevel = null;
+    if (payload.aal) {
+      currentLevel = payload.aal;
+    }
+    let nextLevel = currentLevel;
+    const verifiedFactors = (_d = (_c = session.user.factors) === null || _c === void 0 ? void 0 : _c.filter((factor) => factor.status === "verified")) !== null && _d !== void 0 ? _d : [];
+    if (verifiedFactors.length > 0) {
+      nextLevel = "aal2";
+    }
+    const currentAuthenticationMethods = payload.amr || [];
+    return { data: { currentLevel, nextLevel, currentAuthenticationMethods }, error: null };
   }
   /**
    * Retrieves details about an OAuth authorization request.
@@ -20157,191 +19719,179 @@ var GoTrueClient = class _GoTrueClient {
    * If the response includes only a redirect_url field, it means consent was already given - the caller
    * should handle the redirect manually if needed.
    */
-  _getAuthorizationDetails(authorizationId) {
-    return __async(this, null, function* () {
-      try {
-        return yield this._useSession((result) => __async(this, null, function* () {
-          const { data: { session }, error: sessionError } = result;
-          if (sessionError) {
-            return this._returnResult({ data: null, error: sessionError });
-          }
-          if (!session) {
-            return this._returnResult({ data: null, error: new AuthSessionMissingError() });
-          }
-          return yield _request(this.fetch, "GET", `${this.url}/oauth/authorizations/${authorizationId}`, {
-            headers: this.headers,
-            jwt: session.access_token,
-            xform: (data) => ({ data, error: null })
-          });
-        }));
-      } catch (error) {
-        if (isAuthError(error)) {
-          return this._returnResult({ data: null, error });
+  async _getAuthorizationDetails(authorizationId) {
+    try {
+      return await this._useSession(async (result) => {
+        const { data: { session }, error: sessionError } = result;
+        if (sessionError) {
+          return this._returnResult({ data: null, error: sessionError });
         }
-        throw error;
+        if (!session) {
+          return this._returnResult({ data: null, error: new AuthSessionMissingError() });
+        }
+        return await _request(this.fetch, "GET", `${this.url}/oauth/authorizations/${authorizationId}`, {
+          headers: this.headers,
+          jwt: session.access_token,
+          xform: (data) => ({ data, error: null })
+        });
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: null, error });
       }
-    });
+      throw error;
+    }
   }
   /**
    * Approves an OAuth authorization request.
    * Only relevant when the OAuth 2.1 server is enabled in Supabase Auth.
    */
-  _approveAuthorization(authorizationId, options) {
-    return __async(this, null, function* () {
-      try {
-        return yield this._useSession((result) => __async(this, null, function* () {
-          const { data: { session }, error: sessionError } = result;
-          if (sessionError) {
-            return this._returnResult({ data: null, error: sessionError });
-          }
-          if (!session) {
-            return this._returnResult({ data: null, error: new AuthSessionMissingError() });
-          }
-          const response = yield _request(this.fetch, "POST", `${this.url}/oauth/authorizations/${authorizationId}/consent`, {
-            headers: this.headers,
-            jwt: session.access_token,
-            body: { action: "approve" },
-            xform: (data) => ({ data, error: null })
-          });
-          if (response.data && response.data.redirect_url) {
-            if (isBrowser() && !(options === null || options === void 0 ? void 0 : options.skipBrowserRedirect)) {
-              window.location.assign(response.data.redirect_url);
-            }
-          }
-          return response;
-        }));
-      } catch (error) {
-        if (isAuthError(error)) {
-          return this._returnResult({ data: null, error });
+  async _approveAuthorization(authorizationId, options) {
+    try {
+      return await this._useSession(async (result) => {
+        const { data: { session }, error: sessionError } = result;
+        if (sessionError) {
+          return this._returnResult({ data: null, error: sessionError });
         }
-        throw error;
+        if (!session) {
+          return this._returnResult({ data: null, error: new AuthSessionMissingError() });
+        }
+        const response = await _request(this.fetch, "POST", `${this.url}/oauth/authorizations/${authorizationId}/consent`, {
+          headers: this.headers,
+          jwt: session.access_token,
+          body: { action: "approve" },
+          xform: (data) => ({ data, error: null })
+        });
+        if (response.data && response.data.redirect_url) {
+          if (isBrowser() && !(options === null || options === void 0 ? void 0 : options.skipBrowserRedirect)) {
+            window.location.assign(response.data.redirect_url);
+          }
+        }
+        return response;
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: null, error });
       }
-    });
+      throw error;
+    }
   }
   /**
    * Denies an OAuth authorization request.
    * Only relevant when the OAuth 2.1 server is enabled in Supabase Auth.
    */
-  _denyAuthorization(authorizationId, options) {
-    return __async(this, null, function* () {
-      try {
-        return yield this._useSession((result) => __async(this, null, function* () {
-          const { data: { session }, error: sessionError } = result;
-          if (sessionError) {
-            return this._returnResult({ data: null, error: sessionError });
-          }
-          if (!session) {
-            return this._returnResult({ data: null, error: new AuthSessionMissingError() });
-          }
-          const response = yield _request(this.fetch, "POST", `${this.url}/oauth/authorizations/${authorizationId}/consent`, {
-            headers: this.headers,
-            jwt: session.access_token,
-            body: { action: "deny" },
-            xform: (data) => ({ data, error: null })
-          });
-          if (response.data && response.data.redirect_url) {
-            if (isBrowser() && !(options === null || options === void 0 ? void 0 : options.skipBrowserRedirect)) {
-              window.location.assign(response.data.redirect_url);
-            }
-          }
-          return response;
-        }));
-      } catch (error) {
-        if (isAuthError(error)) {
-          return this._returnResult({ data: null, error });
+  async _denyAuthorization(authorizationId, options) {
+    try {
+      return await this._useSession(async (result) => {
+        const { data: { session }, error: sessionError } = result;
+        if (sessionError) {
+          return this._returnResult({ data: null, error: sessionError });
         }
-        throw error;
+        if (!session) {
+          return this._returnResult({ data: null, error: new AuthSessionMissingError() });
+        }
+        const response = await _request(this.fetch, "POST", `${this.url}/oauth/authorizations/${authorizationId}/consent`, {
+          headers: this.headers,
+          jwt: session.access_token,
+          body: { action: "deny" },
+          xform: (data) => ({ data, error: null })
+        });
+        if (response.data && response.data.redirect_url) {
+          if (isBrowser() && !(options === null || options === void 0 ? void 0 : options.skipBrowserRedirect)) {
+            window.location.assign(response.data.redirect_url);
+          }
+        }
+        return response;
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: null, error });
       }
-    });
+      throw error;
+    }
   }
   /**
    * Lists all OAuth grants that the authenticated user has authorized.
    * Only relevant when the OAuth 2.1 server is enabled in Supabase Auth.
    */
-  _listOAuthGrants() {
-    return __async(this, null, function* () {
-      try {
-        return yield this._useSession((result) => __async(this, null, function* () {
-          const { data: { session }, error: sessionError } = result;
-          if (sessionError) {
-            return this._returnResult({ data: null, error: sessionError });
-          }
-          if (!session) {
-            return this._returnResult({ data: null, error: new AuthSessionMissingError() });
-          }
-          return yield _request(this.fetch, "GET", `${this.url}/user/oauth/grants`, {
-            headers: this.headers,
-            jwt: session.access_token,
-            xform: (data) => ({ data, error: null })
-          });
-        }));
-      } catch (error) {
-        if (isAuthError(error)) {
-          return this._returnResult({ data: null, error });
+  async _listOAuthGrants() {
+    try {
+      return await this._useSession(async (result) => {
+        const { data: { session }, error: sessionError } = result;
+        if (sessionError) {
+          return this._returnResult({ data: null, error: sessionError });
         }
-        throw error;
+        if (!session) {
+          return this._returnResult({ data: null, error: new AuthSessionMissingError() });
+        }
+        return await _request(this.fetch, "GET", `${this.url}/user/oauth/grants`, {
+          headers: this.headers,
+          jwt: session.access_token,
+          xform: (data) => ({ data, error: null })
+        });
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: null, error });
       }
-    });
+      throw error;
+    }
   }
   /**
    * Revokes a user's OAuth grant for a specific client.
    * Only relevant when the OAuth 2.1 server is enabled in Supabase Auth.
    */
-  _revokeOAuthGrant(options) {
-    return __async(this, null, function* () {
-      try {
-        return yield this._useSession((result) => __async(this, null, function* () {
-          const { data: { session }, error: sessionError } = result;
-          if (sessionError) {
-            return this._returnResult({ data: null, error: sessionError });
-          }
-          if (!session) {
-            return this._returnResult({ data: null, error: new AuthSessionMissingError() });
-          }
-          yield _request(this.fetch, "DELETE", `${this.url}/user/oauth/grants`, {
-            headers: this.headers,
-            jwt: session.access_token,
-            query: { client_id: options.clientId },
-            noResolveJson: true
-          });
-          return { data: {}, error: null };
-        }));
-      } catch (error) {
-        if (isAuthError(error)) {
-          return this._returnResult({ data: null, error });
+  async _revokeOAuthGrant(options) {
+    try {
+      return await this._useSession(async (result) => {
+        const { data: { session }, error: sessionError } = result;
+        if (sessionError) {
+          return this._returnResult({ data: null, error: sessionError });
         }
-        throw error;
-      }
-    });
-  }
-  fetchJwk(_0) {
-    return __async(this, arguments, function* (kid, jwks = { keys: [] }) {
-      let jwk = jwks.keys.find((key) => key.kid === kid);
-      if (jwk) {
-        return jwk;
-      }
-      const now = Date.now();
-      jwk = this.jwks.keys.find((key) => key.kid === kid);
-      if (jwk && this.jwks_cached_at + JWKS_TTL > now) {
-        return jwk;
-      }
-      const { data, error } = yield _request(this.fetch, "GET", `${this.url}/.well-known/jwks.json`, {
-        headers: this.headers
+        if (!session) {
+          return this._returnResult({ data: null, error: new AuthSessionMissingError() });
+        }
+        await _request(this.fetch, "DELETE", `${this.url}/user/oauth/grants`, {
+          headers: this.headers,
+          jwt: session.access_token,
+          query: { client_id: options.clientId },
+          noResolveJson: true
+        });
+        return { data: {}, error: null };
       });
-      if (error) {
-        throw error;
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: null, error });
       }
-      if (!data.keys || data.keys.length === 0) {
-        return null;
-      }
-      this.jwks = data;
-      this.jwks_cached_at = now;
-      jwk = data.keys.find((key) => key.kid === kid);
-      if (!jwk) {
-        return null;
-      }
+      throw error;
+    }
+  }
+  async fetchJwk(kid, jwks = { keys: [] }) {
+    let jwk = jwks.keys.find((key) => key.kid === kid);
+    if (jwk) {
       return jwk;
+    }
+    const now = Date.now();
+    jwk = this.jwks.keys.find((key) => key.kid === kid);
+    if (jwk && this.jwks_cached_at + JWKS_TTL > now) {
+      return jwk;
+    }
+    const { data, error } = await _request(this.fetch, "GET", `${this.url}/.well-known/jwks.json`, {
+      headers: this.headers
     });
+    if (error) {
+      throw error;
+    }
+    if (!data.keys || data.keys.length === 0) {
+      return null;
+    }
+    this.jwks = data;
+    this.jwks_cached_at = now;
+    jwk = data.keys.find((key) => key.kid === kid);
+    if (!jwk) {
+      return null;
+    }
+    return jwk;
   }
   /**
    * Extracts the JWT claims present in the access token by first verifying the
@@ -20408,47 +19958,29 @@ var GoTrueClient = class _GoTrueClient {
    * }
    * ```
    */
-  getClaims(_0) {
-    return __async(this, arguments, function* (jwt, options = {}) {
-      try {
-        let token = jwt;
-        if (!token) {
-          const { data, error } = yield this.getSession();
-          if (error || !data.session) {
-            return this._returnResult({ data: null, error });
-          }
-          token = data.session.access_token;
+  async getClaims(jwt, options = {}) {
+    try {
+      let token = jwt;
+      if (!token) {
+        const { data, error } = await this.getSession();
+        if (error || !data.session) {
+          return this._returnResult({ data: null, error });
         }
-        const { header, payload, signature, raw: { header: rawHeader, payload: rawPayload } } = decodeJWT(token);
-        if (!(options === null || options === void 0 ? void 0 : options.allowExpired)) {
-          try {
-            validateExp(payload.exp);
-          } catch (e) {
-            throw new AuthInvalidJwtError(e instanceof Error ? e.message : "JWT validation failed");
-          }
+        token = data.session.access_token;
+      }
+      const { header, payload, signature, raw: { header: rawHeader, payload: rawPayload } } = decodeJWT(token);
+      if (!(options === null || options === void 0 ? void 0 : options.allowExpired)) {
+        try {
+          validateExp(payload.exp);
+        } catch (e) {
+          throw new AuthInvalidJwtError(e instanceof Error ? e.message : "JWT validation failed");
         }
-        const signingKey = !header.alg || header.alg.startsWith("HS") || !header.kid || !("crypto" in globalThis && "subtle" in globalThis.crypto) ? null : yield this.fetchJwk(header.kid, (options === null || options === void 0 ? void 0 : options.keys) ? { keys: options.keys } : options === null || options === void 0 ? void 0 : options.jwks);
-        if (!signingKey) {
-          const { error } = yield this.getUser(token);
-          if (error) {
-            throw error;
-          }
-          return {
-            data: {
-              claims: payload,
-              header,
-              signature
-            },
-            error: null
-          };
-        }
-        const algorithm = getAlgorithm(header.alg);
-        const publicKey = yield crypto.subtle.importKey("jwk", signingKey, algorithm, true, [
-          "verify"
-        ]);
-        const isValid = yield crypto.subtle.verify(algorithm, publicKey, signature, stringToUint8Array(`${rawHeader}.${rawPayload}`));
-        if (!isValid) {
-          throw new AuthInvalidJwtError("Invalid JWT signature");
+      }
+      const signingKey = !header.alg || header.alg.startsWith("HS") || !header.kid || !("crypto" in globalThis && "subtle" in globalThis.crypto) ? null : await this.fetchJwk(header.kid, (options === null || options === void 0 ? void 0 : options.keys) ? { keys: options.keys } : options === null || options === void 0 ? void 0 : options.jwks);
+      if (!signingKey) {
+        const { error } = await this.getUser(token);
+        if (error) {
+          throw error;
         }
         return {
           data: {
@@ -20458,13 +19990,29 @@ var GoTrueClient = class _GoTrueClient {
           },
           error: null
         };
-      } catch (error) {
-        if (isAuthError(error)) {
-          return this._returnResult({ data: null, error });
-        }
-        throw error;
       }
-    });
+      const algorithm = getAlgorithm(header.alg);
+      const publicKey = await crypto.subtle.importKey("jwk", signingKey, algorithm, true, [
+        "verify"
+      ]);
+      const isValid = await crypto.subtle.verify(algorithm, publicKey, signature, stringToUint8Array(`${rawHeader}.${rawPayload}`));
+      if (!isValid) {
+        throw new AuthInvalidJwtError("Invalid JWT signature");
+      }
+      return {
+        data: {
+          claims: payload,
+          header,
+          signature
+        },
+        error: null
+      };
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: null, error });
+      }
+      throw error;
+    }
   }
   // --- Passkey Methods ---
   /**
@@ -20477,47 +20025,45 @@ var GoTrueClient = class _GoTrueClient {
    *
    * @category Auth
    */
-  signInWithPasskey(credentials) {
-    return __async(this, null, function* () {
-      var _a, _b, _c;
-      assertPasskeyExperimentalEnabled(this.experimental);
-      try {
-        if (!browserSupportsWebAuthn()) {
-          return this._returnResult({
-            data: null,
-            error: new AuthUnknownError("Browser does not support WebAuthn", null)
-          });
-        }
-        const { data: options, error: optionsError } = yield this._startPasskeyAuthentication({
-          options: { captchaToken: (_a = credentials === null || credentials === void 0 ? void 0 : credentials.options) === null || _a === void 0 ? void 0 : _a.captchaToken }
+  async signInWithPasskey(credentials) {
+    var _a, _b, _c;
+    assertPasskeyExperimentalEnabled(this.experimental);
+    try {
+      if (!browserSupportsWebAuthn()) {
+        return this._returnResult({
+          data: null,
+          error: new AuthUnknownError("Browser does not support WebAuthn", null)
         });
-        if (optionsError || !options) {
-          return this._returnResult({ data: null, error: optionsError });
-        }
-        const publicKeyOptions = deserializeCredentialRequestOptions(options.options);
-        const signal = (_c = (_b = credentials === null || credentials === void 0 ? void 0 : credentials.options) === null || _b === void 0 ? void 0 : _b.signal) !== null && _c !== void 0 ? _c : webAuthnAbortService.createNewAbortSignal();
-        const { data: credential, error: credentialError } = yield getCredential({
-          publicKey: publicKeyOptions,
-          signal
-        });
-        if (credentialError || !credential) {
-          return this._returnResult({
-            data: null,
-            error: credentialError !== null && credentialError !== void 0 ? credentialError : new AuthUnknownError("WebAuthn ceremony failed", null)
-          });
-        }
-        const serialized = serializeCredentialRequestResponse(credential);
-        return this._verifyPasskeyAuthentication({
-          challengeId: options.challenge_id,
-          credential: serialized
-        });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return this._returnResult({ data: null, error });
-        }
-        throw error;
       }
-    });
+      const { data: options, error: optionsError } = await this._startPasskeyAuthentication({
+        options: { captchaToken: (_a = credentials === null || credentials === void 0 ? void 0 : credentials.options) === null || _a === void 0 ? void 0 : _a.captchaToken }
+      });
+      if (optionsError || !options) {
+        return this._returnResult({ data: null, error: optionsError });
+      }
+      const publicKeyOptions = deserializeCredentialRequestOptions(options.options);
+      const signal = (_c = (_b = credentials === null || credentials === void 0 ? void 0 : credentials.options) === null || _b === void 0 ? void 0 : _b.signal) !== null && _c !== void 0 ? _c : webAuthnAbortService.createNewAbortSignal();
+      const { data: credential, error: credentialError } = await getCredential({
+        publicKey: publicKeyOptions,
+        signal
+      });
+      if (credentialError || !credential) {
+        return this._returnResult({
+          data: null,
+          error: credentialError !== null && credentialError !== void 0 ? credentialError : new AuthUnknownError("WebAuthn ceremony failed", null)
+        });
+      }
+      const serialized = serializeCredentialRequestResponse(credential);
+      return this._verifyPasskeyAuthentication({
+        challengeId: options.challenge_id,
+        credential: serialized
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: null, error });
+      }
+      throw error;
+    }
   }
   /**
    * Register a passkey for the current authenticated user. Handles the full WebAuthn ceremony:
@@ -20529,274 +20075,258 @@ var GoTrueClient = class _GoTrueClient {
    *
    * @category Auth
    */
-  registerPasskey(credentials) {
-    return __async(this, null, function* () {
-      var _a, _b;
-      assertPasskeyExperimentalEnabled(this.experimental);
-      try {
-        if (!browserSupportsWebAuthn()) {
-          return this._returnResult({
-            data: null,
-            error: new AuthUnknownError("Browser does not support WebAuthn", null)
-          });
-        }
-        const { data: options, error: optionsError } = yield this._startPasskeyRegistration();
-        if (optionsError || !options) {
-          return this._returnResult({ data: null, error: optionsError });
-        }
-        const publicKeyOptions = deserializeCredentialCreationOptions(options.options);
-        const signal = (_b = (_a = credentials === null || credentials === void 0 ? void 0 : credentials.options) === null || _a === void 0 ? void 0 : _a.signal) !== null && _b !== void 0 ? _b : webAuthnAbortService.createNewAbortSignal();
-        const { data: credential, error: credentialError } = yield createCredential({
-          publicKey: publicKeyOptions,
-          signal
+  async registerPasskey(credentials) {
+    var _a, _b;
+    assertPasskeyExperimentalEnabled(this.experimental);
+    try {
+      if (!browserSupportsWebAuthn()) {
+        return this._returnResult({
+          data: null,
+          error: new AuthUnknownError("Browser does not support WebAuthn", null)
         });
-        if (credentialError || !credential) {
-          return this._returnResult({
-            data: null,
-            error: credentialError !== null && credentialError !== void 0 ? credentialError : new AuthUnknownError("WebAuthn ceremony failed", null)
-          });
-        }
-        const serialized = serializeCredentialCreationResponse(credential);
-        return this._verifyPasskeyRegistration({
-          challengeId: options.challenge_id,
-          credential: serialized
-        });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return this._returnResult({ data: null, error });
-        }
-        throw error;
       }
-    });
+      const { data: options, error: optionsError } = await this._startPasskeyRegistration();
+      if (optionsError || !options) {
+        return this._returnResult({ data: null, error: optionsError });
+      }
+      const publicKeyOptions = deserializeCredentialCreationOptions(options.options);
+      const signal = (_b = (_a = credentials === null || credentials === void 0 ? void 0 : credentials.options) === null || _a === void 0 ? void 0 : _a.signal) !== null && _b !== void 0 ? _b : webAuthnAbortService.createNewAbortSignal();
+      const { data: credential, error: credentialError } = await createCredential({
+        publicKey: publicKeyOptions,
+        signal
+      });
+      if (credentialError || !credential) {
+        return this._returnResult({
+          data: null,
+          error: credentialError !== null && credentialError !== void 0 ? credentialError : new AuthUnknownError("WebAuthn ceremony failed", null)
+        });
+      }
+      const serialized = serializeCredentialCreationResponse(credential);
+      return this._verifyPasskeyRegistration({
+        challengeId: options.challenge_id,
+        credential: serialized
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: null, error });
+      }
+      throw error;
+    }
   }
   /**
    * Start passkey registration for the current authenticated user.
    * Returns WebAuthn credential creation options to pass to navigator.credentials.create().
    */
-  _startPasskeyRegistration() {
-    return __async(this, null, function* () {
-      assertPasskeyExperimentalEnabled(this.experimental);
-      try {
-        return yield this._useSession((result) => __async(this, null, function* () {
-          const { data: { session }, error: sessionError } = result;
-          if (sessionError) {
-            return this._returnResult({ data: null, error: sessionError });
-          }
-          if (!session) {
-            return this._returnResult({ data: null, error: new AuthSessionMissingError() });
-          }
-          const { data, error } = yield _request(this.fetch, "POST", `${this.url}/passkeys/registration/options`, {
-            headers: this.headers,
-            jwt: session.access_token,
-            body: {}
-          });
-          if (error) {
-            return this._returnResult({ data: null, error });
-          }
-          return this._returnResult({ data, error: null });
-        }));
-      } catch (error) {
-        if (isAuthError(error)) {
+  async _startPasskeyRegistration() {
+    assertPasskeyExperimentalEnabled(this.experimental);
+    try {
+      return await this._useSession(async (result) => {
+        const { data: { session }, error: sessionError } = result;
+        if (sessionError) {
+          return this._returnResult({ data: null, error: sessionError });
+        }
+        if (!session) {
+          return this._returnResult({ data: null, error: new AuthSessionMissingError() });
+        }
+        const { data, error } = await _request(this.fetch, "POST", `${this.url}/passkeys/registration/options`, {
+          headers: this.headers,
+          jwt: session.access_token,
+          body: {}
+        });
+        if (error) {
           return this._returnResult({ data: null, error });
         }
-        throw error;
+        return this._returnResult({ data, error: null });
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: null, error });
       }
-    });
+      throw error;
+    }
   }
   /**
    * Verify passkey registration with the credential response.
    * The credentialResponse should be the serialized output of navigator.credentials.create().
    */
-  _verifyPasskeyRegistration(params) {
-    return __async(this, null, function* () {
-      assertPasskeyExperimentalEnabled(this.experimental);
-      try {
-        return yield this._useSession((result) => __async(this, null, function* () {
-          const { data: { session }, error: sessionError } = result;
-          if (sessionError) {
-            return this._returnResult({ data: null, error: sessionError });
+  async _verifyPasskeyRegistration(params) {
+    assertPasskeyExperimentalEnabled(this.experimental);
+    try {
+      return await this._useSession(async (result) => {
+        const { data: { session }, error: sessionError } = result;
+        if (sessionError) {
+          return this._returnResult({ data: null, error: sessionError });
+        }
+        if (!session) {
+          return this._returnResult({ data: null, error: new AuthSessionMissingError() });
+        }
+        const { data, error } = await _request(this.fetch, "POST", `${this.url}/passkeys/registration/verify`, {
+          headers: this.headers,
+          jwt: session.access_token,
+          body: {
+            challenge_id: params.challengeId,
+            credential: params.credential
           }
-          if (!session) {
-            return this._returnResult({ data: null, error: new AuthSessionMissingError() });
-          }
-          const { data, error } = yield _request(this.fetch, "POST", `${this.url}/passkeys/registration/verify`, {
-            headers: this.headers,
-            jwt: session.access_token,
-            body: {
-              challenge_id: params.challengeId,
-              credential: params.credential
-            }
-          });
-          if (error) {
-            return this._returnResult({ data: null, error });
-          }
-          return this._returnResult({ data, error: null });
-        }));
-      } catch (error) {
-        if (isAuthError(error)) {
+        });
+        if (error) {
           return this._returnResult({ data: null, error });
         }
-        throw error;
+        return this._returnResult({ data, error: null });
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: null, error });
       }
-    });
+      throw error;
+    }
   }
   /**
    * Start passkey authentication.
    * Returns WebAuthn credential request options to pass to navigator.credentials.get().
    */
-  _startPasskeyAuthentication(params) {
-    return __async(this, null, function* () {
-      var _a;
-      assertPasskeyExperimentalEnabled(this.experimental);
-      try {
-        const { data, error } = yield _request(this.fetch, "POST", `${this.url}/passkeys/authentication/options`, {
-          headers: this.headers,
-          body: {
-            gotrue_meta_security: { captcha_token: (_a = params === null || params === void 0 ? void 0 : params.options) === null || _a === void 0 ? void 0 : _a.captchaToken }
-          }
-        });
-        if (error) {
-          return this._returnResult({ data: null, error });
+  async _startPasskeyAuthentication(params) {
+    var _a;
+    assertPasskeyExperimentalEnabled(this.experimental);
+    try {
+      const { data, error } = await _request(this.fetch, "POST", `${this.url}/passkeys/authentication/options`, {
+        headers: this.headers,
+        body: {
+          gotrue_meta_security: { captcha_token: (_a = params === null || params === void 0 ? void 0 : params.options) === null || _a === void 0 ? void 0 : _a.captchaToken }
         }
-        return this._returnResult({ data, error: null });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return this._returnResult({ data: null, error });
-        }
-        throw error;
+      });
+      if (error) {
+        return this._returnResult({ data: null, error });
       }
-    });
+      return this._returnResult({ data, error: null });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: null, error });
+      }
+      throw error;
+    }
   }
   /**
    * Verify passkey authentication and create a session.
    * The credential should be the serialized output of navigator.credentials.get().
    */
-  _verifyPasskeyAuthentication(params) {
-    return __async(this, null, function* () {
-      assertPasskeyExperimentalEnabled(this.experimental);
-      try {
-        const { data, error } = yield _request(this.fetch, "POST", `${this.url}/passkeys/authentication/verify`, {
-          headers: this.headers,
-          body: {
-            challenge_id: params.challengeId,
-            credential: params.credential
-          },
-          xform: _sessionResponse
-        });
-        if (error) {
-          return this._returnResult({ data: null, error });
-        }
-        if (data.session) {
-          yield this._saveSession(data.session);
-          yield this._notifyAllSubscribers("SIGNED_IN", data.session);
-        }
-        return this._returnResult({ data, error: null });
-      } catch (error) {
-        if (isAuthError(error)) {
-          return this._returnResult({ data: null, error });
-        }
-        throw error;
+  async _verifyPasskeyAuthentication(params) {
+    assertPasskeyExperimentalEnabled(this.experimental);
+    try {
+      const { data, error } = await _request(this.fetch, "POST", `${this.url}/passkeys/authentication/verify`, {
+        headers: this.headers,
+        body: {
+          challenge_id: params.challengeId,
+          credential: params.credential
+        },
+        xform: _sessionResponse
+      });
+      if (error) {
+        return this._returnResult({ data: null, error });
       }
-    });
+      if (data.session) {
+        await this._saveSession(data.session);
+        await this._notifyAllSubscribers("SIGNED_IN", data.session);
+      }
+      return this._returnResult({ data, error: null });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: null, error });
+      }
+      throw error;
+    }
   }
   /**
    * List all passkeys for the current user.
    */
-  _listPasskeys() {
-    return __async(this, null, function* () {
-      assertPasskeyExperimentalEnabled(this.experimental);
-      try {
-        return yield this._useSession((result) => __async(this, null, function* () {
-          const { data: { session }, error: sessionError } = result;
-          if (sessionError) {
-            return this._returnResult({ data: null, error: sessionError });
-          }
-          if (!session) {
-            return this._returnResult({ data: null, error: new AuthSessionMissingError() });
-          }
-          const { data, error } = yield _request(this.fetch, "GET", `${this.url}/passkeys`, {
-            headers: this.headers,
-            jwt: session.access_token,
-            xform: (data2) => ({ data: data2, error: null })
-          });
-          if (error) {
-            return this._returnResult({ data: null, error });
-          }
-          return this._returnResult({ data, error: null });
-        }));
-      } catch (error) {
-        if (isAuthError(error)) {
+  async _listPasskeys() {
+    assertPasskeyExperimentalEnabled(this.experimental);
+    try {
+      return await this._useSession(async (result) => {
+        const { data: { session }, error: sessionError } = result;
+        if (sessionError) {
+          return this._returnResult({ data: null, error: sessionError });
+        }
+        if (!session) {
+          return this._returnResult({ data: null, error: new AuthSessionMissingError() });
+        }
+        const { data, error } = await _request(this.fetch, "GET", `${this.url}/passkeys`, {
+          headers: this.headers,
+          jwt: session.access_token,
+          xform: (data2) => ({ data: data2, error: null })
+        });
+        if (error) {
           return this._returnResult({ data: null, error });
         }
-        throw error;
+        return this._returnResult({ data, error: null });
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: null, error });
       }
-    });
+      throw error;
+    }
   }
   /**
    * Update a passkey.
    */
-  _updatePasskey(params) {
-    return __async(this, null, function* () {
-      assertPasskeyExperimentalEnabled(this.experimental);
-      try {
-        return yield this._useSession((result) => __async(this, null, function* () {
-          const { data: { session }, error: sessionError } = result;
-          if (sessionError) {
-            return this._returnResult({ data: null, error: sessionError });
-          }
-          if (!session) {
-            return this._returnResult({ data: null, error: new AuthSessionMissingError() });
-          }
-          const { data, error } = yield _request(this.fetch, "PATCH", `${this.url}/passkeys/${params.passkeyId}`, {
-            headers: this.headers,
-            jwt: session.access_token,
-            body: { friendly_name: params.friendlyName }
-          });
-          if (error) {
-            return this._returnResult({ data: null, error });
-          }
-          return this._returnResult({ data, error: null });
-        }));
-      } catch (error) {
-        if (isAuthError(error)) {
+  async _updatePasskey(params) {
+    assertPasskeyExperimentalEnabled(this.experimental);
+    try {
+      return await this._useSession(async (result) => {
+        const { data: { session }, error: sessionError } = result;
+        if (sessionError) {
+          return this._returnResult({ data: null, error: sessionError });
+        }
+        if (!session) {
+          return this._returnResult({ data: null, error: new AuthSessionMissingError() });
+        }
+        const { data, error } = await _request(this.fetch, "PATCH", `${this.url}/passkeys/${params.passkeyId}`, {
+          headers: this.headers,
+          jwt: session.access_token,
+          body: { friendly_name: params.friendlyName }
+        });
+        if (error) {
           return this._returnResult({ data: null, error });
         }
-        throw error;
+        return this._returnResult({ data, error: null });
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: null, error });
       }
-    });
+      throw error;
+    }
   }
   /**
    * Delete a passkey.
    */
-  _deletePasskey(params) {
-    return __async(this, null, function* () {
-      assertPasskeyExperimentalEnabled(this.experimental);
-      try {
-        return yield this._useSession((result) => __async(this, null, function* () {
-          const { data: { session }, error: sessionError } = result;
-          if (sessionError) {
-            return this._returnResult({ data: null, error: sessionError });
-          }
-          if (!session) {
-            return this._returnResult({ data: null, error: new AuthSessionMissingError() });
-          }
-          const { error } = yield _request(this.fetch, "DELETE", `${this.url}/passkeys/${params.passkeyId}`, {
-            headers: this.headers,
-            jwt: session.access_token,
-            noResolveJson: true
-          });
-          if (error) {
-            return this._returnResult({ data: null, error });
-          }
-          return this._returnResult({ data: null, error: null });
-        }));
-      } catch (error) {
-        if (isAuthError(error)) {
+  async _deletePasskey(params) {
+    assertPasskeyExperimentalEnabled(this.experimental);
+    try {
+      return await this._useSession(async (result) => {
+        const { data: { session }, error: sessionError } = result;
+        if (sessionError) {
+          return this._returnResult({ data: null, error: sessionError });
+        }
+        if (!session) {
+          return this._returnResult({ data: null, error: new AuthSessionMissingError() });
+        }
+        const { error } = await _request(this.fetch, "DELETE", `${this.url}/passkeys/${params.passkeyId}`, {
+          headers: this.headers,
+          jwt: session.access_token,
+          noResolveJson: true
+        });
+        if (error) {
           return this._returnResult({ data: null, error });
         }
-        throw error;
+        return this._returnResult({ data: null, error: null });
+      });
+    } catch (error) {
+      if (isAuthError(error)) {
+        return this._returnResult({ data: null, error });
       }
-    });
+      throw error;
+    }
   }
 };
 GoTrueClient.nextInstanceID = {};
@@ -21018,14 +20548,14 @@ var fetchWithAuth = (supabaseKey, supabaseUrl, getAccessToken, customFetch, trac
   const traceEnabled = (tracePropagationOptions === null || tracePropagationOptions === void 0 ? void 0 : tracePropagationOptions.enabled) === true;
   const respectSampling = (tracePropagationOptions === null || tracePropagationOptions === void 0 ? void 0 : tracePropagationOptions.respectSamplingDecision) !== false;
   const traceTargets = traceEnabled ? getDefaultPropagationTargets(supabaseUrl) : null;
-  return (input, init) => __async(null, null, function* () {
+  return async (input, init) => {
     var _await$getAccessToken;
-    const accessToken = (_await$getAccessToken = yield getAccessToken()) !== null && _await$getAccessToken !== void 0 ? _await$getAccessToken : supabaseKey;
+    const accessToken = (_await$getAccessToken = await getAccessToken()) !== null && _await$getAccessToken !== void 0 ? _await$getAccessToken : supabaseKey;
     let headers = new HeadersConstructor(init === null || init === void 0 ? void 0 : init.headers);
     if (!headers.has("apikey")) headers.set("apikey", supabaseKey);
     if (!headers.has("Authorization")) headers.set("Authorization", `Bearer ${accessToken}`);
     if (traceTargets) {
-      const traceHeaders = yield getTraceHeaders(input, traceTargets, respectSampling);
+      const traceHeaders = await getTraceHeaders(input, traceTargets, respectSampling);
       if (traceHeaders) {
         if (traceHeaders.traceparent && !headers.has("traceparent")) headers.set("traceparent", traceHeaders.traceparent);
         if (traceHeaders.tracestate && !headers.has("tracestate")) headers.set("tracestate", traceHeaders.tracestate);
@@ -21033,19 +20563,17 @@ var fetchWithAuth = (supabaseKey, supabaseUrl, getAccessToken, customFetch, trac
       }
     }
     return fetch$1(input, _objectSpread23(_objectSpread23({}, init), {}, { headers }));
-  });
+  };
 };
-function getTraceHeaders(input, targets, respectSampling) {
-  return __async(this, null, function* () {
-    if (!shouldPropagateToTarget(typeof input === "string" ? input : input instanceof URL ? input : input.url, targets)) return null;
-    const traceContext = yield extractTraceContext();
-    if (!traceContext || !traceContext.traceparent) return null;
-    if (respectSampling) {
-      const parsed = parseTraceParent(traceContext.traceparent);
-      if (parsed && !parsed.isSampled) return null;
-    }
-    return traceContext;
-  });
+async function getTraceHeaders(input, targets, respectSampling) {
+  if (!shouldPropagateToTarget(typeof input === "string" ? input : input instanceof URL ? input : input.url, targets)) return null;
+  const traceContext = await extractTraceContext();
+  if (!traceContext || !traceContext.traceparent) return null;
+  if (respectSampling) {
+    const parsed = parseTraceParent(traceContext.traceparent);
+    if (parsed && !parsed.isSampled) return null;
+  }
+  return traceContext;
 }
 function normalizeTracePropagation(value) {
   return typeof value === "boolean" ? { enabled: value } : value;
@@ -21069,9 +20597,7 @@ function applySettingDefaults(options, defaults) {
       enabled: (_ref = (_tracePropagationOpti = tracePropagationOptions === null || tracePropagationOptions === void 0 ? void 0 : tracePropagationOptions.enabled) !== null && _tracePropagationOpti !== void 0 ? _tracePropagationOpti : DEFAULT_TRACE_PROPAGATION_OPTIONS$1 === null || DEFAULT_TRACE_PROPAGATION_OPTIONS$1 === void 0 ? void 0 : DEFAULT_TRACE_PROPAGATION_OPTIONS$1.enabled) !== null && _ref !== void 0 ? _ref : false,
       respectSamplingDecision: (_ref2 = (_tracePropagationOpti2 = tracePropagationOptions === null || tracePropagationOptions === void 0 ? void 0 : tracePropagationOptions.respectSamplingDecision) !== null && _tracePropagationOpti2 !== void 0 ? _tracePropagationOpti2 : DEFAULT_TRACE_PROPAGATION_OPTIONS$1 === null || DEFAULT_TRACE_PROPAGATION_OPTIONS$1 === void 0 ? void 0 : DEFAULT_TRACE_PROPAGATION_OPTIONS$1.respectSamplingDecision) !== null && _ref2 !== void 0 ? _ref2 : true
     },
-    accessToken: () => __async(null, null, function* () {
-      return "";
-    })
+    accessToken: async () => ""
   };
   if (options.accessToken) result.accessToken = options.accessToken;
   else delete result.accessToken;
@@ -21469,14 +20995,12 @@ var SupabaseClient = class {
   removeAllChannels() {
     return this.realtime.removeAllChannels();
   }
-  _getAccessToken() {
-    return __async(this, null, function* () {
-      var _this = this;
-      var _data$session$access_, _data$session;
-      if (_this.accessToken) return yield _this.accessToken();
-      const { data } = yield _this.auth.getSession();
-      return (_data$session$access_ = (_data$session = data.session) === null || _data$session === void 0 ? void 0 : _data$session.access_token) !== null && _data$session$access_ !== void 0 ? _data$session$access_ : _this.supabaseKey;
-    });
+  async _getAccessToken() {
+    var _this = this;
+    var _data$session$access_, _data$session;
+    if (_this.accessToken) return await _this.accessToken();
+    const { data } = await _this.auth.getSession();
+    return (_data$session$access_ = (_data$session = data.session) === null || _data$session === void 0 ? void 0 : _data$session.access_token) !== null && _data$session$access_ !== void 0 ? _data$session$access_ : _this.supabaseKey;
   }
   _initSupabaseAuthClient({ autoRefreshToken, persistSession, detectSessionInUrl, storage, userStorage, storageKey, flowType, lock, debug, throwOnError, experimental, lockAcquireTimeout, skipAutoInitialize }, headers, fetch$1) {
     const authHeaders = {
@@ -21640,7 +21164,7 @@ var dummyStorage = {
   }
 };
 var supabaseInstance = null;
-function getSupabase() {
+async function getSupabase() {
   if (!supabaseInstance) {
     supabaseInstance = createClient(
       "https://qjzgfwithyvmwctesnqs.supabase.co",
@@ -21663,174 +21187,155 @@ var rules = [];
 var whitelist = [];
 var petWords = [];
 var censoredWords = [];
-function createNewUser(userID, username) {
-  return __async(this, null, function* () {
-    console.log("creating new user...");
-    yield getSupabase().from("profiles").insert({ "display_name": username, "discord_id": userID });
-  });
+async function createNewUser(userID, username) {
+  console.log("creating new user...");
+  await (await getSupabase()).from("profiles").insert({ "display_name": username, "discord_id": userID });
 }
-function createNewConfig(userID) {
-  return __async(this, null, function* () {
-    console.log("creating new config...");
-    const configData = yield getSupabase().from("Config").insert({}).select().single();
-    yield getSupabase().from("Sub_Config_Access").insert({ "sub_id": userID, "config_id": configData.data.id });
-    yield getSupabase().from("Drone_Config").insert({ "config_id": configData.data.id, "speech_header": "This Drone Says:", "speech_footer": "It Obeys", "action_header": "Drone::Action::Performs(", "action_footer": ");", "whisper_header": "Drone Initiating Quiet Mode", "whisper_footer": "Normal Volume Restored", "loud_header": "Volume.set(500);", "loud_footer": "Volume.set(100)" });
-  });
+async function createNewConfig(userID) {
+  console.log("creating new config...");
+  const configData = await (await getSupabase()).from("Config").insert({}).select().single();
+  await (await getSupabase()).from("Sub_Config_Access").insert({ "sub_id": userID, "config_id": configData.data.id });
+  await (await getSupabase()).from("Drone_Config").insert({ "config_id": configData.data.id, "speech_header": "This Drone Says:", "speech_footer": "It Obeys", "action_header": "Drone::Action::Performs(", "action_footer": ");", "whisper_header": "Drone Initiating Quiet Mode", "whisper_footer": "Normal Volume Restored", "loud_header": "Volume.set(500);", "loud_footer": "Volume.set(100)" });
 }
-function getData(userID, username) {
-  return __async(this, null, function* () {
-    var _a;
-    const currentUserId = userID;
-    console.log(currentUserId);
-    let subIDData = yield getSupabase().from("profiles").select("id").eq("discord_id", currentUserId).single();
-    if (subIDData.data === null) {
-      yield createNewUser(userID, username);
-      subIDData = yield getSupabase().from("profiles").select("id").eq("discord_id", currentUserId).single();
-    }
-    console.log(subIDData);
-    const subID = subIDData.data.id;
-    console.log(subID);
-    let subData = yield getSupabase().from("Sub_Config_Access").select().eq("sub_id", subID);
-    console.log(subData);
-    if (((_a = subData.data) == null ? void 0 : _a.length) === 0) {
-      yield createNewConfig(subID);
-      subData = yield getSupabase().from("Sub_Config_Access").select().eq("sub_id", subID);
-    }
-    config = {};
-    config.id = subData.data[0].config_id;
-    getSupabase().channel("public:config").on("postgres_changes", {
-      event: "*",
-      schema: "public",
-      table: "Config"
-    }, () => __async(null, null, function* () {
-      yield getConfig();
-    })).subscribe();
-    getSupabase().channel("public:rules").on("postgres_changes", {
-      event: "*",
-      schema: "public",
-      table: "Rules"
-    }, () => __async(null, null, function* () {
-      yield getRules();
-    })).subscribe();
-    getSupabase().channel("public:server_whitelist_items").on("postgres_changes", {
-      event: "*",
-      schema: "public",
-      table: "Server_Whitelist_Items"
-    }, () => __async(null, null, function* () {
-      yield getWhitelist();
-    })).subscribe();
-    getSupabase().channel("public:pet_type_words").on("postgres_changes", {
-      event: "*",
-      schema: "public",
-      table: "Config"
-    }, () => __async(null, null, function* () {
-      yield getConfig();
-      yield getPetWords();
-    })).subscribe();
-    getSupabase().channel("public:censored_words").on("postgres_changes", {
-      event: "*",
-      schema: "public",
-      table: "Censored_Words"
-    }, () => __async(null, null, function* () {
-      yield getCensoredWords();
-    })).subscribe();
-    getSupabase().channel("public:drone_config").on("postgres_changes", {
-      event: "*",
-      schema: "public",
-      table: "Drone_Config"
-    }, () => __async(null, null, function* () {
-      yield getDroneConfig();
-    })).subscribe();
-    yield getConfig();
-    yield getRules();
-    yield getWhitelist();
-    yield getPetWords();
-    yield getCensoredWords();
-    yield getDroneConfig();
-  });
+async function getData(userID, username) {
+  const currentUserId = userID;
+  console.log(currentUserId);
+  let subIDData = await (await getSupabase()).from("profiles").select("id").eq("discord_id", currentUserId).single();
+  if (subIDData.data === null) {
+    await createNewUser(userID, username);
+    subIDData = await (await getSupabase()).from("profiles").select("id").eq("discord_id", currentUserId).single();
+  }
+  console.log(subIDData);
+  const subID = subIDData.data.id;
+  console.log(subID);
+  let subData = await (await getSupabase()).from("Sub_Config_Access").select().eq("sub_id", subID);
+  console.log(subData);
+  if (subData.data?.length === 0) {
+    await createNewConfig(subID);
+    subData = await (await getSupabase()).from("Sub_Config_Access").select().eq("sub_id", subID);
+  }
+  config = {};
+  config.id = subData.data[0].config_id;
+  (await getSupabase()).channel("public:config").on("postgres_changes", {
+    event: "*",
+    schema: "public",
+    table: "Config"
+  }, async () => {
+    await getConfig();
+  }).subscribe();
+  (await getSupabase()).channel("public:rules").on("postgres_changes", {
+    event: "*",
+    schema: "public",
+    table: "Rules"
+  }, async () => {
+    await getRules();
+  }).subscribe();
+  (await getSupabase()).channel("public:server_whitelist_items").on("postgres_changes", {
+    event: "*",
+    schema: "public",
+    table: "Server_Whitelist_Items"
+  }, async () => {
+    await getWhitelist();
+  }).subscribe();
+  (await getSupabase()).channel("public:pet_type_words").on("postgres_changes", {
+    event: "*",
+    schema: "public",
+    table: "Config"
+  }, async () => {
+    await getConfig();
+    await getPetWords();
+  }).subscribe();
+  (await getSupabase()).channel("public:censored_words").on("postgres_changes", {
+    event: "*",
+    schema: "public",
+    table: "Censored_Words"
+  }, async () => {
+    await getCensoredWords();
+  }).subscribe();
+  (await getSupabase()).channel("public:drone_config").on("postgres_changes", {
+    event: "*",
+    schema: "public",
+    table: "Drone_Config"
+  }, async () => {
+    await getDroneConfig();
+  }).subscribe();
+  await getConfig();
+  await getRules();
+  await getWhitelist();
+  await getPetWords();
+  await getCensoredWords();
+  await getDroneConfig();
 }
-function getConfig() {
-  return __async(this, null, function* () {
-    const configData = yield getSupabase().from("Config").select().eq("id", config.id).single();
-    config.id = configData.data.id;
-    config.rules_end = new Date(configData.data.rules_end);
-    config.gag_end = new Date(configData.data.gag_end);
-    config.pet_end = new Date(configData.data.pet_end);
-    config.bimbo_end = new Date(configData.data.bimbo_end);
-    config.bimbo_word_length = configData.data.bimbo_word_length;
-    config.pet_amount = configData.data.pet_amount;
-    config.horny_end = new Date(configData.data.horny_end);
-    config.pet_type = configData.data.pet_type;
-    config.drone_end = new Date(configData.data.drone_end);
-    config.debug = configData.data.debug;
-    config.uwu_end = new Date(configData.data.uwu_end);
-    config.censored_end = new Date(configData.data.censored_end);
-    config.censored_replacement = configData.data.censored_replacement;
-    console.log("Config:");
-    console.log(config);
-  });
+async function getConfig() {
+  const configData = await (await getSupabase()).from("Config").select().eq("id", config.id).single();
+  config.id = configData.data.id;
+  config.rules_end = new Date(configData.data.rules_end);
+  config.gag_end = new Date(configData.data.gag_end);
+  config.pet_end = new Date(configData.data.pet_end);
+  config.bimbo_end = new Date(configData.data.bimbo_end);
+  config.bimbo_word_length = configData.data.bimbo_word_length;
+  config.pet_amount = configData.data.pet_amount;
+  config.horny_end = new Date(configData.data.horny_end);
+  config.pet_type = configData.data.pet_type;
+  config.drone_end = new Date(configData.data.drone_end);
+  config.debug = configData.data.debug;
+  config.uwu_end = new Date(configData.data.uwu_end);
+  config.censored_end = new Date(configData.data.censored_end);
+  config.censored_replacement = configData.data.censored_replacement;
+  console.log("Config:");
+  console.log(config);
 }
-function getRules() {
-  return __async(this, null, function* () {
-    const rulesData = yield getSupabase().from("Rules").select().eq("config_id", config.id).order("id", { ascending: false });
-    rules = rulesData.data;
-    console.log("Rules:");
-    console.log(rules);
-  });
+async function getRules() {
+  const rulesData = await (await getSupabase()).from("Rules").select().eq("config_id", config.id).order("id", { ascending: false });
+  rules = rulesData.data;
+  console.log("Rules:");
+  console.log(rules);
 }
-function getWhitelist() {
-  return __async(this, null, function* () {
-    const whitelistData = yield getSupabase().from("Server_Whitelist_Items").select().eq("config_id", config.id);
-    whitelist = whitelistData.data.map((item) => ({
-      id: item.id,
-      config_id: item.config_id,
-      server_name: item.server_name,
-      discord_id: item.discord_id
-    }));
-    console.log("Whitelist:");
-    console.log(whitelist);
-  });
+async function getWhitelist() {
+  const whitelistData = await (await getSupabase()).from("Server_Whitelist_Items").select().eq("config_id", config.id);
+  whitelist = whitelistData.data.map((item) => ({
+    id: item.id,
+    config_id: item.config_id,
+    server_name: item.server_name,
+    discord_id: item.discord_id
+  }));
+  console.log("Whitelist:");
+  console.log(whitelist);
 }
-function getPetWords() {
-  return __async(this, null, function* () {
-    const petWordsData = yield getSupabase().from("Pet_Type_Words").select().eq("pet_type", config.pet_type);
-    petWords = [];
-    for (const wordData of petWordsData.data) {
-      petWords.push(wordData.word);
-    }
-    console.log("Pet words:");
-    console.log(petWords);
-  });
+async function getPetWords() {
+  const petWordsData = await (await getSupabase()).from("Pet_Type_Words").select().eq("pet_type", config.pet_type);
+  petWords = [];
+  for (const wordData of petWordsData.data) {
+    petWords.push(wordData.word);
+  }
+  console.log("Pet words:");
+  console.log(petWords);
 }
-function getCensoredWords() {
-  return __async(this, null, function* () {
-    const censoredWordsData = yield getSupabase().from("Censored_Words").select().eq("config_id", config.id);
-    censoredWords = [];
-    for (const wordData of censoredWordsData.data) {
-      censoredWords.push(wordData.word);
-    }
-    console.log("Censored Words:");
-    console.log(censoredWords);
-  });
+async function getCensoredWords() {
+  const censoredWordsData = await (await getSupabase()).from("Censored_Words").select().eq("config_id", config.id);
+  censoredWords = [];
+  for (const wordData of censoredWordsData.data) {
+    censoredWords.push(wordData.word);
+  }
+  console.log("Censored Words:");
+  console.log(censoredWords);
 }
-function getDroneConfig() {
-  return __async(this, null, function* () {
-    const droneConfigData = yield getSupabase().from("Drone_Config").select().eq("config_id", config.id).single();
-    droneConfig = {
-      config_id: droneConfigData.data.config_id,
-      drone_health: droneConfigData.data.drone_health,
-      speech_header: droneConfigData.data.speech_header,
-      speech_footer: droneConfigData.data.speech_footer,
-      action_header: droneConfigData.data.action_header,
-      action_footer: droneConfigData.data.action_footer,
-      whisper_header: droneConfigData.data.whisper_header,
-      whisper_footer: droneConfigData.data.whisper_footer,
-      loud_header: droneConfigData.data.loud_header,
-      loud_footer: droneConfigData.data.loud_footer
-    };
-    console.log("Drone Config:");
-    console.log(droneConfig);
-  });
+async function getDroneConfig() {
+  const droneConfigData = await (await getSupabase()).from("Drone_Config").select().eq("config_id", config.id).single();
+  droneConfig = {
+    config_id: droneConfigData.data.config_id,
+    drone_health: droneConfigData.data.drone_health,
+    speech_header: droneConfigData.data.speech_header,
+    speech_footer: droneConfigData.data.speech_footer,
+    action_header: droneConfigData.data.action_header,
+    action_footer: droneConfigData.data.action_footer,
+    whisper_header: droneConfigData.data.whisper_header,
+    whisper_footer: droneConfigData.data.whisper_footer,
+    loud_header: droneConfigData.data.loud_header,
+    loud_footer: droneConfigData.data.loud_footer
+  };
+  console.log("Drone Config:");
+  console.log(droneConfig);
 }
 function shouldApplyRules(rules_end, verbose = true) {
   if (verbose) {
@@ -22111,7 +21616,6 @@ function applyCensored(msg, censoredWords2, replacement, censored_end, verbose =
   return msg;
 }
 function applyDrone(msg, drone_end, speech_header, speech_footer, action_header, action_footer, whisper_header, whisper_footer, loud_header, loud_footer, drone_health, channelId, context = {}, verbose = true) {
-  var _a, _b, _c, _d, _e, _f;
   if (!shouldApplyDrone(drone_end, verbose)) {
     return { message: msg };
   }
@@ -22177,9 +21681,9 @@ function applyDrone(msg, drone_end, speech_header, speech_footer, action_header,
     }
     output += outword + " ";
   }
-  const previousMessage = (_a = context.previousMessage) != null ? _a : null;
-  const previousSenderId = (_d = (_c = context.previousSenderId) != null ? _c : (_b = previousMessage == null ? void 0 : previousMessage.author) == null ? void 0 : _b.id) != null ? _d : null;
-  const currentUserId = (_e = context.currentUserId) != null ? _e : null;
+  const previousMessage = context.previousMessage ?? null;
+  const previousSenderId = context.previousSenderId ?? previousMessage?.author?.id ?? null;
+  const currentUserId = context.currentUserId ?? null;
   if (verbose) {
     console.log("Previous message sent by: " + previousSenderId);
   }
@@ -22187,7 +21691,7 @@ function applyDrone(msg, drone_end, speech_header, speech_footer, action_header,
     console.log("Current user ID: " + currentUserId);
   }
   if (verbose) {
-    console.log("Previous message content: " + (previousMessage == null ? void 0 : previousMessage.content));
+    console.log("Previous message content: " + previousMessage?.content);
   }
   let header = speech_header;
   let footer = speech_footer;
@@ -22209,7 +21713,7 @@ function applyDrone(msg, drone_end, speech_header, speech_footer, action_header,
   }
   const continuingOwnBlock = previousSenderId != null && currentUserId != null && previousSenderId === currentUserId;
   const footerSuffix = "\n`" + footer + "`";
-  const previousHadMatchingFooter = (_f = previousMessage == null ? void 0 : previousMessage.content.endsWith(footerSuffix)) != null ? _f : false;
+  const previousHadMatchingFooter = previousMessage?.content.endsWith(footerSuffix) ?? false;
   const editPreviousMessage2 = continuingOwnBlock && previousHadMatchingFooter && previousMessage ? {
     channelId,
     messageId: previousMessage.id,
@@ -22264,15 +21768,14 @@ var logger = {
 };
 var unpatchSendMessage = null;
 function applyReplacements2(msg, channelId) {
-  var _a, _b, _c;
   const UserStore = (0, import_metro2.findByProps)("getCurrentUser", "getUser");
-  const currentUser = (_a = UserStore == null ? void 0 : UserStore.getCurrentUser) == null ? void 0 : _a.call(UserStore);
+  const currentUser = UserStore?.getCurrentUser?.();
   const previousMessage = getPreviousMessage(channelId);
   const previousSender = getPreviousMessageSender(channelId);
   const result = applyReplacements(msg, channelId, {
     previousMessage,
-    previousSenderId: (_b = previousSender == null ? void 0 : previousSender.id) != null ? _b : null,
-    currentUserId: (_c = currentUser == null ? void 0 : currentUser.id) != null ? _c : null
+    previousSenderId: previousSender?.id ?? null,
+    currentUserId: currentUser?.id ?? null
   });
   if (result.editPreviousMessage) {
     editPreviousMessage(result.editPreviousMessage.channelId, result.editPreviousMessage.messageId, result.editPreviousMessage.newContent);
@@ -22280,13 +21783,12 @@ function applyReplacements2(msg, channelId) {
   return result.message;
 }
 var plugin = {
-  onLoad: () => __async(null, null, function* () {
-    var _a;
+  onLoad: async () => {
     try {
       const UserStore = (0, import_metro2.findByProps)("getCurrentUser", "getUser");
-      const currentUser = (_a = UserStore == null ? void 0 : UserStore.getCurrentUser) == null ? void 0 : _a.call(UserStore);
+      const currentUser = UserStore?.getCurrentUser?.();
       if (currentUser) {
-        yield getData(currentUser.id, currentUser.username);
+        await getData(currentUser.id, currentUser.username);
       }
     } catch (error) {
       logger.log("Error in onLoad:", error);
@@ -22294,41 +21796,37 @@ var plugin = {
     const MessageActions = (0, import_metro2.findByProps)("sendMessage");
     if (MessageActions && MessageActions.sendMessage) {
       unpatchSendMessage = (0, import_patcher.before)("sendMessage", MessageActions, (args) => {
-        var _a2, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n;
         const [channelId, messageData] = args;
         const ChannelStore = (0, import_metro2.findByProps)("getChannel", "getDMFromUserId");
         const GuildStore = (0, import_metro2.findByProps)("getGuild", "getGuilds");
         const UserStore = (0, import_metro2.findByProps)("getCurrentUser", "getUser");
-        const channel = (_a2 = ChannelStore == null ? void 0 : ChannelStore.getChannel) == null ? void 0 : _a2.call(ChannelStore, channelId);
+        const channel = ChannelStore?.getChannel?.(channelId);
         if (!channel) return;
-        if ((_b = config) == null ? void 0 : _b.debug) logger.log("Channel object:", channel);
+        if (config?.debug) logger.log("Channel object:", channel);
         let nameToCheck = null;
         let idToCheck = null;
         if (channel.guild_id) {
-          const guild = GuildStore == null ? void 0 : GuildStore.getGuild(channel.guild_id);
-          if ((_c = config) == null ? void 0 : _c.debug) logger.log("Guild object:", guild);
-          nameToCheck = (_d = guild == null ? void 0 : guild.name) != null ? _d : null;
-          idToCheck = (_e = guild == null ? void 0 : guild.id) != null ? _e : null;
+          const guild = GuildStore?.getGuild(channel.guild_id);
+          if (config?.debug) logger.log("Guild object:", guild);
+          nameToCheck = guild?.name ?? null;
+          idToCheck = guild?.id ?? null;
         } else {
           if (channel.name) {
             nameToCheck = channel.name;
-          } else if (((_f = channel.recipients) == null ? void 0 : _f.length) > 0) {
+          } else if (channel.recipients?.length > 0) {
             const currentUser = UserStore.getCurrentUser();
-            const recipientNames = channel.recipients.filter((id) => id !== currentUser.id).map((id) => {
-              var _a3;
-              return (_a3 = UserStore.getUser(id)) == null ? void 0 : _a3.username;
-            }).filter(Boolean);
+            const recipientNames = channel.recipients.filter((id) => id !== currentUser.id).map((id) => UserStore.getUser(id)?.username).filter(Boolean);
             nameToCheck = recipientNames.join(", ");
-            idToCheck = (_g = channel.id) != null ? _g : null;
+            idToCheck = channel.id ?? null;
           }
         }
-        if ((_h = config) == null ? void 0 : _h.debug) logger.log(`Name to check against whitelist: "${nameToCheck}"`);
-        if ((_i = config) == null ? void 0 : _i.debug) logger.log(`ID to check against whitelist: "${idToCheck}"`);
+        if (config?.debug) logger.log(`Name to check against whitelist: "${nameToCheck}"`);
+        if (config?.debug) logger.log(`ID to check against whitelist: "${idToCheck}"`);
         if (whitelist.length > 0) {
           const nameMatches = !!nameToCheck && whitelist.some((item) => item.server_name === nameToCheck);
           const idMatches = !!idToCheck && whitelist.some((item) => item.discord_id === idToCheck);
           if ((nameToCheck || idToCheck) && !nameMatches && !idMatches) {
-            if ((_j = config) == null ? void 0 : _j.debug) {
+            if (config?.debug) {
               logger.log(
                 `No whitelist match for name "${nameToCheck}" or ID "${idToCheck}", skipping modifications.`
               );
@@ -22336,9 +21834,9 @@ var plugin = {
             return;
           }
         }
-        const channelName = (_m = (_l = (_k = channel == null ? void 0 : channel.name) == null ? void 0 : _k.toLowerCase) == null ? void 0 : _l.call(_k)) != null ? _m : "";
+        const channelName = channel?.name?.toLowerCase?.() ?? "";
         if (channelName.includes("sfw") && !channelName.includes("nsfw")) {
-          if ((_n = config) == null ? void 0 : _n.debug) logger.log("SFW channel detected, skipping modifications");
+          if (config?.debug) logger.log("SFW channel detected, skipping modifications");
           return;
         }
         logger.log("Intercepted message send: applying replacements");
@@ -22349,7 +21847,7 @@ var plugin = {
         return args;
       });
     }
-  }),
+  },
   onUnload: () => {
     if (unpatchSendMessage) {
       unpatchSendMessage();

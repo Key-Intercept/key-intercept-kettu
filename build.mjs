@@ -16,7 +16,7 @@ build({
   outfile: "dist/index.js",
   bundle: true,
   format: "cjs", 
-  target: "es2015", // Forces esbuild to downgrade EVERYTHING, including Supabase, to safe syntax
+  target: "es2020", // Forces esbuild to downgrade EVERYTHING, including Supabase, to safe syntax
   external: [
     "@vendetta/*", 
     "react", 
