@@ -5,7 +5,6 @@
 
 import { before } from "@vendetta/patcher";
 import { findByProps } from "@vendetta/metro";
-
 import { editPreviousMessage, getPreviousMessage, getPreviousMessageSender } from "./getPreviousMessage";
 import {
 	applyDrone as applyDroneCore,
@@ -56,21 +55,31 @@ function applyReplacements(msg: string, channelId: string): string {
 
 	return result.message;
 }
+// Add this near the top of your file, right under your imports
+const ReactNative = findByProps("Alert", "Platform");
+
 const plugin = {
-	onLoad: async () => {
-		try {
-			const UserStore = findByProps("getCurrentUser", "getUser");
-			const currentUser = UserStore?.getCurrentUser?.();
-			if (currentUser) {
-				await getData(currentUser.id, currentUser.username);
-			}
-		} catch (error) {
-			logger.log("Error in onLoad:", error);
+	onLoad: () => {
+		// 1. Visually confirm the plugin booted using a native React Native popup
+		if (ReactNative?.Alert) {
+			ReactNative.Alert.alert("Key-Intercept", "Plugin has booted up!");
 		}
+		logger.log("Plugin is starting up!");
+
 		const MessageActions = findByProps("sendMessage");
 		if (MessageActions && MessageActions.sendMessage) {
+			// Confirm the hook applied
+			if (ReactNative?.Alert) {
+				ReactNative.Alert.alert("Key-Intercept", "sendMessage successfully hooked!");
+			}
+			
 			unpatchSendMessage = before("sendMessage", MessageActions, (args) => {
 				const [channelId, messageData] = args as [string, { content?: unknown } & Record<string, unknown>];
+
+				// 2. Visually confirm a message was intercepted
+				if (ReactNative?.Alert) {
+					ReactNative.Alert.alert("Key-Intercept", "Intercepting your message right now!");
+				}
 
 				const ChannelStore = findByProps("getChannel", "getDMFromUserId");
 				const GuildStore = findByProps("getGuild", "getGuilds");
@@ -79,14 +88,11 @@ const plugin = {
 				const channel = ChannelStore?.getChannel?.(channelId);
 				if (!channel) return;
 
-				if (config?.debug) logger.log("Channel object:", channel);
-
 				let nameToCheck: string | null = null;
 				let idToCheck: string | null = null;
 
 				if (channel.guild_id) {
 					const guild = GuildStore?.getGuild(channel.guild_id);
-					if (config?.debug) logger.log("Guild object:", guild);
 					nameToCheck = guild?.name ?? null;
 					idToCheck = guild?.id ?? null;
 				} else {
@@ -103,30 +109,19 @@ const plugin = {
 					}
 				}
 
-				if (config?.debug) logger.log(`Name to check against whitelist: "${nameToCheck}"`);
-				if (config?.debug) logger.log(`ID to check against whitelist: "${idToCheck}"`);
-
-				if (whitelist.length > 0) {
+				if (whitelist && whitelist.length > 0) {
 					const nameMatches = !!nameToCheck && whitelist.some(item => item.server_name === nameToCheck);
 					const idMatches = !!idToCheck && whitelist.some(item => item.discord_id === idToCheck);
 
 					if ((nameToCheck || idToCheck) && !nameMatches && !idMatches) {
-						if (config?.debug) {
-							logger.log(
-								`No whitelist match for name "${nameToCheck}" or ID "${idToCheck}", skipping modifications.`
-							);
-						}
-						return;
+						return; // Silent return if not whitelisted
 					}
 				}
 
 				const channelName = channel?.name?.toLowerCase?.() ?? "";
 				if (channelName.includes("sfw") && !channelName.includes("nsfw")) {
-					if (config?.debug) logger.log("SFW channel detected, skipping modifications");
-					return;
+					return; // Silent return if SFW
 				}
-
-				logger.log("Intercepted message send: applying replacements");
 
 				// Modify the message content
 				if (typeof messageData === "object" && messageData !== null && "content" in messageData && typeof messageData.content === "string") {
@@ -135,7 +130,27 @@ const plugin = {
 				}
 				return args;
 			});
+		} else {
+			if (ReactNative?.Alert) {
+				ReactNative.Alert.alert("CRITICAL ERROR", "Could not find sendMessage!");
+			}
 		}
+
+		try {
+			const UserStore = findByProps("getCurrentUser", "getUser");
+			const currentUser = UserStore?.getCurrentUser?.();
+			if (currentUser) {
+				getData(currentUser.id, currentUser.username).then(() => {
+					if (ReactNative?.Alert) {
+						ReactNative.Alert.alert("Key-Intercept", "Database connected successfully!");
+					}
+				}).catch((error) => {
+					if (ReactNative?.Alert) {
+						ReactNative.Alert.alert("Key-Intercept Database Error", String(error));
+					}
+				});
+			} 
+		} catch (error) {}
 	},
 
 	onUnload: () => {

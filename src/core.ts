@@ -4,33 +4,44 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import { createClient } from "@supabase/supabase-js";
+import { PostgrestClient } from "@supabase/postgrest-js";
+import { RealtimeClient } from "@supabase/realtime-js";
 
 import { NormalizedString } from "./normalizedString";
 import { Config, DroneConfig, Rule, WhitelistItem } from "./types";
-const dummyStorage = {
-	getItem: (key: string) => null,
-	setItem: (key: string, value: string) => { },
-	removeItem: (key: string) => { }
-};
+
 let supabaseInstance: any = null;
+
 export async function getSupabase() {
 	if (!supabaseInstance) {
-		supabaseInstance = createClient(
-			"https://qjzgfwithyvmwctesnqs.supabase.co",
-			"sb_publishable_cxq8QZp9BDtjE4G5qiPCFA_lUZ4Cbdh",
-			{
-				auth: {
-					storage: dummyStorage,
-					persistSession: false,
-					autoRefreshToken: false,
-					detectSessionInUrl: false,
-				}
-			}
-		);
+		const SUPABASE_URL = "https://qjzgfwithyvmwctesnqs.supabase.co";
+		const SUPABASE_KEY = "sb_publishable_cxq8QZp9BDtjE4G5qiPCFA_lUZ4Cbdh";
+
+		// 1. Initialize the Database client
+		const postgrest = new PostgrestClient(`${SUPABASE_URL}/rest/v1`, {
+			headers: {
+				apikey: SUPABASE_KEY,
+				Authorization: `Bearer ${SUPABASE_KEY}`,
+			},
+		});
+
+		// 2. Initialize the Realtime WebSockets client
+		const realtime = new RealtimeClient(`${SUPABASE_URL}/realtime/v1`, {
+			params: {
+				apikey: SUPABASE_KEY,
+			},
+		});
+		realtime.connect();
+
+		// 3. Create a wrapper that matches your existing code's expected syntax
+		supabaseInstance = {
+			from: (table: string) => postgrest.from(table),
+			channel: (topic: string, params?: any) => realtime.channel(topic, params),
+		};
 	}
 	return supabaseInstance;
 }
+
 export let config: Config;
 export let droneConfig: DroneConfig;
 export let rules: Rule[] = [];
@@ -41,7 +52,7 @@ export let censoredWords: string[] = [];
 export type MessageLike = {
 	id: string;
 	content: string;
-	author?: {
+	user?: {
 		id?: string;
 	} | null;
 };
@@ -543,7 +554,7 @@ export function applyDrone(msg: string, drone_end: Date, speech_header: string, 
 	}
 
 	const previousMessage = context.previousMessage ?? null;
-	const previousSenderId = context.previousSenderId ?? previousMessage?.author?.id ?? null;
+	const previousSenderId = context.previousSenderId ?? previousMessage?.user?.id ?? null;
 	const currentUserId = context.currentUserId ?? null;
 
 	if (verbose) { console.log("Previous message sent by: " + previousSenderId) }

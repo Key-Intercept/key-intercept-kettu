@@ -21,5 +21,5 @@ export function editPreviousMessage(channelId: string, messageId: string, newCon
 
 export function getPreviousMessageSender(channelId: string) {
     const previousMessage = getPreviousMessage(channelId);
-    return previousMessage?.author ?? null;
+    return previousMessage?.user ?? null;
 }
