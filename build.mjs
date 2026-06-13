@@ -1,12 +1,12 @@
 import { build } from "esbuild";
 
-// This safely replaces the Node.js 'ws' package with the mobile phone's built-in WebSocket
 const shimWsPlugin = {
   name: "shim-ws",
   setup(build) {
     build.onResolve({ filter: /^ws$/ }, () => ({ path: "ws", namespace: "ws-shim" }));
     build.onLoad({ filter: /.*/, namespace: "ws-shim" }, () => ({
-      contents: "module.exports = window.WebSocket;",
+      // Safely check if WebSocket exists before assigning
+      contents: "module.exports = typeof WebSocket !== 'undefined' ? WebSocket : null;",
     }));
   },
 };
@@ -16,11 +16,18 @@ build({
   outfile: "dist/index.js",
   bundle: true,
   format: "cjs", 
-  target: "es2020", // Forces esbuild to downgrade EVERYTHING, including Supabase, to safe syntax
+  platform: "browser", 
+  target: "es2015", 
   external: [
     "@vendetta/*", 
     "react", 
     "react-native"
   ],
+  define: {
+    // These polyfills prevent Supabase from crashing React Native
+    "process.env.NODE_ENV": '"production"',
+    "process": JSON.stringify({ env: {} }),
+    "global": "window"
+  },
   plugins: [shimWsPlugin],
 }).catch(() => process.exit(1));

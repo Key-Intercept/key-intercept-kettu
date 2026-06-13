@@ -1,39 +1,29 @@
-/*
- * Vencord, a Discord client mod
- * Copyright (c) 2025 Vendicated and contributors
- * SPDX-License-Identifier: GPL-3.0-or-later
- */
-
 import { PostgrestClient } from "@supabase/postgrest-js";
 import { RealtimeClient } from "@supabase/realtime-js";
 
+// Keep your existing imports
 import { NormalizedString } from "./normalizedString";
 import { Config, DroneConfig, Rule, WhitelistItem } from "./types";
 
+export const version_number = "4.3.0";
+
+const SUPABASE_URL = "https://qjzgfwithyvmwctesnqs.supabase.co";
+const SUPABASE_KEY = "sb_publishable_cxq8QZp9BDtjE4G5qiPCFA_lUZ4Cbdh";
+
 let supabaseInstance: any = null;
 
-export async function getSupabase() {
+// Wrap the initialization so it doesn't execute on load
+function getSupabase() {
 	if (!supabaseInstance) {
-		const SUPABASE_URL = "https://qjzgfwithyvmwctesnqs.supabase.co";
-		const SUPABASE_KEY = "sb_publishable_cxq8QZp9BDtjE4G5qiPCFA_lUZ4Cbdh";
-
-		// 1. Initialize the Database client
 		const postgrest = new PostgrestClient(`${SUPABASE_URL}/rest/v1`, {
-			headers: {
-				apikey: SUPABASE_KEY,
-				Authorization: `Bearer ${SUPABASE_KEY}`,
-			},
+			headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
 		});
 
-		// 2. Initialize the Realtime WebSockets client
 		const realtime = new RealtimeClient(`${SUPABASE_URL}/realtime/v1`, {
-			params: {
-				apikey: SUPABASE_KEY,
-			},
+			params: { apikey: SUPABASE_KEY },
 		});
 		realtime.connect();
 
-		// 3. Create a wrapper that matches your existing code's expected syntax
 		supabaseInstance = {
 			from: (table: string) => postgrest.from(table),
 			channel: (topic: string, params?: any) => realtime.channel(topic, params),
@@ -41,6 +31,13 @@ export async function getSupabase() {
 	}
 	return supabaseInstance;
 }
+
+// These getters mimic your existing `supabase` object.
+// They intercept your calls and only initialize Supabase exactly when it is first needed!
+const supabase = {
+	get from() { return getSupabase().from; },
+	get channel() { return getSupabase().channel; }
+};
 
 export let config: Config;
 export let droneConfig: DroneConfig;
@@ -52,7 +49,7 @@ export let censoredWords: string[] = [];
 export type MessageLike = {
 	id: string;
 	content: string;
-	user?: {
+	author?: {
 		id?: string;
 	} | null;
 };
@@ -76,37 +73,37 @@ export type DroneRenderResult = {
 
 export async function createNewUser(userID: string, username: string): Promise<void> {
 	console.log("creating new user...");
-	await (await getSupabase()).from("profiles").insert({ "display_name": username, "discord_id": userID });
+	await supabase.from("profiles").insert({ "display_name": username, "discord_id": userID });
 }
 
 export async function createNewConfig(userID: string): Promise<void> {
 	console.log("creating new config...");
-	const configData = await (await getSupabase()).from("Config").insert({}).select().single();
-	await (await getSupabase()).from("Sub_Config_Access").insert({ "sub_id": userID, "config_id": configData.data!.id });
-	await (await getSupabase()).from("Drone_Config").insert({ "config_id": configData.data!.id, "speech_header": "This Drone Says:", "speech_footer": "It Obeys", "action_header": "Drone::Action::Performs(", "action_footer": ");", "whisper_header": "Drone Initiating Quiet Mode", "whisper_footer": "Normal Volume Restored", "loud_header": "Volume.set(500);", "loud_footer": "Volume.set(100)" });
+	const configData = await supabase.from("Config").insert({}).select().single();
+	await supabase.from("Sub_Config_Access").insert({ "sub_id": userID, "config_id": configData.data!.id });
+	await supabase.from("Drone_Config").insert({ "config_id": configData.data!.id, "speech_header": "This Drone Says:", "speech_footer": "It Obeys", "action_header": "Drone::Action::Performs(", "action_footer": ");", "whisper_header": "Drone Initiating Quiet Mode", "whisper_footer": "Normal Volume Restored", "loud_header": "Volume.set(500);", "loud_footer": "Volume.set(100)" });
 }
 
 export async function getData(userID: string, username: string) {
 	const currentUserId = userID;
 	console.log(currentUserId);
-	let subIDData = await (await getSupabase()).from("profiles").select("id").eq("discord_id", currentUserId).single();
+	let subIDData = await supabase.from("profiles").select("id").eq("discord_id", currentUserId).single();
 	if (subIDData.data === null) {
 		await createNewUser(userID, username);
-		subIDData = await (await getSupabase()).from("profiles").select("id").eq("discord_id", currentUserId).single();
+		subIDData = await supabase.from("profiles").select("id").eq("discord_id", currentUserId).single();
 	}
 	console.log(subIDData);
 	const subID = subIDData.data!.id;
 	console.log(subID);
-	let subData = await (await getSupabase()).from("Sub_Config_Access").select().eq("sub_id", subID);
+	let subData = await supabase.from("Sub_Config_Access").select().eq("sub_id", subID);
 	console.log(subData);
 	if (subData.data?.length === 0) {
 		await createNewConfig(subID!);
-		subData = await (await getSupabase()).from("Sub_Config_Access").select().eq("sub_id", subID);
+		subData = await supabase.from("Sub_Config_Access").select().eq("sub_id", subID);
 	}
 	config = {} as Config;
 	config.id = subData.data![0].config_id;
 
-	(await getSupabase()).channel("public:config").on("postgres_changes", {
+	supabase.channel("public:config").on("postgres_changes", {
 		event: "*",
 		schema: "public",
 		table: "Config"
@@ -114,7 +111,7 @@ export async function getData(userID: string, username: string) {
 		await getConfig();
 	}).subscribe();
 
-	(await getSupabase()).channel("public:rules").on("postgres_changes", {
+	supabase.channel("public:rules").on("postgres_changes", {
 		event: "*",
 		schema: "public",
 		table: "Rules"
@@ -122,7 +119,7 @@ export async function getData(userID: string, username: string) {
 		await getRules();
 	}).subscribe();
 
-	(await getSupabase()).channel("public:server_whitelist_items").on("postgres_changes", {
+	supabase.channel("public:server_whitelist_items").on("postgres_changes", {
 		event: "*",
 		schema: "public",
 		table: "Server_Whitelist_Items"
@@ -130,7 +127,7 @@ export async function getData(userID: string, username: string) {
 		await getWhitelist();
 	}).subscribe();
 
-	(await getSupabase()).channel("public:pet_type_words").on("postgres_changes", {
+	supabase.channel("public:pet_type_words").on("postgres_changes", {
 		event: "*",
 		schema: "public",
 		table: "Config"
@@ -139,7 +136,7 @@ export async function getData(userID: string, username: string) {
 		await getPetWords();
 	}).subscribe();
 
-	(await getSupabase()).channel("public:censored_words").on("postgres_changes", {
+	supabase.channel("public:censored_words").on("postgres_changes", {
 		event: "*",
 		schema: "public",
 		table: "Censored_Words"
@@ -147,7 +144,7 @@ export async function getData(userID: string, username: string) {
 		await getCensoredWords();
 	}).subscribe();
 
-	(await getSupabase()).channel("public:drone_config").on("postgres_changes", {
+	supabase.channel("public:drone_config").on("postgres_changes", {
 		event: "*",
 		schema: "public",
 		table: "Drone_Config"
@@ -164,7 +161,7 @@ export async function getData(userID: string, username: string) {
 }
 
 export async function getConfig() {
-	const configData = await (await getSupabase()).from("Config").select().eq("id", config.id).single();
+	const configData = await supabase.from("Config").select().eq("id", config.id).single();
 	config.id = configData.data!.id;
 	config.rules_end = new Date(configData.data!.rules_end);
 	config.gag_end = new Date(configData.data!.gag_end);
@@ -184,14 +181,14 @@ export async function getConfig() {
 }
 
 export async function getRules() {
-	const rulesData = await (await getSupabase()).from("Rules").select().eq("config_id", config.id).order("id", { ascending: false });
+	const rulesData = await supabase.from("Rules").select().eq("config_id", config.id).order("id", { ascending: false });
 	rules = rulesData.data!;
 	console.log("Rules:");
 	console.log(rules);
 }
 
 export async function getWhitelist() {
-	const whitelistData = await (await getSupabase()).from("Server_Whitelist_Items").select().eq("config_id", config.id);
+	const whitelistData = await supabase.from("Server_Whitelist_Items").select().eq("config_id", config.id);
 	whitelist = whitelistData.data!.map((item: any) => ({
 		id: item.id,
 		config_id: item.config_id,
@@ -203,7 +200,7 @@ export async function getWhitelist() {
 }
 
 export async function getPetWords() {
-	const petWordsData = await (await getSupabase()).from("Pet_Type_Words").select().eq("pet_type", config.pet_type);
+	const petWordsData = await supabase.from("Pet_Type_Words").select().eq("pet_type", config.pet_type);
 	petWords = [];
 	for (const wordData of petWordsData.data!) {
 		petWords.push(wordData.word);
@@ -213,7 +210,7 @@ export async function getPetWords() {
 }
 
 export async function getCensoredWords() {
-	const censoredWordsData = await (await getSupabase()).from("Censored_Words").select().eq("config_id", config.id);
+	const censoredWordsData = await supabase.from("Censored_Words").select().eq("config_id", config.id);
 	censoredWords = [];
 	for (const wordData of censoredWordsData.data!) {
 		censoredWords.push(wordData.word);
@@ -223,7 +220,7 @@ export async function getCensoredWords() {
 }
 
 export async function getDroneConfig() {
-	const droneConfigData = await (await getSupabase()).from("Drone_Config").select().eq("config_id", config.id).single();
+	const droneConfigData = await supabase.from("Drone_Config").select().eq("config_id", config.id).single();
 	droneConfig = {
 		config_id: droneConfigData.data!.config_id as bigint,
 		drone_health: droneConfigData.data!.drone_health as number,
@@ -554,7 +551,7 @@ export function applyDrone(msg: string, drone_end: Date, speech_header: string, 
 	}
 
 	const previousMessage = context.previousMessage ?? null;
-	const previousSenderId = context.previousSenderId ?? previousMessage?.user?.id ?? null;
+	const previousSenderId = context.previousSenderId ?? previousMessage?.author?.id ?? null;
 	const currentUserId = context.currentUserId ?? null;
 
 	if (verbose) { console.log("Previous message sent by: " + previousSenderId) }
