@@ -16,21 +16,26 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9 # Uses the latest major stable version of pnpm
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # Using LTS Node
-          cache: 'npm'
+          node-version: '20'
+          cache: 'pnpm' # Configures setup-node to cache pnpm store directories
 
       - name: Install Dependencies
-        run: npm install
-        
+        run: pnpm install --no-frozen-lockfile # Reconciles package.json even if pnpm-lock.yaml is missing or out of sync
+
       - name: Build Plugin
-        run: npm run build # Triggers node build.mjs to generate your dist/ folder
+        run: pnpm run build # Triggers your build.mjs script via pnpm
 
       - name: Deploy to GitHub Pages Branch
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: dist # Deploys only the compiled output inside dist/
-          branch: gh-pages # Destined branch name for GitHub Pages to read from
-          clean: true # Automatically removes old/stale assets
+          folder: dist
+          branch: gh-pages
+          clean: true
