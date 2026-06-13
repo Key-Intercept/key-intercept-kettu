@@ -23,7 +23,7 @@ export class NormalizedString {
         const regexWithIndices = new RegExp(regex, 'gid');
         let match;
         while ((match = regexWithIndices.exec(this.nfkdStr)) != null) {
-            const indices = match.indices!;
+            const indices = (match as any).indices!;
             let postStart = indices[0]![0];
             let postEnd = indices[0]![1];
 
