@@ -3,7 +3,6 @@
  * A text transformation plugin for Kettu
  */
 
-// These will be set by onLoad when they're available
 let before: any = null;
 let findByProps: any = null;
 
@@ -21,7 +20,6 @@ const logger = {
 		try {
 			console.log("[key-intercept]", ...args);
 		} catch (e) {
-			// Silently ignore console errors
 		}
 	},
 };
