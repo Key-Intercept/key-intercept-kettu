@@ -1,635 +1,257 @@
-import { PostgrestClient } from "@supabase/postgrest-js";
-import { RealtimeClient } from "@supabase/realtime-js";
-
-// Keep your existing imports
-import { NormalizedString } from "./normalizedString";
-import { Config, DroneConfig, Rule, WhitelistItem } from "./types";
-
-export const version_number = "4.3.0";
-
-const SUPABASE_URL = "https://qjzgfwithyvmwctesnqs.supabase.co";
-const SUPABASE_KEY = "sb_publishable_cxq8QZp9BDtjE4G5qiPCFA_lUZ4Cbdh";
-
-let supabaseInstance: any = null;
-
-// Wrap the initialization so it doesn't execute on load
-function getSupabase() {
-	if (!supabaseInstance) {
-		const postgrest = new PostgrestClient(`${SUPABASE_URL}/rest/v1`, {
-			headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
-		});
-
-		const realtime = new RealtimeClient(`${SUPABASE_URL}/realtime/v1`, {
-			params: { apikey: SUPABASE_KEY },
-		});
-		realtime.connect();
-
-		supabaseInstance = {
-			from: (table: string) => postgrest.from(table),
-			channel: (topic: string, params?: any) => realtime.channel(topic, params),
-		};
-	}
-	return supabaseInstance;
-}
-
-// These getters mimic your existing `supabase` object.
-// They intercept your calls and only initialize Supabase exactly when it is first needed!
-const supabase = {
-	get from() { return getSupabase().from; },
-	get channel() { return getSupabase().channel; }
-};
-
-export let config: Config;
-export let droneConfig: DroneConfig;
-export let rules: Rule[] = [];
-export let whitelist: WhitelistItem[] = [];
-export let petWords: string[] = [];
-export let censoredWords: string[] = [];
-
-export type MessageLike = {
-	id: string;
-	content: string;
-	author?: {
-		id?: string;
-	} | null;
-};
-
 export type DroneContext = {
-	previousMessage?: MessageLike | null;
-	previousSenderId?: string | null;
-	currentUserId?: string | null;
+    previousMessage?: any | null;
+    previousSenderId?: string | null;
+    currentUserId?: string | null;
 };
 
 export type DroneEditRequest = {
-	channelId: string;
-	messageId: string;
-	newContent: string;
+    channelId: string;
+    messageId: string;
+    newContent: string;
 };
 
-export type DroneRenderResult = {
-	message: string;
-	editPreviousMessage?: DroneEditRequest;
-};
+class IndexRange { constructor(public start: number, public stop: number) {} }
+class IndexMatch { constructor(public preNormalized: IndexRange, public postNormalized: IndexRange) {} }
 
-export async function createNewUser(userID: string, username: string): Promise<void> {
-	console.log("creating new user...");
-	await supabase.from("profiles").insert({ "display_name": username, "discord_id": userID });
+export class NormalizedString {
+    str: string;
+    verbose: boolean;
+    nfkdStr: string = "";
+    indices: IndexMatch[] = [];
+
+    constructor(str: string, verbose: boolean) {
+        this.str = str;
+        this.verbose = verbose;
+        this.rebuildNFKDMappings();
+    }
+
+    replace(regex: string | RegExp, fn: (match: string) => string): string {
+        const regexWithIndices = new RegExp(regex, "gid");
+        let match;
+        while ((match = regexWithIndices.exec(this.nfkdStr)) != null) {
+            // @ts-ignore
+            const indices = match.indices;
+            let preRange = this.convertToPreNormalizedIndices(indices[0][0], indices[0][1]);
+            this.str = this.str.substring(0, preRange.start) + fn(match[0]) + this.str.substring(preRange.stop);
+            this.rebuildNFKDMappings();
+        }
+        return this.str;
+    }
+
+    rebuildNFKDMappings() {
+        this.nfkdStr = "";
+        this.indices = [];
+        for (let i = 0; i < this.str.length; i++) {
+            let char = this.str[i];
+            let preIndx = [i, i + 1];
+            if (char.charCodeAt(0) >= 55296 && char.charCodeAt(0) <= 57343) {
+                char = this.str.substring(i, i + 2);
+                preIndx[1] = i + 2;
+                i++;
+            }
+            const nfkdChar = char.normalize("NFKD");
+            let postIndx = [this.nfkdStr.length, this.nfkdStr.length + nfkdChar.length];
+            this.indices.push(new IndexMatch(new IndexRange(preIndx[0], preIndx[1]), new IndexRange(postIndx[0], postIndx[1])));
+            this.nfkdStr += nfkdChar;
+        }
+    }
+
+    convertToPreNormalizedIndices(postStart: number, postEnd: number): IndexRange {
+        let preStart = -1, preEnd = -1;
+        for (let index of this.indices) {
+            if (preStart == -1 && index.postNormalized.start <= postStart && index.postNormalized.stop > postStart) preStart = index.preNormalized.start;
+            if (preEnd == -1 && index.postNormalized.start < postEnd && index.postNormalized.stop >= postEnd) preEnd = index.preNormalized.stop;
+        }
+        return new IndexRange(preStart, preEnd);
+    }
 }
 
-export async function createNewConfig(userID: string): Promise<void> {
-	console.log("creating new config...");
-	const configData = await supabase.from("Config").insert({}).select().single();
-	await supabase.from("Sub_Config_Access").insert({ "sub_id": userID, "config_id": configData.data!.id });
-	await supabase.from("Drone_Config").insert({ "config_id": configData.data!.id, "speech_header": "This Drone Says:", "speech_footer": "It Obeys", "action_header": "Drone::Action::Performs(", "action_footer": ");", "whisper_header": "Drone Initiating Quiet Mode", "whisper_footer": "Normal Volume Restored", "loud_header": "Volume.set(500);", "loud_footer": "Volume.set(100)" });
+export function word_is_link(word: string): boolean {
+    return (word[0] == "h" && word[1] == "t" && word[2] == "t" && word[3] == "p");
 }
 
-export async function getData(userID: string, username: string) {
-	const currentUserId = userID;
-	console.log(currentUserId);
-	let subIDData = await supabase.from("profiles").select("id").eq("discord_id", currentUserId).single();
-	if (subIDData.data === null) {
-		await createNewUser(userID, username);
-		subIDData = await supabase.from("profiles").select("id").eq("discord_id", currentUserId).single();
-	}
-	console.log(subIDData);
-	const subID = subIDData.data!.id;
-	console.log(subID);
-	let subData = await supabase.from("Sub_Config_Access").select().eq("sub_id", subID);
-	console.log(subData);
-	if (subData.data?.length === 0) {
-		await createNewConfig(subID!);
-		subData = await supabase.from("Sub_Config_Access").select().eq("sub_id", subID);
-	}
-	config = {} as Config;
-	config.id = subData.data![0].config_id;
-
-	supabase.channel("public:config").on("postgres_changes", {
-		event: "*",
-		schema: "public",
-		table: "Config"
-	}, async () => {
-		await getConfig();
-	}).subscribe();
-
-	supabase.channel("public:rules").on("postgres_changes", {
-		event: "*",
-		schema: "public",
-		table: "Rules"
-	}, async () => {
-		await getRules();
-	}).subscribe();
-
-	supabase.channel("public:server_whitelist_items").on("postgres_changes", {
-		event: "*",
-		schema: "public",
-		table: "Server_Whitelist_Items"
-	}, async () => {
-		await getWhitelist();
-	}).subscribe();
-
-	supabase.channel("public:pet_type_words").on("postgres_changes", {
-		event: "*",
-		schema: "public",
-		table: "Config"
-	}, async () => {
-		await getConfig();
-		await getPetWords();
-	}).subscribe();
-
-	supabase.channel("public:censored_words").on("postgres_changes", {
-		event: "*",
-		schema: "public",
-		table: "Censored_Words"
-	}, async () => {
-		await getCensoredWords();
-	}).subscribe();
-
-	supabase.channel("public:drone_config").on("postgres_changes", {
-		event: "*",
-		schema: "public",
-		table: "Drone_Config"
-	}, async () => {
-		await getDroneConfig();
-	}).subscribe();
-
-	await getConfig();
-	await getRules();
-	await getWhitelist();
-	await getPetWords();
-	await getCensoredWords();
-	await getDroneConfig();
+function applyRules(msg: string, rules: any[], rules_end: Date): string {
+    if (Date.now() > rules_end.getTime()) return msg;
+    let output = msg.normalize("NFKC");
+    rules.sort((a, b) => a.order - b.order);
+    for (const rule of rules) {
+        if (!rule.enabled) continue;
+        const temp = new RegExp(rule.rule_regex.toString().replaceAll("\\\\", "\\"));
+        const matchCallback = (match: string): string => {
+            if (Math.random() > rule.chance_to_apply) return match;
+            return match.replace(new RegExp(temp, "i"), rule.rule_replacement);
+        };
+        if (rule.regex_normalize) {
+            output = new NormalizedString(output, false).replace(new RegExp(temp, "gi"), matchCallback);
+        } else {
+            output = output.replace(new RegExp(temp, "gi"), matchCallback);
+        }
+    }
+    return output;
 }
 
-export async function getConfig() {
-	const configData = await supabase.from("Config").select().eq("id", config.id).single();
-	config.id = configData.data!.id;
-	config.rules_end = new Date(configData.data!.rules_end);
-	config.gag_end = new Date(configData.data!.gag_end);
-	config.pet_end = new Date(configData.data!.pet_end);
-	config.bimbo_end = new Date(configData.data!.bimbo_end);
-	config.bimbo_word_length = configData.data!.bimbo_word_length;
-	config.pet_amount = configData.data!.pet_amount;
-	config.horny_end = new Date(configData.data!.horny_end);
-	config.pet_type = configData.data!.pet_type;
-	config.drone_end = new Date(configData.data!.drone_end);
-	config.debug = configData.data!.debug;
-	config.uwu_end = new Date(configData.data!.uwu_end);
-	config.censored_end = new Date(configData.data!.censored_end);
-	config.censored_replacement = configData.data!.censored_replacement;
-	console.log("Config:");
-	console.log(config);
+function applyGag(msg: string, gag_end: Date): string {
+    if (Date.now() > gag_end.getTime()) return msg;
+    let output = "";
+    let inEmote = false;
+    const remainChars = ["a", "e", "i", "o", "u", "g", "h", "A", "E", "I", "O", "U", "G", "H", "?", "!", ".", ",", ":", ";", "#", "*", "-", "(", ")", "~"];
+    for (const word of msg.split(" ")) {
+        let outword = "";
+        if (word_is_link(word)) { outword = word + " "; continue; }
+        for (const char of word) {
+            if (char === ":" && !inEmote) { inEmote = true; outword += char; continue; } 
+            else if (char === ":" && inEmote) { inEmote = false; outword += char; continue; }
+            if (inEmote) { outword += char; continue; }
+            if (remainChars.includes(char)) { outword += char; } 
+            else { outword += (!(char.charCodeAt(0) >= 97 && char.charCodeAt(0) <= 122)) ? ["G", "H"][Math.floor(Math.random() * 2)] : ["g", "h"][Math.floor(Math.random() * 2)]; }
+        }
+        output += outword + " ";
+    }
+    return output;
 }
 
-export async function getRules() {
-	const rulesData = await supabase.from("Rules").select().eq("config_id", config.id).order("id", { ascending: false });
-	rules = rulesData.data!;
-	console.log("Rules:");
-	console.log(rules);
+function applyPet(msg: string, pet_end: Date, pet_amount: number, pet_words: string[]) {
+    if (Date.now() > pet_end.getTime() || pet_amount === 0 || !pet_words.length) return msg;
+    let output = "";
+    for (const word of msg.split(" ")) {
+        if (word_is_link(word)) { output += word + " "; continue; }
+        if (word[0] === ":" && word[word.length - 1] === ":") { output += word + " "; continue; }
+        if (Math.random() < pet_amount) { output += pet_words[Math.floor(Math.random() * pet_words.length)]; } 
+        else { output += word; }
+        output += " ";
+    }
+    return output;
 }
 
-export async function getWhitelist() {
-	const whitelistData = await supabase.from("Server_Whitelist_Items").select().eq("config_id", config.id);
-	whitelist = whitelistData.data!.map((item: any) => ({
-		id: item.id,
-		config_id: item.config_id,
-		server_name: item.server_name,
-		discord_id: item.discord_id,
-	}));
-	console.log("Whitelist:");
-	console.log(whitelist);
+function applyBimbo(msg: string, bimbo_end: Date, bimbo_word_length: number) {
+    if (Date.now() > bimbo_end.getTime()) return msg;
+    let output = "";
+    const pronouns = ["i", "you", "he", "she", "it", "we", "they", "is"];
+    const likeChance = 0.1;
+    const gargle_words = ["like", "hehe", "uhh", "totally", "so dumbb", "ummm", "hhhhh"];
+    for (const word of msg.split(" ")) {
+        let changed = false;
+        if (!word_is_link(word)) {
+            if (pronouns.includes(word.toLowerCase())) { output += word + " like totally "; changed = true; }
+            if (word.length > bimbo_word_length) { return output + word.substring(0, bimbo_word_length - 2) + "uhhhh long words harddd hehe"; }
+        }
+        if (!changed) { output += word + " "; }
+        if (Math.random() < likeChance && !word_is_link(word)) { output += gargle_words[Math.floor(Math.random() * (gargle_words.length - 1))] + " "; }
+    }
+    return output;
 }
 
-export async function getPetWords() {
-	const petWordsData = await supabase.from("Pet_Type_Words").select().eq("pet_type", config.pet_type);
-	petWords = [];
-	for (const wordData of petWordsData.data!) {
-		petWords.push(wordData.word);
-	}
-	console.log("Pet words:");
-	console.log(petWords);
+function applyHorny(msg: string, horny_end: Date) {
+    if (Date.now() > horny_end.getTime()) return msg;
+    const horny_words = ["hmmph", "nngh", "ahhh", "ooh", "oohh", "mmm", "hehe", "hehehe", "heheh", "eheh", "ehehe", "eheheh", "guhh", "pleasee", "need to cumm", "oh goshh", "ohhh", "ahhh", "cummm", "gggg"];
+    let output = "";
+    for (const word of msg.split(" ")) {
+        if (!word_is_link(word) && Math.random() < 0.75) { output += horny_words[Math.floor(Math.random() * (horny_words.length - 1))] + " "; }
+        output += word + " ";
+    }
+    return output;
 }
 
-export async function getCensoredWords() {
-	const censoredWordsData = await supabase.from("Censored_Words").select().eq("config_id", config.id);
-	censoredWords = [];
-	for (const wordData of censoredWordsData.data!) {
-		censoredWords.push(wordData.word);
-	}
-	console.log("Censored Words:");
-	console.log(censoredWords);
+function applyUWU(msg: string, uwu_end: Date) {
+    if (Date.now() > uwu_end.getTime()) return msg;
+    let output = "";
+    for (let word of msg.split(" ")) {
+        if (word_is_link(word)) { output += word + " "; continue; }
+        word = word.replace(new RegExp("th", "gi"), "d").replace(new RegExp("r|l", "gi"), "w").replace(new RegExp("u", "gi"), "uw").replace(new RegExp("n([aeiou])", "gi"), "ny$1").replace(new RegExp("ove", "gi"), "uv");
+        output += word + " "
+    }
+    return output;
 }
 
-export async function getDroneConfig() {
-	const droneConfigData = await supabase.from("Drone_Config").select().eq("config_id", config.id).single();
-	droneConfig = {
-		config_id: droneConfigData.data!.config_id as bigint,
-		drone_health: droneConfigData.data!.drone_health as number,
-		speech_header: droneConfigData.data!.speech_header as string,
-		speech_footer: droneConfigData.data!.speech_footer as string,
-		action_header: droneConfigData.data!.action_header as string,
-		action_footer: droneConfigData.data!.action_footer as string,
-		whisper_header: droneConfigData.data!.whisper_header as string,
-		whisper_footer: droneConfigData.data!.whisper_footer as string,
-		loud_header: droneConfigData.data!.loud_header as string,
-		loud_footer: droneConfigData.data!.loud_footer as string,
-	}
-	console.log("Drone Config:");
-	console.log(droneConfig);
+function applyCensored(msg: string, censoredWords: string[], replacement: string, censored_end: Date) {
+    if (Date.now() > censored_end.getTime() || !censoredWords.length) return msg;
+    for (let word of censoredWords) {
+        let replacementText = "";
+        for (let i = 0; i < word.length; i += replacement.length) { replacementText += replacement }
+        msg = msg.replace(new RegExp(word, "gi"), replacementText);
+    }
+    return msg;
 }
 
-export function shouldApplyRules(rules_end: Date, verbose: boolean = true): boolean {
-	if (verbose) { console.log(Date.now() <= rules_end.getTime() ? "Should apply rules" : "Should not apply rules"); }
-	return Date.now() <= rules_end.getTime();
+function applyDrone(msg: string, drone_end: Date, config: any, channelId: string, context: DroneContext = {}): { message: string, editPreviousMessage?: DroneEditRequest } {
+    if (Date.now() > drone_end.getTime()) return { message: msg };
+    if (config.drone_health < 10) return { message: "`This Drone haaaaas receieved bzzzzt, ppplease provide repaiirs using beep '/repair', tthank youu. Returned Error: 0x7547372482`" };
+
+    let containsLink = false;
+    for (const word of msg.split(" ")) { if (word_is_link(word)) containsLink = true; }
+
+    let output = "";
+    if (!containsLink) {
+        msg = msg.replace(new RegExp("\\bMe\\b", "gi"), "This Drone").replace(new RegExp("\\bMy\\b", "gi"), "Its'").replace(new RegExp("\\bI am\\b", "gi"), "It is").replace(new RegExp("\\bI(')?m\\b", "gi"), "It is").replace(new RegExp("\\bI\\b", "gi"), "This Drone");
+    }
+
+    let ignoreFirstOne = false;
+    for (const word of msg.split(" ")) {
+        if (ignoreFirstOne) { ignoreFirstOne = false; continue; }
+        if (!word_is_link(word) && Math.random() > (config.drone_health / 100)) { output += Math.random() > 0.5 ? "`beep` " : "`bzzzt` "; }
+        output += word + " ";
+    }
+
+    const tempOutput = output;
+    output = "";
+    let lastTriggered = 0;
+
+    for (const word of tempOutput.split(" ")) {
+        let outword = "";
+        if (!word_is_link(word)) {
+            for (const char of word) {
+                outword += char;
+                lastTriggered += 1;
+                if (Math.random() + (lastTriggered / 100) - 1 > (config.drone_health / 100) && char !== "`") {
+                    lastTriggered = 0;
+                    for (let i = 0; i < Math.floor(Math.random() * 10); i++) { outword += char; }
+                }
+            }
+        } else { outword = word; }
+        output += outword + " ";
+    }
+
+    const previousMessage = context.previousMessage ?? null;
+    const previousSenderId = context.previousSenderId ?? previousMessage?.author?.id ?? null;
+    const currentUserId = context.currentUserId ?? null;
+
+    let header = config.speech_header;
+    let footer = config.speech_footer;
+
+    if (msg.startsWith("**")) { header = config.loud_header; footer = config.loud_footer; }
+    else if (msg.startsWith("*")) { header = config.action_header; footer = config.action_footer; }
+    else if (msg.startsWith("-#")) { header = config.whisper_header; footer = config.whisper_footer; }
+
+    const continuingOwnBlock = previousSenderId != null && currentUserId != null && previousSenderId === currentUserId;
+    const footerSuffix = "\n`" + footer + "`";
+    const previousHadMatchingFooter = previousMessage?.content.endsWith(footerSuffix) ?? false;
+    const editPreviousMessage = continuingOwnBlock && previousHadMatchingFooter && previousMessage ? { channelId, messageId: previousMessage.id, newContent: previousMessage.content.replace(footerSuffix, "") } : undefined;
+
+    const formattedBody = output.trimEnd();
+    let formattedMessage = formattedBody + footerSuffix;
+    if (!continuingOwnBlock || !previousHadMatchingFooter) { formattedMessage = "`" + header + "`\n" + formattedMessage; }
+
+    return { message: formattedMessage, editPreviousMessage };
 }
 
-export function shouldApplyGag(gag_end: Date, verbose: boolean = true): boolean {
-	if (verbose) { console.log(Date.now() <= gag_end.getTime() ? "Should apply gag" : "Should not apply gag"); }
-	return Date.now() <= gag_end.getTime();
-}
+// Master wrapper
+export function applyAllReplacements(msg: string, channelId: string, context: DroneContext, state: any): { message: string, editPreviousMessage?: DroneEditRequest } {
+    if (!state.config) return { message: msg };
+    
+    msg = applyRules(msg, state.rules, state.config.rules_end);
+    msg = applyUWU(msg, state.config.uwu_end);
+    msg = applyHorny(msg, state.config.horny_end);
+    msg = applyPet(msg, state.config.pet_end, state.config.pet_amount, state.petWords);
+    msg = applyBimbo(msg, state.config.bimbo_end, state.config.bimbo_word_length);
+    msg = applyCensored(msg, state.censoredWords, state.config.censored_replacement, state.config.censored_end);
+    msg = applyGag(msg, state.config.gag_end);
 
-export function shouldApplyPet(pet_end: Date, pet_amount: number, verbose: boolean = true): boolean {
-	if (verbose) { console.log(Date.now() <= pet_end.getTime() ? "Should apply pet" : "Should not apply pet"); }
-	return Date.now() <= pet_end.getTime() && pet_amount !== 0;
-}
-
-export function shouldApplyBimbo(bimbo_end: Date, verbose: boolean = true): boolean {
-	if (verbose) { console.log(Date.now() <= bimbo_end.getTime() ? "Should apply bimbo" : "Should not apply bimbo"); }
-	return Date.now() <= bimbo_end.getTime();
-}
-
-export function shouldApplyHorny(horny_end: Date, verbose: boolean = true): boolean {
-	if (verbose) { console.log(Date.now() <= horny_end.getTime() ? "Should apply horny" : "Should not apply horny"); }
-	return Date.now() <= horny_end.getTime();
-}
-
-export function shouldApplyDrone(drone_end: Date, verbose: boolean = true): boolean {
-	if (verbose) { console.log(Date.now() <= drone_end.getTime() ? "Should apply drone" : "Should not apply drone"); }
-	return Date.now() <= drone_end.getTime();
-}
-
-export function shouldApplyUWU(uwu_end: Date, verbose: boolean = true): boolean {
-	if (verbose) { console.log(Date.now() <= uwu_end.getTime() ? "Should apply uwu" : "Should not apply uwu"); }
-	return Date.now() <= uwu_end.getTime();
-}
-
-export function shouldApplyCensored(censored_end: Date, verbose: boolean = true): boolean {
-	if (verbose) { console.log(Date.now() <= censored_end.getTime() ? "Should apply censored" : "Should not apply censored"); }
-	return Date.now() <= censored_end.getTime();
-}
-
-export function applyRules(msg: string, rules: Rule[], rules_end: Date, verbose: boolean = true): string {
-	if (!shouldApplyRules(rules_end, verbose)) {
-		return msg;
-	}
-	let output = msg.normalize("NFKC");
-	rules.sort((a, b) => a.order - b.order);
-	for (const rule of rules) {
-		if (!rule.enabled) {
-			if (verbose) { console.log("Rule disabled, skipping"); }
-			continue;
-		}
-		const temp = new RegExp(rule.rule_regex.toString().replace(/\\\\/g, "\\"));
-		const matchCallback = (match: string, ..._args: unknown[]): string => {
-			if (Math.random() > rule.chance_to_apply) {
-				if (verbose) { console.log(`Skipping match ${rule.chance_to_apply}`); }
-				return match;
-			}
-			if (verbose) { console.log(`Rule Applied ${match.replace(new RegExp(temp, "i"), rule.rule_replacement)}`); }
-			return match.replace(new RegExp(temp, "i"), rule.rule_replacement);
-		};
-
-		if (rule.regex_normalize) {
-			if (verbose) { console.log("Using input normalization"); }
-			output = new NormalizedString(output, verbose).replace(new RegExp(temp, "gi"), matchCallback);
-		} else {
-			output = output.replace(new RegExp(temp, "gi"), matchCallback);
-		}
-
-
-
-		if (verbose) { console.log(`Applying rule: ${temp}`); }
-	}
-	if (verbose) { console.log("message after rules: " + output); }
-	return output;
-}
-
-export function applyGag(msg: string, gag_end: Date, verbose: boolean = true): string {
-	if (!shouldApplyGag(gag_end, verbose)) {
-		return msg;
-	}
-	let output = "";
-	let inEmote = false;
-	const remainChars = ["a", "e", "i", "o", "u", "g", "h", "A", "E", "I", "O", "U", "G", "H", "?", "!", ".", ",", ":", ";", "#", "*", "-", "(", ")", "~"];
-	for (const word of msg.split(" ")) {
-		let outword = "";
-		if (word_is_link(word, verbose)) {
-			outword = word + " ";
-			continue;
-		}
-		for (const char of word) {
-			if (char === ":" && !inEmote) {
-				if (verbose) { console.log("Starting emote") };
-				inEmote = true;
-				outword += char;
-				continue;
-			} else if (char === ":" && inEmote) {
-				if (verbose) { console.log("Ending emote") };
-				inEmote = false;
-				outword += char;
-				continue;
-			}
-			if (inEmote) {
-				if (verbose) { console.log("Inside emote") };
-				outword += char;
-				continue;
-			}
-			if (remainChars.includes(char)) {
-				outword += char;
-			} else {
-				if (!(char.charCodeAt(0) >= 97 && char.charCodeAt(0) <= 122)) {
-					outword += ["G", "H"][Math.floor(Math.random() * 2)];
-				} else {
-					outword += ["g", "h"][Math.floor(Math.random() * 2)];
-				}
-			}
-		}
-		output += outword + " ";
-	}
-	if (verbose) { console.log("message after gag: " + output); }
-	return output;
-}
-
-export function applyPet(msg: string, pet_end: Date, pet_amount: number, pet_words: string[], verbose: boolean = true) {
-	if (!shouldApplyPet(pet_end, pet_amount, verbose)) {
-		return msg;
-	}
-	let output = "";
-	for (const word of msg.split(" ")) {
-		if (word_is_link(word, verbose)) {
-			output += word + " ";
-			continue
-		}
-		if (word[0] === ":" && word[word.length] === ":") {
-			output += word + " ";
-			if (verbose) { console.log("Skipping emote word") };
-			continue;
-		}
-		if (Math.random() < pet_amount) {
-			if (verbose) { console.log("Replacing word with pet word"); }
-			output += pet_words[Math.floor(Math.random() * (pet_words.length))];
-		} else {
-			output += word;
-		}
-		output += " ";
-	}
-	if (verbose) { console.log("message after pet: " + output); }
-	return output;
-}
-
-export function applyBimbo(msg: string, bimbo_end: Date, bimbo_word_length: number, verbose: boolean = true) {
-	if (!shouldApplyBimbo(bimbo_end, verbose)) {
-		return msg;
-	}
-	let output = "";
-	const pronouns = ["i", "you", "he", "she", "it", "we", "they", "is"];
-	const maxWordLength = bimbo_word_length;
-	const likeChance = 0.1;
-	const gargle_words = ["like", "hehe", "uhh", "totally", "so dumbb", "ummm", "hhhhh"];
-	for (const word of msg.split(" ")) {
-		let changed = false;
-		if (!word_is_link(word, verbose)) {
-			if (pronouns.includes(word.toLowerCase())) {
-				output += word;
-				output += " like totally ";
-				changed = true;
-				if (verbose) { console.log("pronoun found, added 'like totally'"); }
-			}
-			if (word.length > maxWordLength) {
-				if (verbose) { console.log("word: " + word + " was too long"); }
-				output += word.substring(0, maxWordLength - 2);
-				output += "uhhhh long words harddd hehe";
-				return output;
-			}
-		}
-		if (!changed) {
-			output += word;
-			output += " ";
-		}
-		if (Math.random() < likeChance && !word_is_link(word, verbose)) {
-			output += gargle_words[Math.floor(Math.random() * (gargle_words.length - 1))];
-			output += " ";
-			if (verbose) { console.log("added gargle word " + output.split(" ").reverse()[0]) };
-		}
-	}
-	if (verbose) { console.log("message after bimbo: " + output); }
-	return output;
-}
-
-export function applyHorny(msg: string, horny_end: Date, verbose: boolean = true, horny_words: string[] = ["hmmph", "nngh", "ahhh", "ooh", "oohh", "mmm", "hehe", "hehehe", "heheh", "eheh", "ehehe", "eheheh", "guhh", "pleasee", "need to cumm", "oh goshh", "ohhh", "ahhh", "cummm", "gggg"]) {
-	if (!shouldApplyHorny(horny_end, verbose)) {
-		return msg;
-	}
-	let output = "";
-	for (const word of msg.split(" ")) {
-		if (!word_is_link(word, verbose)) {
-			if (Math.random() < 0.75) {
-				if (verbose) { console.log("Adding horny word"); }
-				output += horny_words[Math.floor(Math.random() * (horny_words.length - 1))];
-				output += " ";
-			}
-		}
-		output += word + " ";
-	}
-	return output;
-}
-
-export function applyUWU(msg: string, uwu_end: Date, verbose: boolean = true) {
-	if (!shouldApplyUWU(uwu_end, verbose)) {
-		return msg;
-	}
-	let output = "";
-
-	for (let word of msg.split(" ")) {
-		if (word_is_link(word, verbose)) {
-			output += word + " ";
-			continue;
-		}
-		word = word.replace(new RegExp("th", "gi"), "d");
-		word = word.replace(new RegExp("r|l", "gi"), "w");
-		word = word.replace(new RegExp("u", "gi"), "uw");
-		word = word.replace(new RegExp("n([aeiou])", "gi"), "ny$1")
-		word = word.replace(new RegExp("ove", "gi"), "uv")
-		output += word + " "
-	}
-
-	return output;
-}
-
-export function applyCensored(msg: string, censoredWords: string[], replacement: string, censored_end: Date, verbose: boolean = true) {
-	if (!shouldApplyCensored(censored_end, verbose)) {
-		return msg;
-	}
-
-	for (let word of censoredWords) {
-		let replacementText = "";
-		for (let i = 0; i < word.length; i += replacement.length) {
-			replacementText += replacement
-		}
-		msg = msg.replace(new RegExp(word, "gi"), replacementText);
-	}
-
-	return msg;
-}
-
-export function applyDrone(msg: string, drone_end: Date, speech_header: string, speech_footer: string, action_header: string, action_footer: string, whisper_header: string, whisper_footer: string, loud_header: string, loud_footer: string, drone_health: number, channelId: string, context: DroneContext = {}, verbose: boolean = true): DroneRenderResult {
-	if (!shouldApplyDrone(drone_end, verbose)) {
-		return { message: msg };
-	}
-
-	if (drone_health < 10) {
-		return {
-			message: "`This Drone haaaaas receieved bzzzzt, ppplease provide repaiirs using beep '/repair', tthank youu. Returned Error: 0x7547372482`",
-		};
-	}
-
-	let containsLink = false;
-	for (const word of msg.split(" ")) {
-		if (word_is_link(word, verbose)) {
-			containsLink = true;
-		}
-	}
-
-	let output = "";
-	if (!containsLink) {
-		msg = msg.replace(new RegExp("\\bMe\\b", "gi"), "This Drone");
-		msg = msg.replace(new RegExp("\\bMy\\b", "gi"), "Its'");
-		msg = msg.replace(new RegExp("\\bI am\\b", "gi"), "It is");
-		msg = msg.replace(new RegExp("\\bI(')?m\\b", "gi"), "It is");
-		msg = msg.replace(new RegExp("\\bI\\b", "gi"), "This Drone");
-		if (verbose) { console.log("Drone Regex Applied"); }
-	}
-
-	let ignoreFirstOne = false;
-
-	for (const word of msg.split(" ")) {
-		if (ignoreFirstOne) {
-			ignoreFirstOne = false;
-			continue;
-		}
-		if (!word_is_link(word, verbose)) {
-			if (Math.random() > (drone_health / 100)) {
-				if (verbose) { console.log("Adding random beep"); }
-				output += Math.random() > 0.5 ? "`beep` " : "`bzzzt` ";
-			}
-		}
-		output += word + " ";
-	}
-
-	const tempOutput = output;
-	output = "";
-
-	let lastTriggered = 0;
-
-	for (const word of tempOutput.split(" ")) {
-		let outword = "";
-		if (!word_is_link(word, verbose)) {
-			for (const char of word) {
-				outword += char;
-				lastTriggered += 1;
-				if (Math.random() + (lastTriggered / 100) - 1 > (drone_health / 100) && char !== "`") {
-					lastTriggered = 0;
-					for (let i = 0; i < Math.floor(Math.random() * 10); i++) {
-						if (verbose) { console.log("Adding random static"); }
-						outword += char;
-					}
-				}
-			}
-		} else {
-			outword = word;
-		}
-		output += outword + " ";
-	}
-
-	const previousMessage = context.previousMessage ?? null;
-	const previousSenderId = context.previousSenderId ?? previousMessage?.author?.id ?? null;
-	const currentUserId = context.currentUserId ?? null;
-
-	if (verbose) { console.log("Previous message sent by: " + previousSenderId) }
-	if (verbose) { console.log("Current user ID: " + currentUserId) }
-	if (verbose) { console.log("Previous message content: " + previousMessage?.content) }
-
-	let header = speech_header;
-	let footer = speech_footer;
-
-	if (msg.startsWith("**")) {
-		header = loud_header;
-		footer = loud_footer;
-	}
-	else if (msg.startsWith("*")) {
-		header = action_header;
-		footer = action_footer;
-	}
-	else if (msg.startsWith("-#")) {
-		header = whisper_header;
-		footer = whisper_footer;
-	}
-
-	if (verbose) { console.log("header: " + header) }
-	if (verbose) { console.log("footer: " + footer) }
-
-	const continuingOwnBlock = previousSenderId != null && currentUserId != null && previousSenderId === currentUserId;
-	const footerSuffix = "\n`" + footer + "`";
-	const previousHadMatchingFooter = previousMessage?.content.endsWith(footerSuffix) ?? false;
-	const editPreviousMessage = continuingOwnBlock && previousHadMatchingFooter && previousMessage
-		? {
-			channelId,
-			messageId: previousMessage.id,
-			newContent: previousMessage.content.replace(footerSuffix, ""),
-		}
-		: undefined;
-
-	const formattedBody = output.trimEnd();
-	let formattedMessage = formattedBody + footerSuffix;
-
-	if (!continuingOwnBlock || !previousHadMatchingFooter) {
-		formattedMessage = "`" + header + "`\n" + formattedMessage;
-	}
-
-	return {
-		message: formattedMessage,
-		editPreviousMessage,
-	};
-}
-
-export function applyReplacements(msg: string, channelId: string, context: DroneContext = {}): DroneRenderResult {
-	const originalMsg = msg;
-	console.log("Original message: " + originalMsg);
-	msg = applyRules(msg, rules, config.rules_end);
-	msg = applyUWU(msg, config.uwu_end);
-	msg = applyHorny(msg, config.horny_end);
-	msg = applyPet(msg, config.pet_end, config.pet_amount, petWords);
-	msg = applyBimbo(msg, config.bimbo_end, config.bimbo_word_length);
-	msg = applyCensored(msg, censoredWords, config.censored_replacement, config.censored_end);
-	msg = applyGag(msg, config.gag_end);
-	let editPreviousMessage: DroneEditRequest | undefined;
-	if (droneConfig != null) {
-		const droneResult = applyDrone(msg, config.drone_end, droneConfig.speech_header, droneConfig.speech_footer, droneConfig.action_header, droneConfig.action_footer, droneConfig.whisper_header, droneConfig.whisper_footer, droneConfig.loud_header, droneConfig.loud_footer, droneConfig.drone_health, channelId, context);
-		msg = droneResult.message;
-		editPreviousMessage = droneResult.editPreviousMessage;
-	}
-	return {
-		message: msg + (config.debug && (shouldApplyRules(config.rules_end) || shouldApplyGag(config.gag_end) || shouldApplyPet(config.pet_end, config.pet_amount) || shouldApplyBimbo(config.bimbo_end) || shouldApplyHorny(config.horny_end) || shouldApplyDrone(config.drone_end)) ? `\n        (original message: ${originalMsg})` : ""),
-		editPreviousMessage,
-	};
-}
-
-export function word_is_link(word: string, verbose: boolean = true): boolean {
-	if (verbose) {
-		console.log("testing if is link:");
-		console.log(word[0]);
-		console.log(word[1]);
-		console.log(word[2]);
-		console.log(word[3]);
-	}
-	return (word[0] == "h" && word[1] == "t" && word[2] == "t" && word[3] == "p")
+    let editPreviousMessage: DroneEditRequest | undefined;
+    if (state.droneConfig) {
+        const droneResult = applyDrone(msg, state.config.drone_end, state.droneConfig, channelId, context);
+        msg = droneResult.message;
+        editPreviousMessage = droneResult.editPreviousMessage;
+    }
+    
+    return { message: msg, editPreviousMessage };
 }
