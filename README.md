@@ -45,11 +45,23 @@ To install this you must first install Kettu, this will differ if you are on and
 
 1. [Click here](https://github.com/C0C0B01/KettuManager/releases/latest) to download the APK
 2. Run it to install Kettu
+3. Go and install the [Key Intercept Plugin](#plugin)
 
 ### IOS
 
-1. [Click here](https://github.com/C0C0B01/KettuTweak/releases/latest) to download the program
-2. Run it to add Kettu
+> Note: I have no apple devices and refuse to get any, so I have no way of testing this.
+> Also note: you will need a pc to install this unless you know how to sideload without PC
+
+1. Download iloader on PC
+2. Connect your phone to PC via USB
+3. Sign in to your IOS account on Iloader
+4. Set the server to "stikstore"
+5. On the IPhone, go to settings > general > vpn & device management
+6. You should see a new developer app, enable it
+7. Go to settings > privacy & security and enable developer mode
+8. Restart your phone
+9. kettu should now be installed
+10. Go and install the [Key Intercept Plugin](#plugin)
 
 ### Plugin
 
