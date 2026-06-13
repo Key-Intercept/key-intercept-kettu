@@ -41,6 +41,8 @@ This project all together costs me £27 / month to maintain (database + server f
 
 To install this you must first install Kettu, this will differ if you are on android or linux, but after this the process is pretty much the same.
 
+> Before installing, make sure to use [the ladel bot](https://discord.com/oauth2/authorize?client_id=1424790082690220052) to `/submit` to yourself
+
 ### Android
 
 1. [Click here](https://github.com/C0C0B01/KettuManager/releases/latest) to download the APK
