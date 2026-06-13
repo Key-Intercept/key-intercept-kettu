@@ -1,16 +1,29 @@
-# Key-Intercept
+# Key-Intercept-kettu
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Key-Intercept/key-intercept/Test)![GitHub License](https://img.shields.io/github/license/Key-Intercept/key-intercept)![Website](https://img.shields.io/website?url=https%3A%2F%2Fkeyintercept.thomaslower.com%2Flogin.html)![GitHub forks](https://img.shields.io/github/forks/Key-Intercept/key-intercept)![GitHub Downloads (all assets, latest release)](https://img.shields.io/github/downloads/Key-Intercept/key-intercept/latest/total)
 
 Welcome to key-intercept, a plugin for discord which helps you talk ~~un~~properly.
 
 Basically, this is a lil program that sits in the back of your discord. When you send a message it will edit it in some way dependent upon a list of [rules](#rules)
 
-> Note: Vencord is an unsupported use of Discord, to use it is a breach of TOS. Use it, and this plugin, at your own risk.
+> Note: Kettu is an unsupported use of Discord, to use it is a breach of TOS. Use it, and this plugin, at your own risk.
 Contents:
+- [Key-Intercept-kettu](#key-intercept-kettu)
   - [Funding](#funding)
   - [Install](#install)
+    - [Android](#android)
+    - [IOS](#ios)
+    - [Plugin](#plugin)
   - [First time setup](#first-time-setup)
   - [Usage](#usage)
+    - [Gag Mode](#gag-mode)
+    - [Pet Mode](#pet-mode)
+    - [Bimbo mode](#bimbo-mode)
+    - [Horny mode](#horny-mode)
+    - [Drone mode](#drone-mode)
+    - [UWU mode](#uwu-mode)
+    - [Rules mode](#rules-mode)
+    - [Censored mode](#censored-mode)
+    - [The ladel bot](#the-ladel-bot)
   - [Bugs / Issues](#bugs--issues)
   - [Contributing](#contributing)
   - [Distributing](#distributing)
@@ -26,110 +39,37 @@ This project all together costs me £27 / month to maintain (database + server f
 
 ## Install
 
-This program natively supports Windows (coz you kinda have to in this day and age) and Linux (coz I write the code in that). As a result, this program features 2 install scripts, both named key-intercept-install.
+To install this you must first install Kettu, this will differ if you are on android or linux, but after this the process is pretty much the same.
 
-For mac users, the [Linux](#linux) install should work, however, I have no means by which I can test this and will not be maintaining this.
+### Android
 
-For android users, check [Here](https://github.com/Key-Intercept/Key-Intercept-Mobile).
+1. [Click here](https://github.com/C0C0B01/KettuManager/releases/latest) to download the APK
+2. Run it to install Kettu
 
-There are some known issues with installation, if you have any issues, [check here](https://github.com/Key-Intercept/key-intercept/wiki/Known-Issues)
+### IOS
 
-### Windows
-To install on Windows:
+1. [Click here](https://github.com/C0C0B01/KettuTweak/releases/latest) to download the program
+2. Run it to add Kettu
 
-1. Go to [Releases](https://github.com/Key-Intercept/key-intercept/releases)
-2. In that list, you should see a section labelled "Assets" under which you will see a .zip file named `key-intercept-windows.zip`.
-3. Click that file to download it
-4. Unzip it
-5. Go into the folder and double-click `key-intercept-CLICK-ME.bat`
-6. A terminal will open, eventually it will wait and ask you to choose something, just press enter
-7. Start Discord
-8. Go to Discord settings -> plugins and enable key-intercept
-9. Enable [The-Ladel](https://discord.com/oauth2/authorize?client_id=1424790082690220052) bot on your account
-10. Do /submit on someone to give access to your controls
+### Plugin
 
-### Linux
-To install on Linux:
+To install the plugin:
 
-1. Go to [Releases](https://github.com/Key-Intercept/key-intercept/releases)
-2. In that list, you should see a section labelled "Assets" under which you will see a .zip file named `key-intercept-linux.zip`.
-3. Click that file to download it
-4. Unzip it
-5. Go to that folder in the terminal
-6. Make sure discord is closed (fully from the system monitor)
-7. Run `key-intercept-install.sh` as `sudo`
-8. Press enter when the script appears to hang
-9. Start Discord
-10. Go to Discord settings -> plugins are enable key-intercept
-11. Enable [The-Ladel](https://discord.com/oauth2/authorize?client_id=1424790082690220052) bot on your account
-12. Do /submit on someone to give access to your controls
-
-Steps 1-5 & 7 can be accomplished by running the following command:
-```sh
-curl -s https://api.github.com/repos/Key-Intercept/key-intercept/releases/latest \
-| grep -o 'https://[^"]*key-intercept-linux.zip' \
-| xargs curl -L -O && unzip key-intercept-linux.zip && cd key-intercept-linux && sudo bash key-intercept-install.sh
-```
-
-### Build from source
-
-So, you think you're better than everyone else.
-
-Its fine, I prefer to build from source as well, just makes it feel better tbh doesnt it?
-
-#### Install dependencies
-
-You will need [Node.js](https://nodejs.org/en/download), [pnpm](https://pnpm.io/installation) and [git](https://git-scm.com/install/windows)
-
-#### Setup
-
-First, obviously, clone the repo (im not giving you the command, if you don't know how to do this then don't bother building from source)
-
-You will also need to clone the [Vencord repo](https://github.com/Vendicated/Vencord)
-
-Now, copy the `key-intercept` folder containing the `index.ts` file to `Vencord/src/userplugins/`
-
-#### Configuring Vencord
-
-There is 1 change we need to make to vencord for key-intercept to work. We must edit the csp file.
-
-> Discord is a website tricking you into thinking it is an app. For security reasons it has a set number of links it can connect to for certain pieces of data, anything else is automatically blocked. These links are stored in the csp file. Key-intercept uses a database hosted on supabase for storing your configs (hence how the bot is able to access it). As a result of this, we need to add access to the database to this file.
-
-1. Open up `Vencord/src/main/csp/index.ts`.
-2. Go to around like 53 (anywhere within that map is fine)
-3. Add the following lines to that file
-```ts
-"https://*.supabase.co": ConnectSrc,
-"wss://*.supabase.co": ConnectSrc,
-```
-
-#### Discord Injection
-
-First, close discord from the system monitor
-
-Then, go to the vencord folder and run
-```sh
-pnpm install && pnpm add @supabase/supabase-js -w
-```
-This will install all pnpm dependencies including supabase
-
-Then run
-```sh
-pnpm build
-```
-to build the project and
-```sh
-pnpm inject
-```
-to install the project to Discord (inject must be ran as sudo if you are on linux)
+1. Open Kettu
+2. Go to Profile > Settings > Plugins
+3. Click the plus button in the bottom right hand corner
+4. Type in the source [https://key-intercept.github.io/key-intercept-kettu/](https://key-intercept.github.io/key-intercept-kettu/)
+5. Click install
+6. Make sure the plugin is enabled
+7. A popup will appear if the plugin is working
 
 ## First time setup
 
-When first installing this, you will most likely want to enable others to control it and edit it. To do this, add [the-ladel](https://discord.com/oauth2/authorize?client_id=1424790082690220052) bot to your account, then run the [/submit](https://github.com/Key-Intercept/key-intercept/wiki/The-Ladel#submit) command to give access.
+See [the original key intercept repo](https://github.com/Key-Intercept/key-intercept#first-time-setup)
 
 ## Usage
 
-This program has 5 pre-defined ways of using it, and a way of defining custom modes:
+This program has 7 pre-defined ways of using it, and a way of defining custom modes:
 
 > Different modes can be used at the same time with a predefined priority order
 
@@ -176,6 +116,9 @@ Makes the user talk through uwu
 
 ### Rules mode
 This enables users to add custom rules which use a system called "Regex".
+
+### Censored mode
+Censors words, kinda simple tbh.
 
 ### The ladel bot
 
