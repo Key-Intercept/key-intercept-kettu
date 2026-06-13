@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
@@ -45,6 +47,6 @@ jobs:
           git config --local user.name "GitHub Action"
           git add dist/
           git commit -m "build: update dist files"
-          git push origin main
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
