@@ -1,11 +1,8 @@
 import { PostgrestClient } from "@supabase/postgrest-js";
 import { RealtimeClient } from "@supabase/realtime-js";
 
-// Keep your existing imports
 import { NormalizedString } from "./normalizedString";
 import { Config, DroneConfig, Rule, WhitelistItem } from "./types";
-
-export const version_number = "4.3.0";
 
 const SUPABASE_URL = "https://qjzgfwithyvmwctesnqs.supabase.co";
 const SUPABASE_KEY = "sb_publishable_cxq8QZp9BDtjE4G5qiPCFA_lUZ4Cbdh";
@@ -14,7 +11,6 @@ let supabaseInstance: any = null;
 let realtimeConnected = false;
 let initError: Error | null = null;
 
-// Wrap the initialization so it doesn't execute on load
 function getSupabase() {
 	if (supabaseInstance) return supabaseInstance;
 	if (initError) throw initError;
@@ -49,8 +45,6 @@ function getSupabase() {
 	}
 }
 
-// These getters mimic your existing `supabase` object.
-// They intercept your calls and only initialize Supabase exactly when it is first needed!
 const supabase = {
 	get from() { 
 		try {
@@ -104,7 +98,7 @@ export type DroneRenderResult = {
 
 export async function createNewUser(userID: string, username: string): Promise<void> {
 	try {
-		console.log("[key-intercept] creating new user...");
+
 		const result = await supabase.from("profiles").insert({ "display_name": username, "discord_id": userID });
 		if (result.error) {
 			console.error("[key-intercept] Error creating user:", result.error);
@@ -116,7 +110,7 @@ export async function createNewUser(userID: string, username: string): Promise<v
 
 export async function createNewConfig(userID: string): Promise<void> {
 	try {
-		console.log("[key-intercept] creating new config...");
+
 		const configData = await supabase.from("Config").insert({}).select().single();
 		if (configData.error) {
 			console.error("[key-intercept] Error creating config:", configData.error);
@@ -141,7 +135,7 @@ export async function createNewConfig(userID: string): Promise<void> {
 export async function getData(userID: string, username: string) {
 	try {
 		const currentUserId = userID;
-		console.log("[key-intercept]", currentUserId);
+
 		let subIDData = await supabase.from("profiles").select("id").eq("discord_id", currentUserId).single();
 		if (subIDData.error) {
 			console.error("[key-intercept] Error fetching profile:", subIDData.error);
@@ -154,17 +148,14 @@ export async function getData(userID: string, username: string) {
 				throw new Error("Failed to create user profile");
 			}
 		}
-		console.log("[key-intercept] subIDData:", subIDData);
 		const subID = subIDData.data?.id;
 		if (!subID) {
 			throw new Error("Failed to get user ID from profile");
 		}
-		console.log("[key-intercept] subID:", subID);
 		let subData = await supabase.from("Sub_Config_Access").select().eq("sub_id", subID);
 		if (subData.error) {
 			console.error("[key-intercept] Error fetching config access:", subData.error);
 		}
-		console.log("[key-intercept] subData:", subData);
 		if (!subData.data || subData.data.length === 0) {
 			await createNewConfig(subID!);
 			subData = await supabase.from("Sub_Config_Access").select().eq("sub_id", subID);
@@ -264,7 +255,6 @@ export async function getConfig() {
 		config.uwu_end = new Date(configData.data.uwu_end);
 		config.censored_end = new Date(configData.data.censored_end);
 		config.censored_replacement = configData.data.censored_replacement;
-		console.log("[key-intercept] Config:", config);
 	} catch (err) {
 		console.error("[key-intercept] Error in getConfig:", err);
 	}
@@ -278,7 +268,6 @@ export async function getRules() {
 			return;
 		}
 		rules = rulesData.data || [];
-		console.log("[key-intercept] Rules:", rules);
 	} catch (err) {
 		console.error("[key-intercept] Error in getRules:", err);
 	}
@@ -297,7 +286,6 @@ export async function getWhitelist() {
 			server_name: item.server_name,
 			discord_id: item.discord_id,
 		}));
-		console.log("[key-intercept] Whitelist:", whitelist);
 	} catch (err) {
 		console.error("[key-intercept] Error in getWhitelist:", err);
 	}
@@ -314,7 +302,6 @@ export async function getPetWords() {
 		for (const wordData of petWordsData.data || []) {
 			petWords.push(wordData.word);
 		}
-		console.log("[key-intercept] Pet words:", petWords);
 	} catch (err) {
 		console.error("[key-intercept] Error in getPetWords:", err);
 	}
@@ -331,7 +318,6 @@ export async function getCensoredWords() {
 		for (const wordData of censoredWordsData.data || []) {
 			censoredWords.push(wordData.word);
 		}
-		console.log("[key-intercept] Censored Words:", censoredWords);
 	} catch (err) {
 		console.error("[key-intercept] Error in getCensoredWords:", err);
 	}
@@ -360,7 +346,6 @@ export async function getDroneConfig() {
 			loud_header: droneConfigData.data.loud_header as string,
 			loud_footer: droneConfigData.data.loud_footer as string,
 		}
-		console.log("[key-intercept] Drone Config:", droneConfig);
 	} catch (err) {
 		console.error("[key-intercept] Error in getDroneConfig:", err);
 	}
