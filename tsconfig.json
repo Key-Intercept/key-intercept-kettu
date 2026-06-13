@@ -18,7 +18,7 @@
       "@utils": ["./node_modules/@utils"]
     },
     "jsx": "react-jsx"
-    ,"types": []
+    ,"types": ["node"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts"],
   "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx"]

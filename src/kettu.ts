@@ -3,8 +3,9 @@
  * A text transformation plugin for Kettu
  */
 
-import { before } from "@vendetta/patcher";
-import { findByProps } from "@vendetta/metro";
+// These will be set by onLoad when they're available
+let before: any = null;
+let findByProps: any = null;
 
 import { editPreviousMessage, getPreviousMessage, getPreviousMessageSender } from "./getPreviousMessage";
 import {
@@ -16,8 +17,27 @@ import {
 } from "./core";
 
 const logger = {
-	log: (...args: unknown[]) => console.log("[key-intercept]", ...args),
+	log: (...args: unknown[]) => {
+		try {
+			console.log("[key-intercept]", ...args);
+		} catch (e) {
+			// Silently ignore console errors
+		}
+	},
 };
+
+function safeAlert(title: string, message: string) {
+	try {
+		if (findByProps) {
+			const ReactNative = findByProps("Alert");
+			if (ReactNative?.Alert) {
+				ReactNative.Alert.alert(title, message);
+			}
+		}
+	} catch (e) {
+		logger.log("Alert failed:", title, message, e);
+	}
+}
 
 let unpatchSendMessage: (() => void) | null = null;
 
@@ -57,94 +77,116 @@ function applyReplacements(msg: string, channelId: string): string {
 	return result.message;
 }
 
-const plugin = {
-	onLoad: () => {
-        // Safe: Evaluated only after the plugin successfully registers
-        const ReactNative = findByProps("Alert");
-        
-		try {
-			if (ReactNative?.Alert) {
-				ReactNative.Alert.alert("Key-Intercept", "The plugin is executing!");
-			}
-			logger.log("Plugin is starting up!");
+export default {
+    onLoad: () => {
+            logger.log("Plugin is starting up!");
+
+            // Get Vendetta modules from globalThis (set by host environment)
+            const vendettaBefore = (globalThis as any)?.vendetta?.patcher?.before;
+            const vendettaFindByProps = (globalThis as any)?.vendetta?.metro?.findByProps;
+
+            if (!vendettaBefore || !vendettaFindByProps) {
+                throw new Error("Vendetta modules not available. Plugin requires Vendetta host environment.");
+            }
+
+            logger.log("Vendetta modules loaded successfully");
+
+            // Set global for getPreviousMessage functions
+            (globalThis as any).__kettuFindByProps = vendettaFindByProps;
+			
+			// Update local references
+			before = vendettaBefore;
+			findByProps = vendettaFindByProps;
 
 			const MessageActions = findByProps("sendMessage");
 			if (MessageActions && MessageActions.sendMessage) {
-				
-				unpatchSendMessage = before("sendMessage", MessageActions, (args) => {
-					const [channelId, messageData] = args as [string, { content?: unknown } & Record<string, unknown>];
+				unpatchSendMessage = before("sendMessage", MessageActions, ((args: any) => {
+					try {
+						const [channelId, messageData] = args as [string, { content?: unknown } & Record<string, unknown>];
 
-					if (ReactNative?.Alert) ReactNative.Alert.alert("Key-Intercept", "Intercepting your message right now!");
+						logger.log("Intercepting message in channel:", channelId);
 
-					const ChannelStore = findByProps("getChannel", "getDMFromUserId");
-					const GuildStore = findByProps("getGuild", "getGuilds");
-					const UserStore = findByProps("getCurrentUser", "getUser");
+						const ChannelStore = findByProps("getChannel", "getDMFromUserId");
+						const GuildStore = findByProps("getGuild", "getGuilds");
+						const UserStore = findByProps("getCurrentUser", "getUser");
 
-					const channel = ChannelStore?.getChannel?.(channelId);
-					if (!channel) return;
-
-					let nameToCheck: string | null = null;
-					let idToCheck: string | null = null;
-
-					if (channel.guild_id) {
-						const guild = GuildStore?.getGuild(channel.guild_id);
-						nameToCheck = guild?.name ?? null;
-						idToCheck = guild?.id ?? null;
-					} else {
-						if (channel.name) {
-							nameToCheck = channel.name;
-						} else if (channel.recipients?.length > 0) {
-							const currentUser = UserStore.getCurrentUser();
-							const recipientNames = channel.recipients
-								.filter((id: string) => id !== currentUser.id)
-								.map((id: string) => UserStore.getUser(id)?.username)
-								.filter(Boolean);
-							nameToCheck = recipientNames.join(", ");
-							idToCheck = channel.id ?? null;
-						}
-					}
-
-					if (whitelist && whitelist.length > 0) {
-						const nameMatches = !!nameToCheck && whitelist.some(item => item.server_name === nameToCheck);
-						const idMatches = !!idToCheck && whitelist.some(item => item.discord_id === idToCheck);
-
-						if ((nameToCheck || idToCheck) && !nameMatches && !idMatches) {
+						const channel = ChannelStore?.getChannel?.(channelId);
+						if (!channel) {
+							console.log("Channel not found:", channelId);
 							return;
 						}
-					}
 
-					const channelName = channel?.name?.toLowerCase?.() ?? "";
-					if (channelName.includes("sfw") && !channelName.includes("nsfw")) {
-						return;
-					}
+						let nameToCheck: string | null = null;
+						let idToCheck: string | null = null;
 
-					if (typeof messageData === "object" && messageData !== null && "content" in messageData && typeof messageData.content === "string") {
-						const output = applyReplacements(messageData.content, channelId);
-						messageData.content = output;
+						if (channel.guild_id) {
+							const guild = GuildStore?.getGuild(channel.guild_id);
+							nameToCheck = guild?.name ?? null;
+							idToCheck = guild?.id ?? null;
+						} else {
+							if (channel.name) {
+								nameToCheck = channel.name;
+							} else if (channel.recipients?.length > 0) {
+								const currentUser = UserStore.getCurrentUser();
+								const recipientNames = channel.recipients
+									.filter((id: string) => id !== currentUser.id)
+									.map((id: string) => UserStore.getUser(id)?.username)
+									.filter(Boolean);
+								nameToCheck = recipientNames.join(", ");
+								idToCheck = channel.id ?? null;
+							}
+						}
+
+						if (whitelist && whitelist.length > 0) {
+							const nameMatches = !!nameToCheck && whitelist.some(item => item.server_name === nameToCheck);
+							const idMatches = !!idToCheck && whitelist.some(item => item.discord_id === idToCheck);
+
+							if ((nameToCheck || idToCheck) && !nameMatches && !idMatches) {
+								console.log("Message blocked by whitelist");
+								return;
+							}
+						}
+
+						const channelName = channel?.name?.toLowerCase?.() ?? "";
+						if (channelName.includes("sfw") && !channelName.includes("nsfw")) {
+							console.log("Message in SFW channel, skipping");
+							return;
+						}
+
+						if (typeof messageData === "object" && messageData !== null && "content" in messageData && typeof messageData.content === "string") {
+							const output = applyReplacements(messageData.content, channelId);
+							messageData.content = output;
+							console.log("Message transformed");
+						}
+						return args;
+					} catch (e) {
+						console.log("Error in message interception:", e);
+						return args;
 					}
-					return args;
-				});
+				}) as any);
 			} else {
-				if (ReactNative?.Alert) ReactNative.Alert.alert("Error", "Could not find sendMessage!");
+				console.log("Error: Could not find sendMessage!");
+				safeAlert("Error", "Could not find sendMessage!");
 			}
 
 			const UserStore = findByProps("getCurrentUser", "getUser");
 			const currentUser = UserStore?.getCurrentUser?.();
 			if (currentUser) {
+				console.log("Current user found, loading database...");
 				getData(currentUser.id, currentUser.username)
 					.then(() => {
-                        if (ReactNative?.Alert) ReactNative.Alert.alert("Key-Intercept", "Database connected successfully!");
+						console.log("Database connected successfully!");
+						safeAlert("Key-Intercept", "Database connected successfully!");
 					})
 					.catch(err => {
-						if (ReactNative?.Alert) ReactNative.Alert.alert("DB Error", String(err));
+						console.log("Database connection failed:", err);
+						safeAlert("DB Error", String(err));
 					});
+			} else {
+				console.log("Current user not found");
 			}
 
-		} catch (fatalError) {
-			if (ReactNative?.Alert) {
-				ReactNative.Alert.alert("FATAL ERROR", String(fatalError));
-			}
-		}
+			safeAlert("Key-Intercept", "The plugin is executing!");
 	},
 
 	onUnload: () => {
@@ -154,5 +196,3 @@ const plugin = {
 		}
 	},
 };
-
-export default plugin;

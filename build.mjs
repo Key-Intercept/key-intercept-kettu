@@ -27,7 +27,7 @@ const plugins = [
             const result = await swc.transform(code, {
                 filename: id,
                 jsc: {
-                    externalHelpers: true,
+                    externalHelpers: false,
                     parser: {
                         syntax: ts ? "typescript" : "ecmascript",
                         tsx,
