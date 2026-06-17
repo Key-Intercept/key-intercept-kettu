@@ -14,7 +14,7 @@ export type Config = {
 	uwu_end: Date,
 	censored_end: Date,
 	censored_replacement: string,
-	debug: boolean;
+	debug: boolean,
 };
 
 export type Rule = {
@@ -49,4 +49,5 @@ export type DroneConfig = {
 	whisper_footer: string,
 	loud_header: string,
 	loud_footer: string,
+	drone_term: string
 }
