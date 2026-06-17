@@ -86,10 +86,7 @@ export async function getData(userID: string, username: string) {
 	console.log(subID);
 	let subData = await supabase.from("Sub_Config_Access").select().eq("sub_id", subID);
 	console.log(subData);
-	if (subData.data?.length === 0) {
-		await createNewConfig(subID!);
-		subData = await supabase.from("Sub_Config_Access").select().eq("sub_id", subID);
-	}
+	subData = await supabase.from("Sub_Config_Access").select().eq("sub_id", subID);
 	config = {} as Config;
 	config.id = subData.data![0].config_id;
 
