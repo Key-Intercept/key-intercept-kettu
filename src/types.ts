@@ -38,7 +38,7 @@ export type RuleGroup = {
 	name: string,
 	config_id: bigint,
 	disabled_at: Date,
-}
+};
 
 export type WhitelistItem = {
 	id: bigint,
